@@ -1,6 +1,5 @@
 package com.kakaobase.snsapp.domain.members.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
@@ -37,13 +36,11 @@ public class MemberRequestDto {
 
             @Schema(description = "기수명", example = "PANGYO_1", allowableValues = {"PANGYO_1", "PANGYO_2", "JEJU_1", "JEJU_2", "JEJU_3"})
             @NotNull(message = "기수는 필수 입력값입니다.")
-            @JsonProperty("class_name")
             String className,
 
             @Schema(description = "GitHub 프로필 URL", example = "https://github.com/gildong")
             @Pattern(regexp = "^(https://github\\.com/)[A-Za-z0-9_-]+(/)?.*$",
                     message = "GitHub URL 형식이 올바르지 않습니다. https://github.com/{username} 형식이어야 합니다.")
-            @JsonProperty("github_url")
             String githubUrl
     ) {}
 
