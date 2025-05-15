@@ -14,9 +14,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class CookieUtil {
 
-    /**
-     * application.yml에서 주입받은 리프레시 토큰 쿠키 관련 설정값들
-     */
     @Value("${app.jwt.refresh.token-name}")
     private String refreshTokenCookieName;
 
@@ -29,20 +26,43 @@ public class CookieUtil {
     @Value("${app.jwt.secure}")
     private boolean secureCookie;
 
+    @Value("${app.jwt.access.path}")
+    private String accessTokenPath;
+
+    @Value("${app.jwt.access.expiration-time}")
+    private long accessTokenExpiration;
+
     /**
      * 리프레시 토큰을 담은 쿠키를 생성합니다.
      * 생성된 쿠키는 JavaScript에서 접근할 수 없도록 HttpOnly로 설정
      */
-    public void createRefreshTokenCookie(String refreshToken, HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from(refreshTokenCookieName, refreshToken)
-                .path(refreshTokenCookiePath)
-                .maxAge(refreshTokenExpiration / 1000)
-                .httpOnly(true)
-                .secure(secureCookie)
-                .sameSite("Lax")
-                .build();
+    public void addTokenByCookie(String purpose, String tokenHash, HttpServletResponse response) {
 
-        response.addHeader("Set-Cookie", cookie.toString()); // 그대로 Set-Cookie 헤더로 추가
+        if(purpose.equals("refresh-token")) {
+            ResponseCookie cookie = ResponseCookie.from(refreshTokenCookieName, tokenHash)
+                    .path(refreshTokenCookiePath)
+                    .maxAge(refreshTokenExpiration / 1000)
+                    .httpOnly(true)
+                    .secure(secureCookie)
+                    .sameSite("Lax")
+                    .build();
+
+            response.addHeader("Set-Cookie", cookie.toString());
+        }
+        else if(purpose.equals("acess-token")) {
+            ResponseCookie cookie = ResponseCookie.from("access_token", tokenHash)
+                    .path(accessTokenPath)
+                    .maxAge(accessTokenExpiration / 1000)
+                    .httpOnly(true)
+                    .secure(secureCookie)
+                    .sameSite("Lax")
+                    .build();
+
+            response.addHeader("Set-Cookie", cookie.toString());
+        }
+
+
+
     }
 
 
