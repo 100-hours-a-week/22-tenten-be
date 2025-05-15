@@ -68,7 +68,7 @@ public class AuthController {
         // 쿠키에서 리프레시 토큰 추출
         String cookieValue = cookieUtil.extractRefreshTokenFromCookie(httpRequest);
 
-        // 토큰이 있다면 기존 토큰 파기
+        // 헤더에 리프레시 토큰이 있다면 기존 토큰 파기
         if (cookieValue != null) {
             securityTokenManager.revokeRefreshToken(cookieValue);
         }
