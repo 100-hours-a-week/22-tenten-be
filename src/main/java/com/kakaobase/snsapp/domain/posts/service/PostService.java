@@ -179,9 +179,6 @@ public class PostService {
     /**
      * 게시글 목록을 조회합니다.
      */
-    /**
-     * 게시글 목록을 조회합니다.
-     */
     public PostResponseDto.PostListResponse getPostList(String postType, int limit, Long cursor, Long currentMemberId) {
         // 1. 유효성 검증
         if (limit < 1) {
