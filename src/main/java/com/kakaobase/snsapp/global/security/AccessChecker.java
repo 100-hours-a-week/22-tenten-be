@@ -8,6 +8,7 @@ import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import com.kakaobase.snsapp.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
@@ -66,6 +67,7 @@ public class AccessChecker {
         if (!hasAccess) {
             log.debug("사용자 ID {}(기수: {})의 게시판 접근 거부: {}",
                     Long.valueOf(userDetails.getId()), className, postType);
+            throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
 
         return hasAccess;
