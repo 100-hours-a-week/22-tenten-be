@@ -95,7 +95,8 @@ public class Member extends BaseSoftDeletableEntity {
         PANGYO_2,
         JEJU_1,
         JEJU_2,
-        JEJU_3
+        JEJU_3,
+        ALL
     }
 
 
