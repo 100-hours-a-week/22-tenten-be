@@ -90,9 +90,11 @@ public class UserAuthenticationService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
 
-        // 토큰이 있다면 기존 토큰 파기
-        if (!providedRefreshToken.isBlank()) {
-                securityTokenManager.revokeRefreshToken(providedRefreshToken);
+        // 리프레시 토큰이 있다면 기존 토큰 파기
+        if (providedRefreshToken != null
+                && !providedRefreshToken.isBlank()
+                && providedRefreshToken.length() > 20) {
+            securityTokenManager.revokeRefreshToken(providedRefreshToken);
         }
 
         String refreshToken = securityTokenManager.createRefreshToken(
@@ -113,7 +115,7 @@ public class UserAuthenticationService {
         String refreshToken = cookieUtil.extractRefreshTokenFromCookie(httpRequest);
 
         // 토큰이 없으면 예외 발생
-        if (refreshToken == null || refreshToken.trim().isEmpty()) {
+        if (refreshToken == null || refreshToken.isBlank()) {
             throw new CustomException(AuthErrorCode.REFRESH_TOKEN_MISSING);
         }
 
@@ -132,23 +134,14 @@ public class UserAuthenticationService {
      * 로그아웃 처리
      */
     @Transactional
-    public void logout(HttpServletRequest request, HttpServletResponse response) {
-
-        log.info("로그아웃 리퀘스트: {}", request.toString());
-        // 1. 쿠키에서 리프레시 토큰 추출
-        String refreshToken = cookieUtil.extractRefreshTokenFromCookie(request);
-
-        // 토큰이 없으면 예외 발생
-        if (refreshToken == null) {
-            throw new CustomException(AuthErrorCode.REFRESH_TOKEN_MISSING);
+    public ResponseCookie logout(String providedRefreshToken) {
+        // 토큰이 있다면 기존 토큰 파기
+        if (providedRefreshToken != null
+                && !providedRefreshToken.isBlank()
+                && providedRefreshToken.length() > 20) {
+            securityTokenManager.revokeRefreshToken(providedRefreshToken);
         }
-
-        // 2. 토큰이 존재하면 무효화 처리
-        securityTokenManager.revokeRefreshToken(refreshToken);
-
-        // 3. 쿠키에서 리프레시 토큰 제거
-        response.addCookie(cookieUtil.clearRefreshTokenCookie());
-
+        return cookieUtil.createEmptyRefreshCookie();
     }
 
     /**
