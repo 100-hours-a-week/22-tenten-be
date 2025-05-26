@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.auth.service;
 
 import com.kakaobase.snsapp.domain.auth.converter.AuthConverter;
+import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
 import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.entity.RevokedRefreshToken;
@@ -21,8 +22,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,44 +45,60 @@ public class UserAuthenticationService {
     private final CookieUtil cookieUtil;
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService userDetailsService;
+    private final CustomUserDetailsService customUserDetailsService;
 
     /**
      * 사용자 로그인 처리 및 인증 토큰 발급
      */
     @Transactional
-    public AuthResponseDto.LoginResponse login(String email, String password, String userAgent, String providedRefreshToken, HttpServletResponse response) {
-        // 1. 이메일로 사용자 조회
-        Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, email));
+    public AuthResponseDto.LoginResponse login(AuthRequestDto.Login request, String providedRefreshToken) {
 
-        // 2. 비밀번호 검증
-        if (!passwordEncoder.matches(password, member.getPassword())) {
-            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+        String email = request.email();
+        String password = request.password();
+        CustomUserDetails userDetails;
+
+        //이메일 인증 겸 인증객체 생성
+        try{
+            userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(email);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities()
+            );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        }catch (UsernameNotFoundException e){
+            throw new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, email);
         }
 
-        // 3. CustomUserDetailsService를 사용하여 인증 객체 생성
-        CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserById(member.getId().toString());
-
+        // 2. 비밀번호 검증
+        if (!passwordEncoder.matches(password, userDetails.getPassword())) {
+            throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
+        }
 
         // 토큰이 있다면 기존 토큰 파기
         if (!providedRefreshToken.isBlank()) {
             securityTokenManager.revokeRefreshToken(providedRefreshToken);
         }
 
-        // 5. Refresh Token 발급 및 저장
+        // 6. 액세스 토큰 생성
+        String accessToken = jwtTokenProvider.createAccessToken(userDetails);
+
+
+        return new AuthResponseDto.LoginResponse(Long.valueOf(userDetails.getId()), userDetails.getNickname(), userDetails.getClassName(), userDetails.getProfileImgUrl(), accessToken);
+    }
+
+
+    //refresh토큰 생성
+    public ResponseCookie getRefreshCookie(String userAgent){
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
         String refreshToken = securityTokenManager.createRefreshToken(
                 Long.parseLong(userDetails.getId()),
                 userAgent
         );
 
-        // 6. 액세스 토큰 생성
-        String accessToken = jwtTokenProvider.createAccessToken(userDetails);
-
-
-        // 7. 쿠키에 RefreshToken주입
-        cookieUtil.createRefreshTokenCookie(refreshToken, response);
-
-        return new AuthResponseDto.LoginResponse(member.getId(), member.getNickname(),member.getClassName(),member.getProfileImgUrl(), accessToken);
+        return cookieUtil.createRefreshTokenCookie(refreshToken);
     }
 
     /**

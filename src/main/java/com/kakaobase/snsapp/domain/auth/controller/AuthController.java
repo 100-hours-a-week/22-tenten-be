@@ -20,6 +20,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -43,8 +46,6 @@ public class AuthController {
      * Access Token은 응답 본문에, Refresh Token은 HttpOnly Secure 쿠키로 전달됩니다.
      *
      * @param request 로그인 요청 정보 (이메일, 비밀번호)
-     * @param httpRequest HTTP 요청 객체
-     * @param httpResponse HTTP 응답 객체
      * @return 액세스 토큰을 포함한 응답
      */
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인하고 JWT 토큰을 발급합니다")
@@ -57,30 +58,31 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = AuthResponseDto.RefreshTokenInvalid.class)))
     })
     @PostMapping("/tokens")
-    public CustomResponse<AuthResponseDto.LoginResponse> login(
+    public ResponseEntity<CustomResponse<AuthResponseDto.LoginResponse>>  login(
             @Parameter(description = "로그인 정보", required = true)
             @Valid @RequestBody AuthRequestDto.Login request,
             HttpServletResponse httpResponse,
-            @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String refreshToken,
-            @RequestHeader(value = "User-Agent", required = true) String userAgent
+            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String refreshToken,
+            @Parameter(hidden = true) @RequestHeader(value = "User-Agent", required = true) String userAgent
     ) {
 
         log.info("로그인 요청: {}", request.email());
 
-
         // 로그인 처리 및 토큰 발급
-        AuthResponseDto.LoginResponse result = userAuthenticationService.login(
-                request.email(),
-                request.password(),
-                userAgent,
-                refreshToken,
-                httpResponse
+        AuthResponseDto.LoginResponse response = userAuthenticationService.login(
+                request,
+                refreshToken
         );
+
+        ResponseCookie refreshCookie = userAuthenticationService.getRefreshCookie(userAgent);
 
         log.info("로그인 성공: {}", request.email());
 
         // 액세스 토큰을 응답 본문에 포함
-        return CustomResponse.success("로그인에 성공하였습니다.", result);
+        return ResponseEntity
+                .ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(CustomResponse.success("로그인에 성공하였습니다", response));
     }
 
     /**
