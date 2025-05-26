@@ -38,13 +38,13 @@ public class JwtTokenProvider {
     /**
      * 생성된 인증객체를 기반으로 Access Token을 생성합니다.
      *
-     * @param authentication 인증객체
+     * @param customUserDetail 인증객체
      */
-    public String createAccessToken(Authentication authentication) {
-        CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
-        String userId = user.getId();
-        String role = user.getRole();
-        String className = user.getClassName();
+    public String createAccessToken(CustomUserDetails customUserDetail) {
+
+        String userId = customUserDetail.getId();
+        String role = customUserDetail.getRole();
+        String className = customUserDetail.getClassName();
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);

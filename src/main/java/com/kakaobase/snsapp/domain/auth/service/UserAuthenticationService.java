@@ -59,12 +59,7 @@ public class UserAuthenticationService {
         // 3. CustomUserDetailsService를 사용하여 인증 객체 생성
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserById(member.getId().toString());
 
-        // 4. Authentication 객체 생성
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,  // 인증 완료 후에는 credentials는 null
-                userDetails.getAuthorities()
-        );
+
 
         // 5. Refresh Token 발급 및 저장
         String refreshToken = securityTokenManager.createRefreshToken(
@@ -73,7 +68,7 @@ public class UserAuthenticationService {
         );
 
         // 6. 액세스 토큰 생성
-        String accessToken = jwtTokenProvider.createAccessToken(authentication);
+        String accessToken = jwtTokenProvider.createAccessToken(userDetails);
 
 
         // 7. 쿠키에 RefreshToken주입
@@ -102,15 +97,9 @@ public class UserAuthenticationService {
         // 2. CustomUserDetailsService를 통해 인증 정보 로드
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserById(String.valueOf(userId));
 
-        // 3. 인증 객체 생성
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,
-                userDetails.getAuthorities()
-        );
 
         // 4. 새 액세스 토큰 발급
-        return jwtTokenProvider.createAccessToken(authentication);
+        return jwtTokenProvider.createAccessToken(userDetails);
     }
 
     /**
