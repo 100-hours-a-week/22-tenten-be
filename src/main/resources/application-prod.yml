@@ -6,6 +6,8 @@ spring:
 app:
   jwt:
     secure: true
+    refresh:
+      domain: ${COOKIE_DOMAIN}
 
 logging:
   level:

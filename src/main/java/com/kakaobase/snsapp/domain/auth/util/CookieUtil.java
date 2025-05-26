@@ -28,6 +28,9 @@ public class CookieUtil {
     @Value("${app.jwt.secure}")
     private boolean secureCookie;
 
+    @Value("${app.jwt.refresh.domain}")
+    private String cookieDomain;
+
     /**
      * 리프레시 토큰을 담은 쿠키를 생성합니다.
      * 생성된 쿠키는 JavaScript에서 접근할 수 없도록 HttpOnly로 설정
@@ -35,6 +38,7 @@ public class CookieUtil {
     public ResponseCookie createRefreshTokenCookie(String refreshToken) {
         return ResponseCookie.from(refreshTokenCookieName, refreshToken)
                 .path(refreshTokenCookiePath)
+                .domain(cookieDomain)
                 .maxAge(refreshTokenExpiration / 1000)
                 .httpOnly(true)
                 .secure(secureCookie)
@@ -74,6 +78,7 @@ public class CookieUtil {
         cookie.setPath(refreshTokenCookiePath);
         cookie.setHttpOnly(true);
         cookie.setSecure(secureCookie);
+        cookie.setDomain(refreshTokenCookiePath);
         return cookie;
     }
 }
