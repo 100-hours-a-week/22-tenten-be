@@ -99,12 +99,11 @@ public class AuthController {
     })
     @PostMapping("/tokens/refresh")
     public CustomResponse<AuthResponseDto.TokenResponse> refreshToken(
-            HttpServletRequest httpRequest) {
-
+            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken) {
         log.info("액세스 토큰 재발급 요청");
 
 
-        String newAccessToken = authService.refreshAuthentication(httpRequest);
+        String newAccessToken = authService.refreshAuthentication(providedRefreshToken);
 
         log.info("액세스 토큰 재발급 성공");
 

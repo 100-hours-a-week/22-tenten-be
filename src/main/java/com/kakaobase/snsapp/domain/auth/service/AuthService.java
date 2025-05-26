@@ -102,18 +102,19 @@ public class AuthService {
      * 리프레시 토큰을 사용해 새 액세스 토큰 발급
      */
     @Transactional
-    public String refreshAuthentication(HttpServletRequest httpRequest) {
+    public String refreshAuthentication(String providedRefreshToken) {
 
-        // 1. 쿠키에서 리프레시 토큰 추출
-        String refreshToken = cookieUtil.extractRefreshTokenFromCookie(httpRequest);
 
         // 토큰이 없으면 예외 발생
-        if (refreshToken == null || refreshToken.isBlank()) {
+        if (providedRefreshToken == null
+                || providedRefreshToken.isBlank()
+                || providedRefreshToken.length() < 20)
+        {
             throw new CustomException(AuthErrorCode.REFRESH_TOKEN_MISSING);
         }
 
         // 1. 리프레시 토큰 검증 및 사용자 ID 추출
-        Long userId = securityTokenManager.validateRefreshTokenAndGetUserId(refreshToken);
+        Long userId = securityTokenManager.validateRefreshTokenAndGetUserId(providedRefreshToken);
 
         // 2. CustomUserDetailsService를 통해 인증 정보 로드
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserById(String.valueOf(userId));
