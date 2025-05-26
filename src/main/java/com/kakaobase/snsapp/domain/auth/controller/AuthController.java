@@ -62,19 +62,16 @@ public class AuthController {
             @Parameter(description = "로그인 정보", required = true)
             @Valid @RequestBody AuthRequestDto.Login request,
             HttpServletResponse httpResponse,
-            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String refreshToken,
+            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken,
             @Parameter(hidden = true) @RequestHeader(value = "User-Agent", required = true) String userAgent
     ) {
 
         log.info("로그인 요청: {}", request.email());
 
         // 로그인 처리 및 토큰 발급
-        AuthResponseDto.LoginResponse response = userAuthenticationService.login(
-                request,
-                refreshToken
-        );
+        AuthResponseDto.LoginResponse response = userAuthenticationService.login(request);
 
-        ResponseCookie refreshCookie = userAuthenticationService.getRefreshCookie(userAgent);
+        ResponseCookie refreshCookie = userAuthenticationService.getRefreshCookie(providedRefreshToken, userAgent);
 
         log.info("로그인 성공: {}", request.email());
 

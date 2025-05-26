@@ -50,8 +50,8 @@ public class UserAuthenticationService {
     /**
      * 사용자 로그인 처리 및 인증 토큰 발급
      */
-    @Transactional
-    public AuthResponseDto.LoginResponse login(AuthRequestDto.Login request, String providedRefreshToken) {
+    @Transactional(readOnly = true)
+    public AuthResponseDto.LoginResponse login(AuthRequestDto.Login request) {
 
         String email = request.email();
         String password = request.password();
@@ -74,24 +74,26 @@ public class UserAuthenticationService {
             throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
         }
 
-        // 토큰이 있다면 기존 토큰 파기
-        if (!providedRefreshToken.isBlank()) {
-            securityTokenManager.revokeRefreshToken(providedRefreshToken);
-        }
-
         // 6. 액세스 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(userDetails);
 
-
+        log.debug("로그인 사용자 정보: id-{}, nickname-{}, className-{}, imgurl-{}", Long.valueOf(userDetails.getId()), userDetails.getNickname(), userDetails.getClassName(), userDetails.getProfileImgUrl());
         return new AuthResponseDto.LoginResponse(Long.valueOf(userDetails.getId()), userDetails.getNickname(), userDetails.getClassName(), userDetails.getProfileImgUrl(), accessToken);
     }
 
 
-    //refresh토큰 생성
-    public ResponseCookie getRefreshCookie(String userAgent){
+    //refresh토큰 쿠키 생성
+    @Transactional
+    public ResponseCookie getRefreshCookie(String providedRefreshToken, String userAgent){
 
+        //login메서드시 생성된 인증객체 반환
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
+        // 토큰이 있다면 기존 토큰 파기
+        if (!providedRefreshToken.isBlank()) {
+                securityTokenManager.revokeRefreshToken(providedRefreshToken);
+        }
 
         String refreshToken = securityTokenManager.createRefreshToken(
                 Long.parseLong(userDetails.getId()),
