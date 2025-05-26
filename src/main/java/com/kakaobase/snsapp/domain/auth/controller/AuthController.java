@@ -2,9 +2,7 @@ package com.kakaobase.snsapp.domain.auth.controller;
 
 import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
-import com.kakaobase.snsapp.domain.auth.service.SecurityTokenManager;
 import com.kakaobase.snsapp.domain.auth.service.AuthService;
-import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,7 +11,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,17 +32,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-    private final CookieUtil cookieUtil;
-    private final SecurityTokenManager securityTokenManager;
 
-    /**
-     * 로그인 API
-     * 이메일과 비밀번호로 로그인하여 JWT 토큰을 발급받습니다.
-     * Access Token은 응답 본문에, Refresh Token은 HttpOnly Secure 쿠키로 전달됩니다.
-     *
-     * @param request 로그인 요청 정보 (이메일, 비밀번호)
-     * @return 액세스 토큰을 포함한 응답
-     */
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인하고 JWT 토큰을 발급합니다")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "로그인 성공",
@@ -80,14 +67,7 @@ public class AuthController {
                 .body(CustomResponse.success("로그인에 성공하였습니다", response));
     }
 
-    /**
-     * 액세스 토큰 재발급 API
-     * 리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.
-     * 리프레시 토큰은 쿠키에서 자동으로 전송됩니다.
-     *
-     * @param httpRequest HTTP 요청 객체
-     * @return 새로 발급된 액세스 토큰을 포함한 응답
-     */
+
     @Operation(summary = "액세스 토큰 재발급", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "토큰 재발급 성공",
@@ -100,10 +80,10 @@ public class AuthController {
     @PostMapping("/tokens/refresh")
     public CustomResponse<AuthResponseDto.TokenResponse> refreshToken(
             @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken) {
+
         log.info("액세스 토큰 재발급 요청");
 
-
-        String newAccessToken = authService.refreshAuthentication(providedRefreshToken);
+        String newAccessToken = authService.getAccessToken(providedRefreshToken);
 
         log.info("액세스 토큰 재발급 성공");
 
@@ -136,7 +116,6 @@ public class AuthController {
 
         log.info("로그아웃 요청 수신");
 
-        // Service에 전체 로그아웃 처리 위임
         authService.logout(providedRefreshToken);
         ResponseCookie emptyRefreshCookie = authService.logout(providedRefreshToken);
 
