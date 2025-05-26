@@ -31,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final MemberRepository memberRepository;
     private final SecurityTokenManager securityTokenManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final CookieUtil cookieUtil;
@@ -116,7 +115,6 @@ public class AuthService {
 
         // 2. CustomUserDetailsService를 통해 인증 정보 로드
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserById(String.valueOf(userId));
-
 
         // 4. 새 액세스 토큰 발급
         return jwtTokenProvider.createAccessToken(userDetails);

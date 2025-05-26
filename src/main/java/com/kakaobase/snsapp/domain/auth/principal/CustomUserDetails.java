@@ -1,9 +1,6 @@
 package com.kakaobase.snsapp.domain.auth.principal;
 
-import com.kakaobase.snsapp.domain.members.entity.Member;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
