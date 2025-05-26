@@ -45,7 +45,6 @@ public class SecurityTokenManager {
     public String createRefreshToken(Long userId, String userAgent) {
         // 1. 랜덤 토큰 생성
         String rawToken = generateSecureToken();
-        String hashedToken = hashToken(rawToken);
 
         // 2. 만료 시간 계산
         LocalDateTime expiryTime = LocalDateTime.now()
@@ -54,7 +53,7 @@ public class SecurityTokenManager {
         // 3. AuthConverter를 사용하여 토큰 엔티티 생성 및 저장
         AuthToken tokenEntity = authConverter.toAuthTokenEntity(
                 userId,
-                hashedToken,
+                rawToken,
                 userAgent,
                 expiryTime
         );
