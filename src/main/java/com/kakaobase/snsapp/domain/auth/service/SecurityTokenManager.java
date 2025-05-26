@@ -45,6 +45,7 @@ public class SecurityTokenManager {
     public String createRefreshToken(Long userId, String userAgent) {
         // 1. 랜덤 토큰 생성
         String rawToken = generateSecureToken();
+        String hashedToken = hashToken(rawToken);
 
         // 2. 만료 시간 계산
         LocalDateTime expiryTime = LocalDateTime.now()
@@ -53,7 +54,7 @@ public class SecurityTokenManager {
         // 3. AuthConverter를 사용하여 토큰 엔티티 생성 및 저장
         AuthToken tokenEntity = authConverter.toAuthTokenEntity(
                 userId,
-                rawToken,
+                hashedToken,
                 userAgent,
                 expiryTime
         );
@@ -100,6 +101,21 @@ public class SecurityTokenManager {
         revokeToken(tokenEntity);
     }
 
+    /**
+     * 토큰 취소 처리 (내부 메서드)
+     */
+    @Transactional
+    public void revokeToken(AuthToken token) {
+        // AuthConverter를 사용하여 취소된 토큰 엔티티 생성
+        RevokedRefreshToken revokedToken = authConverter.toRevokedTokenEntity(
+                token.getRefreshTokenHash(),
+                token.getMemberId()
+        );
+
+        // 기존 토큰 삭제 및 취소 토큰 저장
+        authTokenRepository.delete(token);
+        revokedTokenRepository.save(revokedToken);
+    }
 
     /**
      * 현재 토큰을 제외한 모든 토큰 취소
@@ -116,21 +132,7 @@ public class SecurityTokenManager {
         }
     }
 
-    /**
-     * 토큰 취소 처리 (내부 메서드)
-     */
-    @Transactional
-    public void revokeToken(AuthToken token) {
-        // AuthConverter를 사용하여 취소된 토큰 엔티티 생성
-        RevokedRefreshToken revokedToken = authConverter.toRevokedTokenEntity(
-                token.getRefreshTokenHash(),
-                token.getMemberId()
-        );
 
-        // 기존 토큰 삭제 및 취소 토큰 저장
-        authTokenRepository.delete(token);
-        revokedTokenRepository.save(revokedToken);
-    }
 
     /**
      * 토큰이 취소되었는지 확인
