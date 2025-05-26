@@ -12,7 +12,6 @@ import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
 import com.kakaobase.snsapp.global.security.jwt.JwtTokenProvider;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseCookie;
@@ -102,8 +101,7 @@ public class AuthService {
      * 리프레시 토큰을 사용해 새 액세스 토큰 발급
      */
     @Transactional
-    public String refreshAuthentication(String providedRefreshToken) {
-
+    public String getAccessToken(String providedRefreshToken) {
 
         // 토큰이 없으면 예외 발생
         if (providedRefreshToken == null
