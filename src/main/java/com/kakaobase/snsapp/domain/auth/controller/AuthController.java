@@ -60,24 +60,20 @@ public class AuthController {
     public CustomResponse<AuthResponseDto.LoginResponse> login(
             @Parameter(description = "로그인 정보", required = true)
             @Valid @RequestBody AuthRequestDto.Login request,
-            HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse) {
+            HttpServletResponse httpResponse,
+            @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String refreshToken,
+            @RequestHeader(value = "User-Agent", required = true) String userAgent
+    ) {
 
         log.info("로그인 요청: {}", request.email());
 
-        // 쿠키에서 리프레시 토큰 추출
-        String cookieValue = cookieUtil.extractRefreshTokenFromCookie(httpRequest);
-
-        // 토큰이 있다면 기존 토큰 파기
-        if (cookieValue != null) {
-            securityTokenManager.revokeRefreshToken(cookieValue);
-        }
 
         // 로그인 처리 및 토큰 발급
         AuthResponseDto.LoginResponse result = userAuthenticationService.login(
                 request.email(),
                 request.password(),
-                httpRequest.getHeader("User-Agent"),
+                userAgent,
+                refreshToken,
                 httpResponse
         );
 
