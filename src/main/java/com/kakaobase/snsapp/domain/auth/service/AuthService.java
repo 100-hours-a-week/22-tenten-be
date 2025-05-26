@@ -1,25 +1,18 @@
 package com.kakaobase.snsapp.domain.auth.service;
 
-import com.kakaobase.snsapp.domain.auth.converter.AuthConverter;
 import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
-import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
-import com.kakaobase.snsapp.domain.auth.entity.RevokedRefreshToken;
 import com.kakaobase.snsapp.domain.auth.exception.AuthErrorCode;
 import com.kakaobase.snsapp.domain.auth.exception.AuthException;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetailsService;
-import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
-import com.kakaobase.snsapp.domain.auth.repository.RevokedRefreshTokenRepository;
 import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 
-import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
 import com.kakaobase.snsapp.global.security.jwt.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseCookie;
@@ -37,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserAuthenticationService {
+public class AuthService {
 
     private final MemberRepository memberRepository;
     private final SecurityTokenManager securityTokenManager;

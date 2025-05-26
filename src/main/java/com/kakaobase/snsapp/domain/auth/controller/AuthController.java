@@ -3,7 +3,7 @@ package com.kakaobase.snsapp.domain.auth.controller;
 import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
 import com.kakaobase.snsapp.domain.auth.service.SecurityTokenManager;
-import com.kakaobase.snsapp.domain.auth.service.UserAuthenticationService;
+import com.kakaobase.snsapp.domain.auth.service.AuthService;
 import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class AuthController {
 
-    private final UserAuthenticationService userAuthenticationService;
+    private final AuthService authService;
     private final CookieUtil cookieUtil;
     private final SecurityTokenManager securityTokenManager;
 
@@ -67,9 +67,9 @@ public class AuthController {
         log.info("로그인 요청: {}", request.email());
 
         // 로그인 처리 및 토큰 발급
-        AuthResponseDto.LoginResponse response = userAuthenticationService.login(request);
+        AuthResponseDto.LoginResponse response = authService.login(request);
 
-        ResponseCookie refreshCookie = userAuthenticationService.getRefreshCookie(providedRefreshToken, userAgent);
+        ResponseCookie refreshCookie = authService.getRefreshCookie(providedRefreshToken, userAgent);
 
         log.info("로그인 성공: {}", request.email());
 
@@ -104,7 +104,7 @@ public class AuthController {
         log.info("액세스 토큰 재발급 요청");
 
 
-        String newAccessToken = userAuthenticationService.refreshAuthentication(httpRequest);
+        String newAccessToken = authService.refreshAuthentication(httpRequest);
 
         log.info("액세스 토큰 재발급 성공");
 
@@ -138,8 +138,8 @@ public class AuthController {
         log.info("로그아웃 요청 수신");
 
         // Service에 전체 로그아웃 처리 위임
-        userAuthenticationService.logout(providedRefreshToken);
-        ResponseCookie emptyRefreshCookie = userAuthenticationService.logout(providedRefreshToken);
+        authService.logout(providedRefreshToken);
+        ResponseCookie emptyRefreshCookie = authService.logout(providedRefreshToken);
 
         return ResponseEntity
                 .ok()
