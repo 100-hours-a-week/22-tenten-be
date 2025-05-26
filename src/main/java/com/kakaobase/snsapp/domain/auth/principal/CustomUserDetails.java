@@ -32,7 +32,7 @@ public class CustomUserDetails implements UserDetails {
 
 
     //JWT인증 시 사용
-    public CustomUserDetails(String id, String role, String className,boolean isEnabled) {
+    public CustomUserDetails(String id, String role, String className, boolean isEnabled) {
         this.id = id;
         this.role = role;
         this.className = className;
