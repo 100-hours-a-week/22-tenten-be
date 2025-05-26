@@ -2,12 +2,10 @@ package com.kakaobase.snsapp.domain.auth.controller;
 
 import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
-import com.kakaobase.snsapp.domain.auth.exception.AuthErrorCode;
 import com.kakaobase.snsapp.domain.auth.service.SecurityTokenManager;
 import com.kakaobase.snsapp.domain.auth.service.UserAuthenticationService;
 import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
-import com.kakaobase.snsapp.global.error.exception.CustomException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -122,8 +120,6 @@ public class AuthController {
      * 현재 사용 중인 토큰을 무효화하고 로그아웃합니다.
      * 리프레시 토큰은 서버에서 블랙리스트에 등록되고, 쿠키에서 제거됩니다.
      *
-     * @param httpRequest HTTP 요청 객체
-     * @param httpResponse HTTP 응답 객체
      * @return 로그아웃 성공 메시지
      */
     @Operation(summary = "로그아웃", description = "현재 사용 중인 토큰을 무효화하고 로그아웃합니다")
@@ -134,15 +130,21 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = AuthResponseDto.RefreshTokenMissing.class)))
     })
     @DeleteMapping("/tokens")
-    public CustomResponse<Void> logout(
-            HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse) {
+    public ResponseEntity<CustomResponse<Void>> logout(
+            HttpServletResponse httpResponse,
+            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken
+            ) {
 
         log.info("로그아웃 요청 수신");
 
         // Service에 전체 로그아웃 처리 위임
-        userAuthenticationService.logout(httpRequest, httpResponse);
+        userAuthenticationService.logout(providedRefreshToken);
+        ResponseCookie emptyRefreshCookie = userAuthenticationService.logout(providedRefreshToken);
 
-        return CustomResponse.success("정상적으로 로그아웃되었습니다.");
+        return ResponseEntity
+                .ok()
+                .header(HttpHeaders.SET_COOKIE, emptyRefreshCookie.toString())
+                .body(CustomResponse.success("정상적으로 로그아웃되었습니다."));
+
     }
 }

@@ -72,13 +72,14 @@ public class CookieUtil {
      *
      * @return 만료된 쿠키
      */
-    public Cookie clearRefreshTokenCookie() {
-        Cookie cookie = new Cookie(refreshTokenCookieName, null);
-        cookie.setMaxAge(0);  // 즉시 만료
-        cookie.setPath(refreshTokenCookiePath);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(secureCookie);
-        cookie.setDomain(refreshTokenCookiePath);
-        return cookie;
+    public ResponseCookie createEmptyRefreshCookie() {
+        return ResponseCookie.from(refreshTokenCookieName, "")
+                .maxAge(0) // 즉시 만료
+                .path(refreshTokenCookiePath)
+                .httpOnly(true)
+                .secure(secureCookie)
+                .domain(cookieDomain)
+                .build();
+
     }
 }
