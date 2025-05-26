@@ -2,7 +2,6 @@ package com.kakaobase.snsapp.domain.auth.util;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
@@ -33,16 +32,14 @@ public class CookieUtil {
      * 리프레시 토큰을 담은 쿠키를 생성합니다.
      * 생성된 쿠키는 JavaScript에서 접근할 수 없도록 HttpOnly로 설정
      */
-    public void createRefreshTokenCookie(String refreshToken, HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from(refreshTokenCookieName, refreshToken)
+    public ResponseCookie createRefreshTokenCookie(String refreshToken) {
+        return ResponseCookie.from(refreshTokenCookieName, refreshToken)
                 .path(refreshTokenCookiePath)
                 .maxAge(refreshTokenExpiration / 1000)
                 .httpOnly(true)
                 .secure(secureCookie)
                 .sameSite("Lax")
                 .build();
-
-        response.addHeader("Set-Cookie", cookie.toString()); // 그대로 Set-Cookie 헤더로 추가
     }
 
 
