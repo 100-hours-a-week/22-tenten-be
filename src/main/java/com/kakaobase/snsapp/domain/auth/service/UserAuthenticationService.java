@@ -46,7 +46,7 @@ public class UserAuthenticationService {
      * 사용자 로그인 처리 및 인증 토큰 발급
      */
     @Transactional
-    public AuthResponseDto.LoginResponse login(String email, String password, String userAgent, HttpServletResponse response) {
+    public AuthResponseDto.LoginResponse login(String email, String password, String userAgent, String providedRefreshToken, HttpServletResponse response) {
         // 1. 이메일로 사용자 조회
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, email));
@@ -60,6 +60,10 @@ public class UserAuthenticationService {
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserById(member.getId().toString());
 
 
+        // 토큰이 있다면 기존 토큰 파기
+        if (!providedRefreshToken.isBlank()) {
+            securityTokenManager.revokeRefreshToken(providedRefreshToken);
+        }
 
         // 5. Refresh Token 발급 및 저장
         String refreshToken = securityTokenManager.createRefreshToken(
