@@ -45,6 +45,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new CustomUserDetails(
                 member.getEmail(),
                 member.getPassword(),
+                member.getNickname(),
                 member.getId().toString(),
                 member.getRole(),
                 member.getClassName(),
@@ -79,6 +80,11 @@ public class CustomUserDetailsService implements UserDetailsService {
                 });
 
 
-        return new CustomUserDetails(member.getId().toString(), member.getRole(), member.getClassName(), member.isEnabled());
+        return new CustomUserDetails(
+                member.getId().toString(),
+                member.getRole(),
+                member.getClassName(),
+                member.getNickname(),
+                member.isEnabled());
     }
 }

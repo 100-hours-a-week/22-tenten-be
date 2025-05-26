@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.auth.principal;
 
 import com.kakaobase.snsapp.domain.members.entity.Member;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,22 +25,25 @@ public class CustomUserDetails implements UserDetails {
     private final String id;
     private final String role;
     private final String className;
+    private final String nickname;
     private final boolean isEnabled;
 
 
 
     //JWT인증 시 사용
-    public CustomUserDetails(String id, String role, String className, boolean isEnabled) {
+    public CustomUserDetails(String id, String role, String className, String nickname,boolean isEnabled) {
         this.id = id;
         this.role = role;
         this.className = className;
+        this.nickname = nickname;
         this.isEnabled = isEnabled;
     }
 
     //로그인 시 사용
-    public CustomUserDetails(String email, String password, String id, String role, String className, boolean isEnabled) {
+    public CustomUserDetails(String email, String password, String id, String role, String className, String nickname, boolean isEnabled) {
         this.email = email;
         this.password = password;
+        this.nickname = nickname;
         this.id = id;
         this.role = role;
         this.className = className;
