@@ -95,8 +95,14 @@ public class SecurityTokenManager {
     public void revokeRefreshToken(String rawToken) {
         String hashedToken = hashToken(rawToken);
 
+        boolean exists = authTokenRepository.existsByRefreshTokenHash(hashedToken);
+        if (!exists) {
+            log.debug("리프레시 토큰 없음 - 무시하고 통과");
+            return;
+        }
+
         AuthToken tokenEntity = authTokenRepository.findByRefreshTokenHash(hashedToken)
-                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID));
+                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID, "해당 리프레시 토큰값을 DB에서 조회할 수 없음"));
 
         revokeToken(tokenEntity);
     }

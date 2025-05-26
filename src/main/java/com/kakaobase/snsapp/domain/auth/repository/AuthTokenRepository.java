@@ -20,6 +20,9 @@ public interface AuthTokenRepository extends JpaRepository<AuthToken, Long> {
      */
     Optional<AuthToken> findByRefreshTokenHash(String refreshTokenHash);
 
+
+    boolean existsByRefreshTokenHash(String refreshTokenHash);
+
     /**
      * 디바이스 ID와 사용자 ID로 AuthToken 조회 (디바이스 기반 로그아웃용)
      *
@@ -57,4 +60,5 @@ public interface AuthTokenRepository extends JpaRepository<AuthToken, Long> {
     @Modifying
     @Query("DELETE FROM AuthToken a WHERE a.expiresAt < :expirationTime")
     int deleteAllExpiredTokensBefore(@Param("expirationTime") LocalDateTime expirationTime);
+
 }
