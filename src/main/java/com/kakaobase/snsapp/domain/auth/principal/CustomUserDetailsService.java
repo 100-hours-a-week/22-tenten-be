@@ -49,6 +49,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 member.getId().toString(),
                 member.getRole(),
                 member.getClassName(),
+                member.getProfileImgUrl(),
                 member.isEnabled()
         );
     }
@@ -84,7 +85,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 member.getId().toString(),
                 member.getRole(),
                 member.getClassName(),
-                member.getNickname(),
                 member.isEnabled());
     }
 }

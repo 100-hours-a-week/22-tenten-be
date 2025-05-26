@@ -22,31 +22,32 @@ public class CustomUserDetails implements UserDetails {
 
     private transient String email;
     private transient String password;
+    private transient String nickname;
+    private transient String profileImgUrl;
     private final String id;
     private final String role;
     private final String className;
-    private final String nickname;
     private final boolean isEnabled;
 
 
 
     //JWT인증 시 사용
-    public CustomUserDetails(String id, String role, String className, String nickname,boolean isEnabled) {
+    public CustomUserDetails(String id, String role, String className,boolean isEnabled) {
         this.id = id;
         this.role = role;
         this.className = className;
-        this.nickname = nickname;
         this.isEnabled = isEnabled;
     }
 
     //로그인 시 사용
-    public CustomUserDetails(String email, String password, String id, String role, String className, String nickname, boolean isEnabled) {
+    public CustomUserDetails(String email, String password, String id, String role, String className, String nickname, String  profileImgUrl, boolean isEnabled) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.id = id;
         this.role = role;
         this.className = className;
+        this.profileImgUrl = profileImgUrl;
         this.isEnabled = isEnabled;
     }
 
