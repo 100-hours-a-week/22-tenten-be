@@ -1,8 +1,5 @@
 package com.kakaobase.snsapp.global.common.s3.service;
 
-import com.amazonaws.HttpMethod;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.kakaobase.snsapp.global.common.s3.dto.PresignedUrlResponseDto;
 import com.kakaobase.snsapp.global.common.s3.exception.S3ErrorCode;
 import com.kakaobase.snsapp.global.common.s3.exception.S3Exception;
@@ -11,9 +8,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.net.URL;
-import java.util.Date;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,24 +31,31 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class S3Service {
 
-    private final AmazonS3 amazonS3;
+    private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
 
     /**
      * S3 버킷 이름
      */
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${spring.cloud.aws.s3.bucket}")
     private String bucketName;
+
+    /**
+     * AWS 리전
+     */
+    @Value("${spring.cloud.aws.region.static}")
+    private String region;
 
     /**
      * Presigned URL 만료 시간 (초)
      */
-    @Value("${cloud.aws.s3.expiration-time:300}")  // 기본값 5분
+    @Value("${spring.cloud.aws.s3.expiration-time:300}")  // 기본값 5분
     private int expirationTime;
 
     /**
      * 최대 파일 크기 (바이트)
      */
-    @Value("${cloud.aws.s3.max-file-size:10485760}")  // 기본값 10MB
+    @Value("${spring.cloud.aws.s3.max-file-size:10485760}")  // 기본값 10MB
     private long maxFileSize;
 
     /**
@@ -82,19 +92,22 @@ public class S3Service {
             // 파일 경로 및 이름 생성 (타입에 따라 폴더 구분)
             String objectKey = generateObjectKey(type, fileName);
 
-            // 만료 시간 설정
-            Date expiration = getExpirationTime();
+            // PutObjectRequest 생성
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .contentType(mimeType)
+                    .build();
 
-            // Presigned URL 생성 요청 객체 생성
-            GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName, objectKey)
-                    .withMethod(HttpMethod.PUT)
-                    .withExpiration(expiration);
-
-            // Content-Type 설정
-            generatePresignedUrlRequest.addRequestParameter("Content-Type", mimeType);
+            // Presigned PUT URL 생성 요청
+            PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofSeconds(expirationTime))
+                    .putObjectRequest(putObjectRequest)
+                    .build();
 
             // Presigned URL 생성
-            URL presignedUrl = amazonS3.generatePresignedUrl(generatePresignedUrlRequest);
+            PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
+            URL presignedUrl = presignedRequest.url();
 
             // 이미지 접근 URL 생성
             String imageUrl = generateImageUrl(objectKey);
@@ -121,7 +134,7 @@ public class S3Service {
             return false;
         }
 
-        String bucketDomain = bucketName + ".s3." + amazonS3.getRegion() + ".amazonaws.com";
+        String bucketDomain = bucketName + ".s3." + region + ".amazonaws.com";
         return imageUrl.contains(bucketDomain);
     }
 
@@ -134,14 +147,19 @@ public class S3Service {
     public void deleteObject(String imageUrl) {
         try {
             String objectKey = extractObjectKeyFromUrl(imageUrl);
-            amazonS3.deleteObject(bucketName, objectKey);
+
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .build();
+
+            s3Client.deleteObject(deleteObjectRequest);
             log.info("S3 객체 삭제 완료: {}", objectKey);
         } catch (Exception e) {
             log.error("S3 객체 삭제 실패: {}", imageUrl, e);
             throw new S3Exception(GeneralErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
-
 
     /**
      * 타입별 S3 객체 키를 생성합니다.
@@ -184,19 +202,6 @@ public class S3Service {
     }
 
     /**
-     * Presigned URL의 만료 시간을 설정합니다.
-     *
-     * @return 만료 시간
-     */
-    private Date getExpirationTime() {
-        Date expiration = new Date();
-        long expTimeMillis = expiration.getTime();
-        expTimeMillis += expirationTime * 1000; // 초 -> 밀리초 변환
-        expiration.setTime(expTimeMillis);
-        return expiration;
-    }
-
-    /**
      * 객체 키로부터 이미지 URL을 생성합니다.
      *
      * @param objectKey S3 객체 키
@@ -204,7 +209,7 @@ public class S3Service {
      */
     private String generateImageUrl(String objectKey) {
         return String.format("https://%s.s3.%s.amazonaws.com/%s",
-                bucketName, amazonS3.getRegion(), objectKey);
+                bucketName, region, objectKey);
     }
 
     /**
@@ -215,7 +220,7 @@ public class S3Service {
      */
     private String extractObjectKeyFromUrl(String imageUrl) {
         String baseUrl = String.format("https://%s.s3.%s.amazonaws.com/",
-                bucketName, amazonS3.getRegion());
+                bucketName, region);
         return imageUrl.substring(baseUrl.length());
     }
 }
