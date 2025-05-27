@@ -32,18 +32,6 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-  cloud:
-    aws:
-      credentials:
-        access-key: ${AWS_ACCESS_KEY}  # AWS IAM 사용자의 액세스 키
-        secret-key: ${AWS_SECRIT_KEY}  # AWS IAM 사용자의 시크릿 키
-      region:
-        static: ap-northeast-2  # 사용할 AWS 리전 (서울 리전)
-      s3:
-        bucket: ${BUCKET_NAME}      # 사용할 S3 버킷 이름
-        expiration-time: 300             # Presigned URL 만료 시간(초)
-        max-file-size: 10485760          # 최대 파일 크기 (10MB)
-
 server:
   forward-headers-strategy: framework
   
@@ -58,6 +46,18 @@ app:
       expiration-time: 604800000 # 7일
       token-name: kakaobase_refresh_token
       path: api/auth/tokens
+
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}  # AWS IAM 사용자의 액세스 키
+        secret-key: ${AWS_SECRIT_KEY}  # AWS IAM 사용자의 시크릿 키
+      region:
+        static: ap-northeast-2  # 사용할 AWS 리전 (서울 리전)
+      s3:
+        bucket: ${BUCKET_NAME}      # 사용할 S3 버킷 이름
+        expiration-time: 300             # Presigned URL 만료 시간(초)
+        max-file-size: 10485760          # 최대 파일 크기 (10MB)
 
 ai:
   server:
