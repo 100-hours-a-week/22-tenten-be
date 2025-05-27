@@ -37,8 +37,9 @@ public class AccessChecker {
      */
     public boolean hasAccessToBoard(String postType, CustomUserDetails userDetails) {
         // 인증되지 않은 사용자는 'all' 게시판만 접근 가능
-        if (userDetails == null) {
-            return "all".equalsIgnoreCase(postType);
+        if (userDetails == null ||
+            userDetails.isEnabled()) {
+            throw new PostException(GeneralErrorCode.FORBIDDEN, "postType");
         }
 
         // 관리자, 봇 권한이 있는 경우 모든 게시판 접근 가능
@@ -91,7 +92,7 @@ public class AccessChecker {
         }
 
         // 사용자 ID 확인
-        Long memberId = Long.valueOf(userDetails.getId());;
+        Long memberId = Long.valueOf(userDetails.getId());
         if (memberId == null) {
             return false;
         }
@@ -118,7 +119,7 @@ public class AccessChecker {
         }
 
         // 사용자 ID 확인
-        Long memberId = Long.valueOf(userDetails.getId());;
+        Long memberId = Long.valueOf(userDetails.getId());
         if (memberId == null) {
             return false;
         }
@@ -164,7 +165,7 @@ public class AccessChecker {
             return true;
         }
 
-        Long memberId = Long.valueOf(userDetails.getId());;
+        Long memberId = Long.valueOf(userDetails.getId());
         if (memberId == null) {
             return false;
         }
