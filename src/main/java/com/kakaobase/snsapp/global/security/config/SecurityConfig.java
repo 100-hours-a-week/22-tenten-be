@@ -66,7 +66,6 @@ public class SecurityConfig {
                         .requestMatchers("/users/email/verification-requests").permitAll()
                         .requestMatchers("/users/email/verification").permitAll()
                         .requestMatchers("/users").permitAll()
-                        .requestMatchers("/posts/{postType}").permitAll()
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
