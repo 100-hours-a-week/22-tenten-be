@@ -4,11 +4,11 @@ import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.entity.PostImage;
-import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
+import com.kakaobase.snsapp.domain.posts.exception.PostException;
+import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Post 도메인의 Entity와 DTO 간 변환을 담당하는 Converter 클래스
@@ -93,7 +93,7 @@ public class PostConverter {
         );
 
         // 이미지 URL 가져오기 (첫 번째 이미지만 사용)
-        String imageUrl = postImages.isEmpty() ? null : postImages.get(0).getImgUrl().toString();
+        String imageUrl = postImages.isEmpty() ? null : postImages.get(0).getImgUrl();
 
 
         // 상세 정보 생성
@@ -252,7 +252,7 @@ public class PostConverter {
             String enumFormat = postType.toUpperCase();
             return Post.BoardType.valueOf(enumFormat);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("유효하지 않은 게시판 타입입니다: " + postType);
+            throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "postType");
         }
     }
 
