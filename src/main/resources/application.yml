@@ -34,6 +34,8 @@ spring:
 
 server:
   forward-headers-strategy: framework
+  servlet:
+    context-path: /api
 
 app:
   jwt:
@@ -62,13 +64,3 @@ cloud:
 ai:
   server:
     url: ${AI_SERVER_URL}
-
-springdoc:
-  api-docs:
-    path: /api/v3/api-docs
-  swagger-ui:
-    path: /api/swagger-ui
-    url: /api/v3/api-docs/swagger-config
-server:
-  servlet:
-    context-path: /api
