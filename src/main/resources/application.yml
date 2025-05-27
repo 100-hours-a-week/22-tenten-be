@@ -62,3 +62,7 @@ cloud:
 ai:
   server:
     url: ${AI_SERVER_URL}
+
+server:
+  servlet:
+    context-path: /api
