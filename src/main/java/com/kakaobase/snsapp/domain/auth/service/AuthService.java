@@ -51,11 +51,6 @@ public class AuthService {
         //이메일 인증 겸 인증객체 생성
         try{
             userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(email);
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities()
-            );
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
         }catch (UsernameNotFoundException e){
             throw new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, email);
         }
@@ -64,6 +59,12 @@ public class AuthService {
         if (!passwordEncoder.matches(password, userDetails.getPassword())) {
             throw new AuthException(AuthErrorCode.INVALID_PASSWORD);
         }
+
+        // 3. 모든 검증이 완료된 후에 인증 객체 생성
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         // 6. 액세스 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(userDetails);
