@@ -34,8 +34,9 @@ dependencies {
     //implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:2.7.0'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 
-    //AWS S3
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.678'
+    //AWS
+    implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.0.2") // BOM
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
 
     //RDB
     implementation 'mysql:mysql-connector-java:8.0.33'
@@ -58,6 +59,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     //discord webhook
