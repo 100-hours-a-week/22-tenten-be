@@ -1,0 +1,107 @@
+# src/test/resources/application.yml
+
+spring:
+  application:
+  # 테스트 시 불필요한 자동 설정 비활성화
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
+      - io.awspring.cloud.autoconfigure.s3.S3AutoConfiguration
+
+  # 데이터베이스 설정 (H2 인메모리)
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # H2 콘솔 설정 (테스트 시 디버깅용)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # JPA 설정
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop  # 테스트 시작 시 생성, 종료 시 삭제
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+        default_batch_fetch_size: 100
+
+  # SQL 로깅 설정
+  sql:
+    init:
+      mode: embedded
+
+  # 메일 설정 (테스트용 - 실제 전송 안함)
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+  cloud:
+    aws:
+      credentials:
+        access-key: test-access-key
+        secret-key: test-secret-key
+      region:
+        static: ap-northeast-2
+      s3:
+        bucket: test-bucket
+
+# JWT 설정 (테스트용)
+app:
+  jwt:
+    secret: test-jwt-secret-key-for-testing-minimum-256-bits-required-for-hmac-sha256-algorithm
+    issuer: kakaobase-test
+    audience: web-test
+    secure: false
+    access:
+      expiration-time: 3600000 # 1시간 (테스트용으로 길게)
+    refresh:
+      expiration-time: 86400000 # 1일 (테스트용으로 짧게)
+      token-name: kakaobase_test_refresh_token
+      path: /auth/tokens
+      domain: localhost
+
+
+# AI 서버 설정 (테스트용)
+ai:
+  server:
+    url: http://localhost:8080/mock-ai
+
+# 로깅 설정
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.amazonaws.util.EC2MetadataUtils: ERROR
+    com.amazonaws.services.s3: DEBUG
+    com.kakaobase.snsapp.global.security: DEBUG
+    com.kakaobase.snsapp.domain.auth: DEBUG
+    com.kakaobase.snsapp.domain.posts: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    root: INFO
+
+# 테스트 전용 설정들
+test:
+  auto-config-test-database: replace
+
+# 테스트 실행 속도 향상을 위한 설정
+management:
+  endpoints:
+    enabled-by-default: false
