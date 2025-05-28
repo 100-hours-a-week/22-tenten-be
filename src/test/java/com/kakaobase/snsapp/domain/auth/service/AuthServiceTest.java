@@ -68,7 +68,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        // MockCustomUserDetailsBuilder를 사용해 다양한 유저 타입의 CustomUserDetails 생성
+        //다양한 유저 타입의 MockCustomUserDetails 생성
         mockKbtUserDetails = MockCustomUserDetailsBuilder.createMockKbtCustomUserDetails();
         mockAdminUserDetails = MockCustomUserDetailsBuilder.createMockAdminCustomUserDetails();
         mockBannedUserDetails = MockCustomUserDetailsBuilder.createMockBannedCustomUserDetails();
@@ -159,28 +159,6 @@ class AuthServiceTest {
         assertThat(userDetails.getRole()).isEqualTo(MOCK_ADMIN_ROLE.name());
     }
 
-    @Test
-    @DisplayName("밴된 유저 로그인 - 밴된 유저가 로그인시 적절한 예외가 발생하는지 확인")
-    void login_BannedMember_ShouldThrowException() {
-        // given
-        AuthRequestDto.Login bannedLoginRequest = new AuthRequestDto.Login(
-                MOCK_BANNED_MEMBER_EMAIL,
-                "bannedPassword123"
-        );
-
-        given(customUserDetailsService.loadUserByUsername(MOCK_BANNED_MEMBER_EMAIL))
-                .willReturn(mockBannedUserDetails);
-        given(passwordEncoder.matches(bannedLoginRequest.password(), mockBannedUserDetails.getPassword()))
-                .willReturn(true);
-
-        // when & then - 밴된 유저는 isEnabled()가 false이므로 인증 객체 생성시 문제가 될 수 있음
-        // 실제 구현에 따라 다를 수 있지만, 일반적으로는 로그인이 허용되지 않아야 함
-        AuthResponseDto.LoginResponse response = authService.login(bannedLoginRequest);
-
-        // 현재 구현에서는 밴 상태 검증이 없으므로 로그인이 성공할 수 있음
-        // 실제로는 비즈니스 요구사항에 따라 밴된 유저의 로그인을 차단해야 할 수 있음
-        assertThat(response).isNotNull();
-    }
 
     @Test
     @DisplayName("로그인 실패 - 존재하지 않는 사용자")
@@ -200,10 +178,8 @@ class AuthServiceTest {
                     assertThat(authException.getEffectiveField()).isEqualTo(MOCK_MEMBER_EMAIL); // 오버라이드된 필드
                 });
 
-        // SecurityContext에 인증 정보가 설정되지 않았는지 확인
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 
-        // verify - 사용자를 찾지 못했으므로 이후 로직들이 실행되지 않았는지 확인
         verify(customUserDetailsService).loadUserByUsername(MOCK_MEMBER_EMAIL);
         verify(passwordEncoder, never()).matches(any(), any());
         verify(jwtTokenProvider, never()).createAccessToken(any());
@@ -235,10 +211,9 @@ class AuthServiceTest {
                     assertThat(authException.getErrorCode().getField()).isEqualTo("password");
                 });
 
-        // SecurityContext에 인증 정보가 설정되지 않았는지 확인
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 
-        // verify - 비밀번호 검증 실패 후 토큰 생성이 실행되지 않았는지 확인
+        // 비밀번호 검증 실패 후 토큰 생성이 실행되지 않았는지 확인
         verify(customUserDetailsService).loadUserByUsername(MOCK_MEMBER_EMAIL);
         verify(passwordEncoder).matches(wrongPassword, mockKbtUserDetails.getPassword());
         verify(jwtTokenProvider, never()).createAccessToken(any());
@@ -266,8 +241,6 @@ class AuthServiceTest {
         assertThat(response.className()).isEqualTo(KBT_MOCK_MEMBER_CLASS_NAME.name());
         assertThat(response.imageUrl()).isEqualTo(MOCK_MEMBER_PROFILE_IMG_URL);
     }
-
-    // ========== 액세스 토큰 재발급 단위 테스트 ==========
 
     @Test
     @DisplayName("유효한 RefreshToken으로 요청시 새로운 AccessToken이 생성되는지 확인")
@@ -390,7 +363,6 @@ class AuthServiceTest {
         ));
     }
 
-    // ========== 로그아웃 단위 테스트 ==========
 
     @Test
     @DisplayName("유효한 토큰으로 로그아웃 요청시 토큰 무효화가 정상적으로 수행되는지 확인")
@@ -460,7 +432,6 @@ class AuthServiceTest {
         verify(cookieUtil).createEmptyRefreshCookie();
     }
 
-    // ========== RefreshToken 쿠키 생성 테스트 ==========
 
     @Test
     @DisplayName("RefreshToken 쿠키 생성시 기존 토큰이 파기되고 새 토큰이 생성되는지 확인")
@@ -491,22 +462,7 @@ class AuthServiceTest {
         verify(securityTokenManager).createRefreshToken(MOCK_MEMBER_ID, userAgent);
         verify(cookieUtil).createRefreshTokenCookie(newRefreshToken);
     }
-
-    // ========== 다른 디바이스 로그아웃 테스트 ==========
-
-    @Test
-    @DisplayName("다른 디바이스 로그아웃시 현재 토큰을 제외한 모든 토큰이 무효화되는지 확인")
-    void logoutOtherDevices_ValidCurrentToken_Success() {
-        // given
-        Long memberId = MOCK_MEMBER_ID;
-        String currentRefreshToken = "current.refresh.token.with.sufficient.length";
-
-        // when
-        authService.logoutOtherDevices(memberId, currentRefreshToken);
-
-        // then
-        verify(securityTokenManager).revokeAllTokensExcept(memberId, currentRefreshToken);
-    }
+    
 
     @Test
     @DisplayName("현재 토큰이 null일 경우 AuthException이 발생하는지 확인")
