@@ -127,11 +127,7 @@ public class AccessChecker {
      * @param userDetails 인증된 사용자 정보
      * @return 권한이 있으면 true, 아니면 false
      */
-    public boolean canCommentOnPost(Long postId, CustomUserDetails userDetails) {
-        // 로그인한 사용자만 댓글 작성 가능
-        if (userDetails == null) {
-            return false;
-        }
+    public boolean canAccessOnComments(Long postId, CustomUserDetails userDetails) {
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));

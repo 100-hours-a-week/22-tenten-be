@@ -125,7 +125,7 @@ public class PostController {
      */
     @DeleteMapping("/{postType}/{postId}")
     @Operation(summary = "게시글 삭제", description = "게시글을 삭제합니다.")
-    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal) and @accessChecker.isPostOwner(#postId, authentication.principal)")
+    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal) and @accessChecker.isPostOwner(#postId, authentication.principal)")
     public ResponseEntity<PostResponseDto.PostDeleteResponse> deletePost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "게시글 ID") @PathVariable Long postId,

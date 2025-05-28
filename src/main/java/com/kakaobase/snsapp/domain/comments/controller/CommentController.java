@@ -35,7 +35,7 @@ public class CommentController {
      * 댓글 작성 API
      */
     @PostMapping("/posts/{postId}/comments")
-    @PreAuthorize("isAuthenticated() &&  @accessChecker.canCommentOnPost(#postId, authentication.principal)")
+    @PreAuthorize("isAuthenticated() &&  @accessChecker.canAccessOnComments(#postId, authentication.principal)")
     @Operation(
             summary = "댓글 작성",
             description = "게시글에 댓글을 작성합니다. parentId가 없으면 일반 댓글, 있으면 대댓글로 등록됩니다."
@@ -110,7 +110,7 @@ public class CommentController {
      * 게시글의 댓글 목록 조회 API
      */
     @GetMapping("/posts/{postId}/comments")
-    @PreAuthorize("@accessChecker.canViewPost(#postId, authentication.principal)")
+    @PreAuthorize("isAuthenticated() && @accessChecker.canAccessOnComments(#postId, authentication.principal)")
     @Operation(
             summary = "게시글의 댓글 목록 조회",
             description = "게시글에 작성된 댓글 목록을 조회합니다. 페이지네이션을 지원합니다."
