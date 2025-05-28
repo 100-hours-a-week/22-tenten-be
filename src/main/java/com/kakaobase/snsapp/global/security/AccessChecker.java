@@ -36,11 +36,6 @@ public class AccessChecker {
      * @return 접근 가능하면 true, 아니면 false
      */
     public boolean hasAccessToBoard(String postType, CustomUserDetails userDetails) {
-        // 인증되지 않은 사용자는 'all' 게시판만 접근 가능
-        if (userDetails == null ||
-            userDetails.isEnabled()) {
-            throw new PostException(GeneralErrorCode.FORBIDDEN, "postType");
-        }
 
         // 관리자, 봇 권한이 있는 경우 모든 게시판 접근 가능
         if (isAdminOrBot(userDetails)) {
