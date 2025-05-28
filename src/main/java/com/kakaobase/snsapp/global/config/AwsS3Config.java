@@ -43,14 +43,14 @@ public class AwsS3Config {
      * AWS 액세스 키
      * <p>AWS IAM에서 발급받은 액세스 키를 설정합니다.</p>
      */
-    @Value("${spring.cloud.aws.credentials.access-key}")
+    @Value("${aws.accessKeyId}")
     private String accessKey;
 
     /**
      * AWS 시크릿 키
      * <p>AWS IAM에서 발급받은 시크릿 키를 설정합니다.</p>
      */
-    @Value("${spring.cloud.aws.credentials.secret-key}")
+    @Value("${aws.secretAccessKey}")
     private String secretKey;
 
     /**
@@ -58,7 +58,7 @@ public class AwsS3Config {
      * <p>S3 버킷이 위치한 AWS 리전을 설정합니다.</p>
      * <p>한국의 경우 일반적으로 'ap-northeast-2'를 사용합니다.</p>
      */
-    @Value("${spring.cloud.aws.region.static}")
+    @Value("${aws.region}")
     private String region;
 
     /**

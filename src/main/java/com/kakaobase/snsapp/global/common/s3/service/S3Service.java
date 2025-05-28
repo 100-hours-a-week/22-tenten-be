@@ -37,25 +37,25 @@ public class S3Service {
     /**
      * S3 버킷 이름
      */
-    @Value("${spring.cloud.aws.s3.bucket}")
+    @Value("${aws.s3.bucket}")
     private String bucketName;
 
     /**
      * AWS 리전
      */
-    @Value("${spring.cloud.aws.region.static}")
+    @Value("${aws.region}")
     private String region;
 
     /**
      * Presigned URL 만료 시간 (초)
      */
-    @Value("${spring.cloud.aws.s3.expiration-time:300}")  // 기본값 5분
+    @Value("${aws.s3.expiration-time:300}")  // 기본값 5분
     private int expirationTime;
 
     /**
      * 최대 파일 크기 (바이트)
      */
-    @Value("${spring.cloud.aws.s3.max-file-size:10485760}")  // 기본값 10MB
+    @Value("${aws.s3.max-file-size:10485760}")  // 기본값 10MB
     private long maxFileSize;
 
     /**
