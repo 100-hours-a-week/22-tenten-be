@@ -462,7 +462,7 @@ class AuthServiceTest {
         verify(securityTokenManager).createRefreshToken(MOCK_MEMBER_ID, userAgent);
         verify(cookieUtil).createRefreshTokenCookie(newRefreshToken);
     }
-    
+
 
     @Test
     @DisplayName("현재 토큰이 null일 경우 AuthException이 발생하는지 확인")
