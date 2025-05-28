@@ -34,28 +34,17 @@ public class S3Service {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
 
-    /**
-     * S3 버킷 이름
-     */
-    @Value("${aws.s3.bucket}")
+    @Value("${spring.cloud.aws.s3.bucket}")
     private String bucketName;
 
-    /**
-     * AWS 리전
-     */
-    @Value("${aws.region}")
+    @Value("${spring.cloud.aws.region.static}")
     private String region;
 
-    /**
-     * Presigned URL 만료 시간 (초)
-     */
-    @Value("${aws.s3.expiration-time:300}")  // 기본값 5분
+    // ✅ 커스텀 설정은 별도 네임스페이스에서
+    @Value("${app.s3.expiration-time:300}")
     private int expirationTime;
 
-    /**
-     * 최대 파일 크기 (바이트)
-     */
-    @Value("${aws.s3.max-file-size:10485760}")  // 기본값 10MB
+    @Value("${app.s3.max-file-size:10485760}")
     private long maxFileSize;
 
     /**
