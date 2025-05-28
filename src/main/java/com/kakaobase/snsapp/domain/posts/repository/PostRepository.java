@@ -49,15 +49,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      */
     Page<Post> findByBoardTypeOrderByCreatedAtDesc(Post.BoardType boardType, Pageable pageable);
 
+
     /**
-     * 게시글을 ID와 작성자 ID로 찾습니다.
-     * 주로 게시글 수정/삭제 권한 확인에 사용됩니다.
-     *
-     * @param id 게시글 ID
-     * @param memberId 회원 ID
-     * @return 조건에 맞는 게시글 (Optional)
+     * 특정 게시글이 특정 사용자가 작성했는지 확인
      */
-    Optional<Post> findByIdAndMemberId(Long id, Long memberId);
+    boolean existsByIdAndMemberId(Long postId, Long memberId);
 
     /**
      * 특정 회원이 좋아요를 누른 게시글 목록을 게시글 ID 기준으로 커서 기반 페이징으로 조회합니다.
