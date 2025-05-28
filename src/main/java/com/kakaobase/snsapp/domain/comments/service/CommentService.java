@@ -166,13 +166,8 @@ public class CommentService {
     @Transactional
     public void deleteRecomment(Long memberId, Long recommentId) {
         // 대댓글 조회
-        Recomment recomment = recommentRepository.findByIdAndDeletedAtIsNull(recommentId)
+        Recomment recomment = recommentRepository.findById(recommentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId", "해당 대댓글을 찾을 수 없습니다."));
-
-        // 대댓글 작성자 확인
-        if (!recomment.getMember().getId().equals(memberId)) {
-            throw new CommentException(CommentErrorCode.POST_NOT_AUTHORIZED, "recommentId", "본인이 작성한 대댓글만 삭제할 수 있습니다.");
-        }
 
         // 대댓글의 좋아요 삭제
         commentLikeService.deleteAllRecommentLikesByRecommentId(recommentId);
@@ -181,7 +176,6 @@ public class CommentService {
 
         // 대댓글 삭제 (Soft Delete)
         recomment.softDelete();
-        recommentRepository.save(recomment);
 
         log.info("대댓글 삭제 완료: 대댓글 ID={}, 삭제자 ID={}", recommentId, memberId);
     }
