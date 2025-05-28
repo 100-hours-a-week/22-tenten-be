@@ -31,6 +31,9 @@ public class CookieUtil {
     @Value("${app.jwt.refresh.domain}")
     private String cookieDomain;
 
+    @Value("${app.jwt.refresh.same-site}")
+    private String cookieSameSite;
+
     /**
      * 리프레시 토큰을 담은 쿠키를 생성합니다.
      * 생성된 쿠키는 JavaScript에서 접근할 수 없도록 HttpOnly로 설정
@@ -42,7 +45,7 @@ public class CookieUtil {
                 .maxAge(refreshTokenExpiration / 1000)
                 .httpOnly(true)
                 .secure(secureCookie)
-                .sameSite("Lax")
+                .sameSite(cookieSameSite)
                 .build();
     }
 
