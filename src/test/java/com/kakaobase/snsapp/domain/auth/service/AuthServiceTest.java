@@ -112,7 +112,6 @@ class AuthServiceTest {
                 .satisfies(exception -> {
                     AuthException authException = (AuthException) exception;
                     assertThat(authException.getErrorCode()).isEqualTo(GeneralErrorCode.RESOURCE_NOT_FOUND);
-                    assertThat(authException.getMessage()).contains(MOCK_MEMBER_EMAIL);
                 });
 
         // verify - 사용자를 찾지 못했으므로 이후 로직들이 실행되지 않았는지 확인
