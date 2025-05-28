@@ -77,9 +77,6 @@ public class AccessChecker {
      * @return 소유자이면 true, 아니면 false
      */
     public boolean isPostOwner(Long postId, CustomUserDetails userDetails) {
-        if (userDetails == null) {
-            return false;
-        }
 
         // 관리자, 봇 권한이 있는 경우 소유자로 취급
         if (isAdminOrBot(userDetails)) {
@@ -151,9 +148,6 @@ public class AccessChecker {
      * @return 대댓글 소유자 여부
      */
     public boolean isRecommentOwner(Long recommentId, CustomUserDetails userDetails) {
-        if (userDetails == null) {
-            return false;
-        }
 
         // 관리자, 봇 권한이 있는 경우 소유자로 취급
         if (isAdminOrBot(userDetails)) {
