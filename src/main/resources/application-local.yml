@@ -7,7 +7,7 @@ app:
     secure: false
     refresh:
       domain: ${COOKIE_DOMAIN}
-      path: api/auth/tokens
+      same-site: Lax
 
 server:
   servlet:

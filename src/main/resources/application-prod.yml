@@ -8,6 +8,7 @@ app:
     secure: true
     refresh:
       domain: ${COOKIE_DOMAIN}
+      same-site: Lax
 
 logging:
   level:

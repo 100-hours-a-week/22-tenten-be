@@ -4,9 +4,10 @@ spring:
       on-profile: dev
 app:
   jwt:
-    secure: false
+    secure: true
     refresh:
       domain: ${COOKIE_DOMAIN}
+      same-site: None
 
 logging:
   level:
