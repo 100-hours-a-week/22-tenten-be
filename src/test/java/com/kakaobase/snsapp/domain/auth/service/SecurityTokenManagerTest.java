@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Optional;
 
-import static com.kakaobase.snsapp.global.mock.constants.MockMemberConstants.*;
+import static com.kakaobase.snsapp.global.constants.MemberFixtureConstants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -69,20 +69,20 @@ class SecurityTokenManagerTest {
     @DisplayName("리프레시 토큰 생성 - MockMemberConstants를 사용한 정상적인 토큰 생성")
     void createRefreshToken_Success() {
         // given
-        given(authConverter.toAuthTokenEntity(eq(MOCK_MEMBER_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class)))
+        given(authConverter.toAuthTokenEntity(eq(MEMBER_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class)))
                 .willReturn(mockAuthToken);
         given(authTokenRepository.save(mockAuthToken))
                 .willReturn(mockAuthToken);
 
         // when
-        String result = securityTokenManager.createRefreshToken(MOCK_MEMBER_ID, testUserAgent);
+        String result = securityTokenManager.createRefreshToken(MEMBER_ID, testUserAgent);
 
         // then
         assertThat(result).isNotNull();
         assertThat(result).isNotEmpty();
         assertThat(result.length()).isGreaterThan(20); // 충분한 길이의 토큰인지 확인
 
-        verify(authConverter).toAuthTokenEntity(eq(MOCK_MEMBER_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class));
+        verify(authConverter).toAuthTokenEntity(eq(MEMBER_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class));
         verify(authTokenRepository).save(mockAuthToken);
     }
 
@@ -90,19 +90,19 @@ class SecurityTokenManagerTest {
     @DisplayName("관리자 리프레시 토큰 생성 - MockMemberConstants의 관리자 ID 사용")
     void createRefreshToken_AdminUser_Success() {
         // given
-        given(authConverter.toAuthTokenEntity(eq(MOCK_ADMIN_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class)))
+        given(authConverter.toAuthTokenEntity(eq(ADMIN_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class)))
                 .willReturn(mockAuthToken);
         given(authTokenRepository.save(mockAuthToken))
                 .willReturn(mockAuthToken);
 
         // when
-        String result = securityTokenManager.createRefreshToken(MOCK_ADMIN_ID, testUserAgent);
+        String result = securityTokenManager.createRefreshToken(ADMIN_ID, testUserAgent);
 
         // then
         assertThat(result).isNotNull();
         assertThat(result).isNotEmpty();
 
-        verify(authConverter).toAuthTokenEntity(eq(MOCK_ADMIN_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class));
+        verify(authConverter).toAuthTokenEntity(eq(ADMIN_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class));
         verify(authTokenRepository).save(mockAuthToken);
     }
 
@@ -112,20 +112,20 @@ class SecurityTokenManagerTest {
         // given
         LocalDateTime beforeCreation = LocalDateTime.now();
 
-        given(authConverter.toAuthTokenEntity(eq(MOCK_MEMBER_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class)))
+        given(authConverter.toAuthTokenEntity(eq(MEMBER_ID), anyString(), eq(testUserAgent), any(LocalDateTime.class)))
                 .willReturn(mockAuthToken);
         given(authTokenRepository.save(mockAuthToken))
                 .willReturn(mockAuthToken);
 
         // when
-        String result = securityTokenManager.createRefreshToken(MOCK_MEMBER_ID, testUserAgent);
+        String result = securityTokenManager.createRefreshToken(MEMBER_ID, testUserAgent);
 
         // then
         assertThat(result).isNotNull();
 
         // AuthConverter 호출 시 전달된 만료 시간이 현재 시간 + 24시간 범위에 있는지 확인
         verify(authConverter).toAuthTokenEntity(
-                eq(MOCK_MEMBER_ID),
+                eq(MEMBER_ID),
                 anyString(),
                 eq(testUserAgent),
                 argThat(expiryTime ->
@@ -147,13 +147,13 @@ class SecurityTokenManagerTest {
         given(mockAuthToken.getExpiresAt())
                 .willReturn(testExpiryTime);
         given(mockAuthToken.getMemberId())
-                .willReturn(MOCK_MEMBER_ID);
+                .willReturn(MEMBER_ID);
 
         // when
         Long result = securityTokenManager.validateRefreshTokenAndGetUserId(testRawToken);
 
         // then
-        assertThat(result).isEqualTo(MOCK_MEMBER_ID);
+        assertThat(result).isEqualTo(MEMBER_ID);
 
         verify(revokedTokenRepository).existsByRefreshTokenHash(anyString());
         verify(authTokenRepository).findByRefreshTokenHash(anyString());
@@ -219,10 +219,10 @@ class SecurityTokenManagerTest {
                 .willReturn(Optional.of(mockAuthToken));
         given(mockAuthToken.getExpiresAt())
                 .willReturn(expiredTime);
-        given(authConverter.toRevokedTokenEntity(anyString(), eq(MOCK_MEMBER_ID)))
+        given(authConverter.toRevokedTokenEntity(anyString(), eq(MEMBER_ID)))
                 .willReturn(mockRevokedToken);
         given(mockAuthToken.getMemberId())
-                .willReturn(MOCK_MEMBER_ID);
+                .willReturn(MEMBER_ID);
         given(mockAuthToken.getRefreshTokenHash())
                 .willReturn(testHashedToken);
 
@@ -255,8 +255,8 @@ class SecurityTokenManagerTest {
         given(mockAuthToken.getRefreshTokenHash())
                 .willReturn(testHashedToken);
         given(mockAuthToken.getMemberId())
-                .willReturn(MOCK_MEMBER_ID);
-        given(authConverter.toRevokedTokenEntity(testHashedToken, MOCK_MEMBER_ID))
+                .willReturn(MEMBER_ID);
+        given(authConverter.toRevokedTokenEntity(testHashedToken, MEMBER_ID))
                 .willReturn(mockRevokedToken);
 
         // when
@@ -265,7 +265,7 @@ class SecurityTokenManagerTest {
         // then
         verify(authTokenRepository).existsByRefreshTokenHash(anyString());
         verify(authTokenRepository).findByRefreshTokenHash(anyString());
-        verify(authConverter).toRevokedTokenEntity(testHashedToken, MOCK_MEMBER_ID);
+        verify(authConverter).toRevokedTokenEntity(testHashedToken, MEMBER_ID);
         verify(authTokenRepository).delete(mockAuthToken);
         verify(revokedTokenRepository).save(mockRevokedToken);
     }
@@ -316,14 +316,14 @@ class SecurityTokenManagerTest {
     void revokeAllTokensExcept_NoTokens_ShouldProcessNormally() {
         // given
         String currentRawToken = "current.token";
-        given(authTokenRepository.findAllByMemberId(MOCK_MEMBER_ID))
+        given(authTokenRepository.findAllByMemberId(MEMBER_ID))
                 .willReturn(Arrays.asList());
 
         // when
-        securityTokenManager.revokeAllTokensExcept(MOCK_MEMBER_ID, currentRawToken);
+        securityTokenManager.revokeAllTokensExcept(MEMBER_ID, currentRawToken);
 
         // then
-        verify(authTokenRepository).findAllByMemberId(MOCK_MEMBER_ID);
+        verify(authTokenRepository).findAllByMemberId(MEMBER_ID);
         verify(authTokenRepository, never()).delete(any());
         verify(revokedTokenRepository, never()).save(any());
     }
@@ -342,9 +342,9 @@ class SecurityTokenManagerTest {
                 .willReturn(false);
         given(authTokenRepository.findByRefreshTokenHash(anyString()))
                 .willReturn(Optional.of(mockAuthToken));
-        given(mockAuthToken.getMemberId()).willReturn(MOCK_MEMBER_ID);
+        given(mockAuthToken.getMemberId()).willReturn(MEMBER_ID);
         given(mockAuthToken.getRefreshTokenHash()).willReturn(testHashedToken);
-        given(authConverter.toRevokedTokenEntity(anyString(), eq(MOCK_MEMBER_ID)))
+        given(authConverter.toRevokedTokenEntity(anyString(), eq(MEMBER_ID)))
                 .willReturn(mockRevokedToken);
 
         // then - validateRefreshTokenAndGetUserId 호출 시 만료 예외 발생
@@ -362,7 +362,7 @@ class SecurityTokenManagerTest {
         // given
         LocalDateTime futureTime = LocalDateTime.now().plusHours(1);
         given(mockAuthToken.getExpiresAt()).willReturn(futureTime);
-        given(mockAuthToken.getMemberId()).willReturn(MOCK_MEMBER_ID);
+        given(mockAuthToken.getMemberId()).willReturn(MEMBER_ID);
 
         // when
         given(revokedTokenRepository.existsByRefreshTokenHash(anyString()))
@@ -372,7 +372,7 @@ class SecurityTokenManagerTest {
 
         // then - validateRefreshTokenAndGetUserId 호출 시 정상 처리
         Long result = securityTokenManager.validateRefreshTokenAndGetUserId(testRawToken);
-        assertThat(result).isEqualTo(MOCK_MEMBER_ID);
+        assertThat(result).isEqualTo(MEMBER_ID);
     }
 
     // ========== 토큰 해싱 테스트 ==========
@@ -390,7 +390,7 @@ class SecurityTokenManagerTest {
         given(authTokenRepository.findByRefreshTokenHash(anyString()))
                 .willReturn(Optional.of(mockAuthToken));
         given(mockAuthToken.getExpiresAt()).willReturn(testExpiryTime);
-        given(mockAuthToken.getMemberId()).willReturn(MOCK_MEMBER_ID);
+        given(mockAuthToken.getMemberId()).willReturn(MEMBER_ID);
 
         // then - 동일한 토큰에 대해 동일한 해시값이 생성되어야 함
         // 내부적으로 해싱이 일관되게 작동하는지 확인
@@ -398,7 +398,7 @@ class SecurityTokenManagerTest {
         Long result2 = securityTokenManager.validateRefreshTokenAndGetUserId(rawToken2);
 
         assertThat(result1).isEqualTo(result2);
-        assertThat(result1).isEqualTo(MOCK_MEMBER_ID);
+        assertThat(result1).isEqualTo(MEMBER_ID);
     }
 
     @Test
@@ -412,9 +412,9 @@ class SecurityTokenManagerTest {
         AuthToken mockAuthToken2 = mock(AuthToken.class);
 
         given(mockAuthToken1.getExpiresAt()).willReturn(testExpiryTime);
-        given(mockAuthToken1.getMemberId()).willReturn(MOCK_MEMBER_ID);
+        given(mockAuthToken1.getMemberId()).willReturn(MEMBER_ID);
         given(mockAuthToken2.getExpiresAt()).willReturn(testExpiryTime);
-        given(mockAuthToken2.getMemberId()).willReturn(MOCK_ADMIN_ID);
+        given(mockAuthToken2.getMemberId()).willReturn(ADMIN_ID);
 
         // when & then
         given(revokedTokenRepository.existsByRefreshTokenHash(anyString()))
@@ -431,8 +431,8 @@ class SecurityTokenManagerTest {
         Long result2 = securityTokenManager.validateRefreshTokenAndGetUserId(rawToken2);
 
         // 서로 다른 사용자 ID가 반환되어야 함 (다른 해시값으로 인해)
-        assertThat(result1).isEqualTo(MOCK_MEMBER_ID);
-        assertThat(result2).isEqualTo(MOCK_ADMIN_ID);
+        assertThat(result1).isEqualTo(MEMBER_ID);
+        assertThat(result2).isEqualTo(ADMIN_ID);
         assertThat(result1).isNotEqualTo(result2);
     }
 }

@@ -9,7 +9,7 @@ import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetailsService;
 import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
-import com.kakaobase.snsapp.global.mock.builder.MockCustomUserDetailsBuilder;
+import com.kakaobase.snsapp.global.fixture.CustomUserDetailsFixture;
 import com.kakaobase.snsapp.global.security.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import static com.kakaobase.snsapp.global.mock.constants.MockMemberConstants.*;
+import static com.kakaobase.snsapp.global.constants.MemberFixtureConstants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -63,19 +63,17 @@ class AuthServiceTest {
 
     private CustomUserDetails mockKbtUserDetails;
     private CustomUserDetails mockAdminUserDetails;
-    private CustomUserDetails mockBannedUserDetails;
     private AuthRequestDto.Login loginRequest;
 
     @BeforeEach
     void setUp() {
         //다양한 유저 타입의 MockCustomUserDetails 생성
-        mockKbtUserDetails = MockCustomUserDetailsBuilder.createMockKbtCustomUserDetails();
-        mockAdminUserDetails = MockCustomUserDetailsBuilder.createMockAdminCustomUserDetails();
-        mockBannedUserDetails = MockCustomUserDetailsBuilder.createMockBannedCustomUserDetails();
+        mockKbtUserDetails = CustomUserDetailsFixture.createKbtCustomUserDetails();
+        mockAdminUserDetails = CustomUserDetailsFixture.createAdminCustomUserDetails();
 
         // 로그인 요청 DTO 생성
         loginRequest = new AuthRequestDto.Login(
-                MOCK_MEMBER_EMAIL,
+                MEMBER_EMAIL,
                 "testPassword123"
         );
 
@@ -91,7 +89,7 @@ class AuthServiceTest {
         // given
         String expectedAccessToken = "mock.access.token";
 
-        given(customUserDetailsService.loadUserByUsername(MOCK_MEMBER_EMAIL))
+        given(customUserDetailsService.loadUserByUsername(MEMBER_EMAIL))
                 .willReturn(mockKbtUserDetails);
         given(passwordEncoder.matches(loginRequest.password(), mockKbtUserDetails.getPassword()))
                 .willReturn(true);
@@ -105,10 +103,10 @@ class AuthServiceTest {
         assertThat(response)
                 .isNotNull()
                 .satisfies(loginResponse -> {
-                    assertThat(loginResponse.memberId()).isEqualTo(MOCK_MEMBER_ID);
-                    assertThat(loginResponse.nickname()).isEqualTo(MOCK_MEMBER_NICKNAME);
-                    assertThat(loginResponse.className()).isEqualTo(KBT_MOCK_MEMBER_CLASS_NAME.name());
-                    assertThat(loginResponse.imageUrl()).isEqualTo(MOCK_MEMBER_PROFILE_IMG_URL);
+                    assertThat(loginResponse.memberId()).isEqualTo(MEMBER_ID);
+                    assertThat(loginResponse.nickname()).isEqualTo(MEMBER_NICKNAME);
+                    assertThat(loginResponse.className()).isEqualTo(KBT_MEMBER_CLASS_NAME.name());
+                    assertThat(loginResponse.imageUrl()).isEqualTo(MEMBER_PROFILE_IMG_URL);
                     assertThat(loginResponse.accessToken()).isEqualTo(expectedAccessToken);
                 });
 
@@ -118,7 +116,7 @@ class AuthServiceTest {
         assertThat(auth.getPrincipal()).isEqualTo(mockKbtUserDetails);
 
         // verify - 메서드 호출 순서와 횟수 검증
-        verify(customUserDetailsService).loadUserByUsername(MOCK_MEMBER_EMAIL);
+        verify(customUserDetailsService).loadUserByUsername(MEMBER_EMAIL);
         verify(passwordEncoder).matches(loginRequest.password(), mockKbtUserDetails.getPassword());
         verify(jwtTokenProvider).createAccessToken(mockKbtUserDetails);
     }
@@ -129,11 +127,11 @@ class AuthServiceTest {
         // given
         String expectedAccessToken = "mock.admin.access.token";
         AuthRequestDto.Login adminLoginRequest = new AuthRequestDto.Login(
-                MOCK_ADMIN_EMAIL,
+                ADMIN_EMAIL,
                 "adminPassword123"
         );
 
-        given(customUserDetailsService.loadUserByUsername(MOCK_ADMIN_EMAIL))
+        given(customUserDetailsService.loadUserByUsername(ADMIN_EMAIL))
                 .willReturn(mockAdminUserDetails);
         given(passwordEncoder.matches(adminLoginRequest.password(), mockAdminUserDetails.getPassword()))
                 .willReturn(true);
@@ -147,8 +145,8 @@ class AuthServiceTest {
         assertThat(response)
                 .isNotNull()
                 .satisfies(loginResponse -> {
-                    assertThat(loginResponse.memberId()).isEqualTo(MOCK_ADMIN_ID);
-                    assertThat(loginResponse.nickname()).isEqualTo(MOCK_ADMIN_NICKNAME);
+                    assertThat(loginResponse.memberId()).isEqualTo(ADMIN_ID);
+                    assertThat(loginResponse.nickname()).isEqualTo(ADMIN_NICKNAME);
                     assertThat(loginResponse.accessToken()).isEqualTo(expectedAccessToken);
                 });
 
@@ -156,7 +154,7 @@ class AuthServiceTest {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
-        assertThat(userDetails.getRole()).isEqualTo(MOCK_ADMIN_ROLE.name());
+        assertThat(userDetails.getRole()).isEqualTo(ADMIN_ROLE.name());
     }
 
 
@@ -164,7 +162,7 @@ class AuthServiceTest {
     @DisplayName("로그인 실패 - 존재하지 않는 사용자")
     void login_Fail_UserNotFound() {
         // given
-        given(customUserDetailsService.loadUserByUsername(MOCK_MEMBER_EMAIL))
+        given(customUserDetailsService.loadUserByUsername(MEMBER_EMAIL))
                 .willThrow(new UsernameNotFoundException("User not found"));
 
         // when & then
@@ -175,12 +173,12 @@ class AuthServiceTest {
                     assertThat(authException.getErrorCode()).isEqualTo(GeneralErrorCode.RESOURCE_NOT_FOUND);
                     assertThat(authException.getErrorCode().getError()).isEqualTo("resource_not_found");
                     assertThat(authException.getErrorCode().getMessage()).isEqualTo("요청한 리소스를 찾을 수 없습니다.");
-                    assertThat(authException.getEffectiveField()).isEqualTo(MOCK_MEMBER_EMAIL); // 오버라이드된 필드
+                    assertThat(authException.getEffectiveField()).isEqualTo(MEMBER_EMAIL); // 오버라이드된 필드
                 });
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 
-        verify(customUserDetailsService).loadUserByUsername(MOCK_MEMBER_EMAIL);
+        verify(customUserDetailsService).loadUserByUsername(MEMBER_EMAIL);
         verify(passwordEncoder, never()).matches(any(), any());
         verify(jwtTokenProvider, never()).createAccessToken(any());
     }
@@ -191,11 +189,11 @@ class AuthServiceTest {
         // given
         String wrongPassword = "wrongPassword123";
         AuthRequestDto.Login wrongPasswordRequest = new AuthRequestDto.Login(
-                MOCK_MEMBER_EMAIL,
+                MEMBER_EMAIL,
                 wrongPassword
         );
 
-        given(customUserDetailsService.loadUserByUsername(MOCK_MEMBER_EMAIL))
+        given(customUserDetailsService.loadUserByUsername(MEMBER_EMAIL))
                 .willReturn(mockKbtUserDetails);
         given(passwordEncoder.matches(wrongPassword, mockKbtUserDetails.getPassword()))
                 .willReturn(false);
@@ -214,7 +212,7 @@ class AuthServiceTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 
         // 비밀번호 검증 실패 후 토큰 생성이 실행되지 않았는지 확인
-        verify(customUserDetailsService).loadUserByUsername(MOCK_MEMBER_EMAIL);
+        verify(customUserDetailsService).loadUserByUsername(MEMBER_EMAIL);
         verify(passwordEncoder).matches(wrongPassword, mockKbtUserDetails.getPassword());
         verify(jwtTokenProvider, never()).createAccessToken(any());
     }
@@ -225,9 +223,9 @@ class AuthServiceTest {
         // given
         String expectedAccessToken = "mock.constants.token";
 
-        given(customUserDetailsService.loadUserByUsername(MOCK_MEMBER_EMAIL))
+        given(customUserDetailsService.loadUserByUsername(MEMBER_EMAIL))
                 .willReturn(mockKbtUserDetails);
-        given(passwordEncoder.matches(anyString(), eq(MOCK_MEMBER_PASSWORD)))
+        given(passwordEncoder.matches(anyString(), eq(MEMBER_PASSWORD)))
                 .willReturn(true);
         given(jwtTokenProvider.createAccessToken(mockKbtUserDetails))
                 .willReturn(expectedAccessToken);
@@ -236,10 +234,10 @@ class AuthServiceTest {
         AuthResponseDto.LoginResponse response = authService.login(loginRequest);
 
         // then - MockMemberConstants 값들이 올바르게 사용되었는지 확인
-        assertThat(response.memberId()).isEqualTo(MOCK_MEMBER_ID);
-        assertThat(response.nickname()).isEqualTo(MOCK_MEMBER_NICKNAME);
-        assertThat(response.className()).isEqualTo(KBT_MOCK_MEMBER_CLASS_NAME.name());
-        assertThat(response.imageUrl()).isEqualTo(MOCK_MEMBER_PROFILE_IMG_URL);
+        assertThat(response.memberId()).isEqualTo(MEMBER_ID);
+        assertThat(response.nickname()).isEqualTo(MEMBER_NICKNAME);
+        assertThat(response.className()).isEqualTo(KBT_MEMBER_CLASS_NAME.name());
+        assertThat(response.imageUrl()).isEqualTo(MEMBER_PROFILE_IMG_URL);
     }
 
     @Test
@@ -248,7 +246,7 @@ class AuthServiceTest {
         // given
         String validRefreshToken = "valid.refresh.token.with.sufficient.length";
         String expectedAccessToken = "new.access.token";
-        Long userId = MOCK_MEMBER_ID;
+        Long userId = MEMBER_ID;
 
         given(securityTokenManager.validateRefreshTokenAndGetUserId(validRefreshToken))
                 .willReturn(userId);
@@ -339,7 +337,7 @@ class AuthServiceTest {
         // given
         String validRefreshToken = "valid.refresh.token.with.sufficient.length";
         String expectedAccessToken = "new.access.token.with.kbt.member.info";
-        Long userId = MOCK_MEMBER_ID;
+        Long userId = MEMBER_ID;
 
         given(securityTokenManager.validateRefreshTokenAndGetUserId(validRefreshToken))
                 .willReturn(userId);
@@ -355,11 +353,11 @@ class AuthServiceTest {
         assertThat(result).isEqualTo(expectedAccessToken);
 
         // MockKbtMember의 정보가 올바르게 사용되었는지 검증
-        verify(customUserDetailsService).loadUserById(String.valueOf(MOCK_MEMBER_ID));
+        verify(customUserDetailsService).loadUserById(String.valueOf(MEMBER_ID));
         verify(jwtTokenProvider).createAccessToken(argThat(userDetails ->
-                userDetails.getId().equals(String.valueOf(MOCK_MEMBER_ID)) &&
-                        userDetails.getNickname().equals(MOCK_MEMBER_NICKNAME) &&
-                        userDetails.getClassName().equals(KBT_MOCK_MEMBER_CLASS_NAME.name())
+                userDetails.getId().equals(String.valueOf(MEMBER_ID)) &&
+                        userDetails.getNickname().equals(MEMBER_NICKNAME) &&
+                        userDetails.getClassName().equals(KBT_MEMBER_CLASS_NAME.name())
         ));
     }
 
@@ -447,7 +445,7 @@ class AuthServiceTest {
         given(securityContext.getAuthentication()).willReturn(authentication);
         given(authentication.getPrincipal()).willReturn(mockKbtUserDetails);
 
-        given(securityTokenManager.createRefreshToken(MOCK_MEMBER_ID, userAgent))
+        given(securityTokenManager.createRefreshToken(MEMBER_ID, userAgent))
                 .willReturn(newRefreshToken);
         given(cookieUtil.createRefreshTokenCookie(newRefreshToken))
                 .willReturn(expectedCookie);
@@ -459,7 +457,7 @@ class AuthServiceTest {
         assertThat(result).isEqualTo(expectedCookie);
 
         verify(securityTokenManager).revokeRefreshToken(existingRefreshToken);
-        verify(securityTokenManager).createRefreshToken(MOCK_MEMBER_ID, userAgent);
+        verify(securityTokenManager).createRefreshToken(MEMBER_ID, userAgent);
         verify(cookieUtil).createRefreshTokenCookie(newRefreshToken);
     }
 
@@ -468,7 +466,7 @@ class AuthServiceTest {
     @DisplayName("현재 토큰이 null일 경우 AuthException이 발생하는지 확인")
     void logoutOtherDevices_NullCurrentToken_ShouldThrowException() {
         // given
-        Long memberId = MOCK_MEMBER_ID;
+        Long memberId = MEMBER_ID;
         String nullCurrentToken = null;
 
         // when & then
