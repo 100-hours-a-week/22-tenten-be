@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.global.common.email;
+package com.kakaobase.snsapp.global.common.email.service;
 
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;

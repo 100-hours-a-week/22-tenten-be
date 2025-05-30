@@ -1,5 +1,6 @@
 package com.kakaobase.snsapp.domain.members.service;
 
+import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentRequestDto;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
@@ -7,9 +8,13 @@ import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.exception.MemberErrorCode;
 import com.kakaobase.snsapp.domain.members.exception.MemberException;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
+import com.kakaobase.snsapp.global.common.email.service.EmailVerificationService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +34,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final MemberConverter memberConverter;
     private final EmailVerificationService emailVerificationService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 회원 가입 처리
@@ -185,5 +191,46 @@ public class MemberService {
                 member.getNickname(),
                 member.getClassName()
         );
+    }
+
+    @Transactional
+    public void unregister() {
+        log.debug("회원탈퇴 처리 시작");
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
+        Member member = memberRepository.findById(Long.valueOf(userDetails.getId()))
+                .orElseThrow(() -> new MemberException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId"));
+
+        String email = member.getEmail();
+
+        // 이메일 인증 확인
+        if (!emailVerificationService.isEmailVerified(email)) {
+            throw new MemberException(MemberErrorCode.EMAIL_VERIFICATION_FAILED);
+        }
+
+        // Member 엔티티 삭제
+        member.softDelete();
+
+    }
+
+    @Transactional
+    public void changePassword(MemberRequestDto.PasswordChange request) {
+        log.debug("비밀번호 수정 시작");
+
+        String email = request.email();
+        String newPassword = request.NewPassword();
+
+        // 이메일 인증 확인
+        if (!emailVerificationService.isEmailVerified(email)) {
+            throw new MemberException(MemberErrorCode.EMAIL_VERIFICATION_FAILED);
+        }
+
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new MemberException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId"));
+
+        member.updatePassword(passwordEncoder.encode(newPassword));
+
     }
 }

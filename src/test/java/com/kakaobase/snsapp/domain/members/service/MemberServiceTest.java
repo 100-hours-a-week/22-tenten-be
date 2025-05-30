@@ -7,6 +7,7 @@ import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.exception.MemberErrorCode;
 import com.kakaobase.snsapp.domain.members.exception.MemberException;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
+import com.kakaobase.snsapp.global.common.email.service.EmailVerificationService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.fixture.MemberFixture;
 import com.kakaobase.snsapp.global.fixture.MemberRequestFixture;

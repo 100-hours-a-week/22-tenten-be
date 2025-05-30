@@ -39,7 +39,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/auth/tokens/refresh",
             "/users/email/verification-requests",
             "/users/email/verification",
-            "/users",
             "/swagger-ui/**",
             "/v3/api-docs/**"
     );
@@ -54,6 +53,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
+        String method = request.getMethod();
+
+        if (pathMatcher.match("/users", path) && method.equals("POST")) {
+            return true;
+        }
 
         return excludedPaths.stream()
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
