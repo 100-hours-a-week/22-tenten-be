@@ -4,12 +4,14 @@ import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentRequestDto;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.exception.MemberErrorCode;
 import com.kakaobase.snsapp.domain.members.exception.MemberException;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.global.common.email.service.EmailVerificationService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -232,5 +234,29 @@ public class MemberService {
 
         member.updatePassword(passwordEncoder.encode(newPassword));
 
+    }
+
+    @Transactional
+    public void changGithubUrl(MemberRequestDto.@Valid GithubUrlChange request) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
+        Member member = memberRepository.findById(Long.valueOf(userDetails.getId()))
+                .orElseThrow(() -> new MemberException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId"));
+
+        member.updateGithubUrl(request.githubUrl());
+    }
+
+    public MemberResponseDto.ProfileImageChange changProfileImageUrl(MemberRequestDto.@Valid ProfileImageChange request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
+        Member member = memberRepository.findById(Long.valueOf(userDetails.getId()))
+                .orElseThrow(() -> new MemberException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId"));
+
+        member.updateProfile(request.imageUrl());
+
+        return new MemberResponseDto.ProfileImageChange(request.imageUrl());
     }
 }

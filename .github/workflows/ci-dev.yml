@@ -1,0 +1,48 @@
+name: Backend CI - Develop
+
+on:
+  push:
+    branches: [develop, feature/**]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Lint (Checkstyle)
+        run: ./gradlew checkstyleMain checkstyleTest
+
+  notify:
+    name: Discord Notification
+    needs: ci
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Notification
+        run: |
+          if [ "${{ needs.ci.result }}" == "success" ]; then
+            STATUS="✅ 성공"
+            COLOR="3066993"
+          else
+            STATUS="❌ 실패"
+            COLOR="15158332"
+          fi
+
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"$STATUS: ${{ github.workflow }}\",
+                \"description\": \"브랜치: \`${{ github.ref_name }}\`\n커밋한 사람: \`${{ github.actor }}\`\n[👉 액션 보기](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\",
+                \"color\": $COLOR
+              }]
+            }" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}

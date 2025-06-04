@@ -65,4 +65,26 @@ public class MemberRequestDto {
                 @JsonProperty("new_password")
                 String NewPassword
         ) {}
+
+        @Schema(description = "GithubUrl 수정 요청 DTO")
+        public record GithubUrlChange(
+
+                @Schema(description = "수정할 GitHub URL", example = "https://github.com/gildong")
+                @Pattern(regexp = "^(https://github\\.com/)[A-Za-z0-9_-]+(/)?.*$",
+                        message = "GitHub URL 형식이 올바르지 않습니다. https://github.com/{username} 형식이어야 합니다.")
+                @JsonProperty("github_url")
+                String githubUrl
+        ) {}
+
+        @Schema(description = "프로필 이미지 수정 요청 DTO")
+        public record ProfileImageChange(
+
+                @Schema(description = "수정할 프로필 이미지 URL", example = "https://s3.amazonaws.com/bucket/uploads/dev.jpg")
+                @Pattern(
+                        regexp = "^https://[a-zA-Z0-9.-]+\\.s3\\.[a-zA-Z0-9-]+\\.amazonaws\\.com/.+$",
+                        message = "올바른 파일 URL 형식이 아닙니다."
+                )
+                @JsonProperty("image_url")
+                String imageUrl
+        ) {}
 }

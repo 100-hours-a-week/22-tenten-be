@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.members.controller;
 
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.service.MemberService;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -66,6 +67,40 @@ public class MemberController {
         return CustomResponse.success("비밀번호 수정이 완료되었습니다");
     }
 
+    @Operation(summary = "GithubUrl 수정", description = "회원의 GithubUrl를 수정합니다")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "GithubUrl 수정성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class))),
+            @ApiResponse(responseCode = "400", description = "유효하지 않은 입력값"),
+            @ApiResponse(responseCode = "401", description = "로그인 되지 않음")
+    })
+    @PutMapping("/github-url")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CustomResponse<Void> putGithubUrl(
+            @Parameter(description = "GithubUrl 수정 요청", required = true)
+            @Valid @RequestBody MemberRequestDto.GithubUrlChange request
+    ) {
+        memberService.changGithubUrl(request);
+        return CustomResponse.success("GitHub 링크가 성공적으로 변경되었습니다.");
+    }
+
+    @Operation(summary = "프로필 이미지 수정", description = "회원의 프로필 이미지를 수정합니다")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "프로필 이미지 수정성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class))),
+            @ApiResponse(responseCode = "400", description = "유효하지 않은 입력값"),
+            @ApiResponse(responseCode = "401", description = "로그인 되지 않음")
+    })
+    @PutMapping("/images")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CustomResponse<MemberResponseDto.ProfileImageChange> putProfileImageUrl(
+            @Parameter(description = "프로필 이미지 수정 요청", required = true)
+            @Valid @RequestBody MemberRequestDto.ProfileImageChange request
+    ) {
+        MemberResponseDto.ProfileImageChange newImageUrl = memberService.changProfileImageUrl(request);
+        return CustomResponse.success("프로필 이미지가 성공적으로 변경되었습니다.", newImageUrl);
+    }
+
 
     @Operation(summary = "회원탈퇴", description = "기존 회원을 탈퇴시킵니다")
     @ApiResponses(value = {
@@ -77,7 +112,6 @@ public class MemberController {
     })
     @DeleteMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    @PreAuthorize("isAuthenticated()")
     public CustomResponse<Void> deleteUser() {
 
         memberService.unregister();

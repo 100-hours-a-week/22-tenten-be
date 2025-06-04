@@ -54,4 +54,11 @@ public class MemberResponseDto {
             @JsonProperty("is_following")
             Boolean isFollowing
     ) {}
+
+        @Schema(description = "회원 프로필 수정 DTO")
+        public record ProfileImageChange(
+                @Schema(description = "프로필 이미지 URL", example = "https://example.com/images/profile.jpg")
+                @JsonProperty("image_url")
+                String profileImageUrl
+        ){}
 }
