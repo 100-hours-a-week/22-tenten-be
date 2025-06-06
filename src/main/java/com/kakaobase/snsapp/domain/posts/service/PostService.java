@@ -1,5 +1,7 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
+import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.service.MemberService;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
@@ -14,6 +16,7 @@ import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.common.s3.service.S3Service;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +46,8 @@ public class PostService {
     private final YouTubeSummaryService youtubeSummaryService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final PostLikeService postLikeService;
+    private final FollowRepository followRepository;
+    private final EntityManager em;
 
     /**
      * 게시글을 생성합니다.
@@ -110,8 +115,11 @@ public class PostService {
         // 좋아요 여부 확인
         boolean isLiked = memberId != null && postLikeService.isLikedByMember(postId, memberId);
 
+        Member follower = em.getReference(Member.class, memberId);
+        Member following = em.getReference(Member.class, post.getMemberId());
+
         // 팔로우 여부는 현재 비활성화 되어있으므로 false로 설정
-        boolean isFollowing = false;
+        boolean isFollowing = followRepository.existsByFollowerUserAndFollowingUser(follower, following);
 
         // 이미지 조회
         List<PostImage> postImages = postImageRepository.findByPostIdOrderBySortIndexAsc(post.getId());
@@ -197,10 +205,6 @@ public class PostService {
         // 5. 게시글의 첫 번째 이미지 URL 조회
         Map<Long, String> firstImageUrlMap = findFirstImageUrlsByPosts(posts);
 
-
-        // 7. 팔로우 정보 조회
-        List<Long> followingIds = List.of();
-
         // 8. 좋아요 정보 조회
         List<Long> likedPostIds = currentMemberId != null
                 ? postLikeService.findLikedPostIdsByMember(currentMemberId, posts)
@@ -213,7 +217,6 @@ public class PostService {
                         memberInfoMap,
                         firstImageUrlMap.get(post.getId()),
                         likedPostIds,
-                        followingIds,
                         currentMemberId
                 ))
                 .collect(Collectors.toList());
@@ -230,18 +233,23 @@ public class PostService {
             Map<Long, Map<String, String>> memberInfoMap,
             String firstImageUrl,
             List<Long> likedPostIds,
-            List<Long> followingIds,
             Long currentMemberId) {
+
 
         // 회원 정보 조회
         Map<String, String> userInfo = memberInfoMap.get(post.getMemberId());
+
+        Member follower = em.getReference(Member.class, currentMemberId);
+        Member following = em.getReference(Member.class, post.getMemberId());
+        Boolean isFollowing = followRepository.existsByFollowerUserAndFollowingUser(follower, following);
 
         // UserInfo DTO 생성
         PostResponseDto.UserInfo user = new PostResponseDto.UserInfo(
                 post.getMemberId(),
                 userInfo.get("nickname"),
                 userInfo.get("imageUrl"),
-                followingIds.contains(post.getMemberId())
+                isFollowing
+
         );
 
         // 본인 게시글 여부 및 좋아요 여부 확인

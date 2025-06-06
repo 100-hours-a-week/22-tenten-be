@@ -8,7 +8,7 @@ import com.kakaobase.snsapp.global.common.email.service.EmailSender;
 import com.kakaobase.snsapp.global.common.email.service.EmailVerificationService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
-import com.kakaobase.snsapp.global.fixture.CustomUserDetailsFixture;
+import com.kakaobase.snsapp.global.fixture.member.CustomUserDetailsFixture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // when
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         // then
         verify(memberRepository).existsByEmail(MEMBER_EMAIL);
@@ -80,7 +80,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(true);
 
         // when
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, PASSWORD_RESET_PURPOSE, mockUserDetails);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, PASSWORD_RESET_PURPOSE);
 
         // then
         verify(memberRepository).existsByEmail(MEMBER_EMAIL);
@@ -97,7 +97,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(true);
 
         // when & then
-        assertThatThrownBy(() -> emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null))
+        assertThatThrownBy(() -> emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE))
                 .isInstanceOf(MemberException.class)
                 .satisfies(exception -> {
                     MemberException memberException = (MemberException) exception;
@@ -113,7 +113,7 @@ class EmailVerificationServiceTest {
     @DisplayName("비밀번호 재설정용 이메일 전송 - UserDetails가 null일 때 CustomException 발생")
     void sendVerificationCode_PasswordReset_NullUserDetails_ShouldThrowException() {
         // when & then
-        assertThatThrownBy(() -> emailVerificationService.sendVerificationCode(MEMBER_EMAIL, PASSWORD_RESET_PURPOSE, null))
+        assertThatThrownBy(() -> emailVerificationService.sendVerificationCode(MEMBER_EMAIL, PASSWORD_RESET_PURPOSE))
                 .isInstanceOf(CustomException.class)
                 .satisfies(exception -> {
                     CustomException customException = (CustomException) exception;
@@ -131,7 +131,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> emailVerificationService.sendVerificationCode(MEMBER_EMAIL, PASSWORD_RESET_PURPOSE, mockUserDetails))
+        assertThatThrownBy(() -> emailVerificationService.sendVerificationCode(MEMBER_EMAIL, PASSWORD_RESET_PURPOSE))
                 .isInstanceOf(MemberException.class)
                 .satisfies(exception -> {
                     MemberException memberException = (MemberException) exception;
@@ -149,7 +149,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // when
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         // then
         verify(emailSender).sendVerificationEmail(eq(MEMBER_EMAIL), argThat(code ->
@@ -167,7 +167,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // 먼저 인증 코드를 전송하여 verificationStore에 데이터 저장
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         // 실제 생성된 코드를 가져와서 테스트 (ReflectionTestUtils 사용)
         Object verificationData = verificationStore.get(MEMBER_EMAIL);
@@ -189,7 +189,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // 먼저 인증 코드를 전송하여 verificationStore에 데이터 저장
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         // when & then
         assertThatThrownBy(() -> emailVerificationService.verifyCode(MEMBER_EMAIL, wrongCode))
@@ -232,7 +232,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // 먼저 인증 코드를 전송
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         // verificationData를 가져와서 만료 시간을 과거로 설정
         Object verificationData = verificationStore.get(MEMBER_EMAIL);
@@ -261,7 +261,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // 먼저 인증 코드를 전송
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         Object verificationData = verificationStore.get(MEMBER_EMAIL);
         int initialAttempts = (int) ReflectionTestUtils.getField(verificationData, "attempts");
@@ -287,7 +287,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // 인증 코드 전송 및 검증 완료
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
         Object verificationData = verificationStore.get(MEMBER_EMAIL);
         String actualCode = (String) ReflectionTestUtils.getField(verificationData, "code");
         emailVerificationService.verifyCode(MEMBER_EMAIL, actualCode);
@@ -306,7 +306,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // 인증 코드만 전송하고 검증하지 않음
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         // when
         boolean result = emailVerificationService.isEmailVerified(MEMBER_EMAIL);
@@ -334,7 +334,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // when - 회원가입용 인증 코드 전송
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         // then - MemberFixtureConstants 값들이 올바르게 사용되었는지 확인
         verify(memberRepository).existsByEmail(MEMBER_EMAIL);
@@ -354,12 +354,12 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // when - 첫 번째 요청
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
         Object firstData = verificationStore.get(MEMBER_EMAIL);
         String firstCode = (String) ReflectionTestUtils.getField(firstData, "code");
 
         // 두 번째 요청
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
         Object secondData = verificationStore.get(MEMBER_EMAIL);
         String secondCode = (String) ReflectionTestUtils.getField(secondData, "code");
 
@@ -382,7 +382,7 @@ class EmailVerificationServiceTest {
         given(memberRepository.existsByEmail(MEMBER_EMAIL)).willReturn(false);
 
         // when
-        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE, null);
+        emailVerificationService.sendVerificationCode(MEMBER_EMAIL, SIGN_UP_PURPOSE);
 
         // then
         Object verificationData = verificationStore.get(MEMBER_EMAIL);

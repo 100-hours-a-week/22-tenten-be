@@ -1,6 +1,11 @@
-package com.kakaobase.snsapp.global.fixture;
+package com.kakaobase.snsapp.global.fixture.member;
 
 import com.kakaobase.snsapp.domain.members.entity.Member;
+import org.springframework.test.util.ReflectionTestUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
 import static com.kakaobase.snsapp.global.constants.MemberFixtureConstants.*;
 
 public class MemberFixture {
@@ -89,4 +94,68 @@ public class MemberFixture {
 
         return member;
     }
+
+
+    public static List<Member> createMixedMembers(int kbtCount, int nonKbtCount) {
+        List<Member> members = new ArrayList<>();
+
+        // KBT 멤버들 생성
+        for (int i = 0; i < kbtCount; i++) {
+            Member member = createKbtMember();
+            ReflectionTestUtils.setField(member, "nickname", "KBT사용자" + (i + 1));
+            ReflectionTestUtils.setField(member, "name", "KBT유저" + (i + 1));
+            members.add(member);
+        }
+
+        // 외부 멤버들 생성
+        for (int i = 0; i < nonKbtCount; i++) {
+            Member member = createNonKbtMember();
+            ReflectionTestUtils.setField(member, "nickname", "외부사용자" + (i + 1));
+            ReflectionTestUtils.setField(member, "name", "외부유저" + (i + 1));
+            members.add(member);
+        }
+
+        return members;
+    }
+
+    private static final AtomicLong emailCounter = new AtomicLong(1);
+
+    public static List<Member> createMultipleKbtMembers(int count) {
+        List<Member> members = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            long uniqueId = emailCounter.getAndIncrement();
+            Member member = Member.builder()
+                    .email("kbt-multi-" + uniqueId + "@kakao.com")  // 고유 이메일
+                    .nickname("KBT사용자" + uniqueId)
+                    .name("KBT유저" + uniqueId)
+                    .password("password123")
+                    .className(Member.ClassName.ALL)
+                    .followerCount(0)
+                    .followingCount(0)
+                    .isBanned(false)
+                    .build();
+            members.add(member);
+        }
+        return members;
+    }
+
+    public static List<Member> createMultipleNonKbtMembers(int count) {
+        List<Member> members = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            long uniqueId = emailCounter.getAndIncrement();
+            Member member = Member.builder()
+                    .email("external-multi-" + uniqueId + "@external.com")  // 고유 이메일
+                    .nickname("외부사용자" + uniqueId)
+                    .name("외부유저" + uniqueId)
+                    .password("password123")
+                    .className(null)
+                    .followerCount(0)
+                    .followingCount(0)
+                    .isBanned(false)
+                    .build();
+            members.add(member);
+        }
+        return members;
+    }
+
 }

@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.global.fixture;
+package com.kakaobase.snsapp.global.fixture.post;
 
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 

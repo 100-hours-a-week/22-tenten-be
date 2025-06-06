@@ -6,9 +6,13 @@ import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
+import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,7 +23,11 @@ import java.util.stream.Collectors;
  * 댓글과 대댓글 관련 엔티티와 DTO 간 변환을 담당하는 컨버터 클래스
  */
 @Component
+@RequiredArgsConstructor
 public class CommentConverter {
+
+    private FollowRepository followRepository;
+    private EntityManager em;
 
     /**
      * 댓글 작성 요청 DTO를 댓글 엔티티로 변환
@@ -67,13 +75,16 @@ public class CommentConverter {
      * @return 댓글 생성 응답 DTO
      */
     public CommentResponseDto.CreateCommentResponse toCreateCommentResponse(Comment comment) {
-        CommentResponseDto.UserInfo userInfo = createUserInfo(
-                comment.getMember().getId(),
-                comment.getMember().getNickname(),
-                comment.getMember().getProfileImgUrl()
-                // 팔로우 기능은 V2에서 구현 예정
-                // false
-        );
+
+        Member CommentOwner = comment.getMember();
+
+        MemberResponseDto.UserInfo userInfo =
+                MemberResponseDto.UserInfo.builder()
+                        .id(CommentOwner.getId())
+                        .name(CommentOwner.getName())
+                        .nickname(CommentOwner.getNickname())
+                        .imageUrl(CommentOwner.getProfileImgUrl())
+                        .build();
 
         return new CommentResponseDto.CreateCommentResponse(
                 comment.getId(),
@@ -90,13 +101,16 @@ public class CommentConverter {
      * @return 대댓글 생성 응답 DTO
      */
     public CommentResponseDto.CreateCommentResponse toCreateRecommentResponse(Recomment recomment) {
-        CommentResponseDto.UserInfo userInfo = createUserInfo(
-                recomment.getMember().getId(),
-                recomment.getMember().getNickname(),
-                recomment.getMember().getProfileImgUrl()
-                // 팔로우 기능은 V2에서 구현 예정
-                // false
-        );
+
+        Member RecommentOwner = recomment.getMember();
+
+        MemberResponseDto.UserInfo userInfo =
+                MemberResponseDto.UserInfo.builder()
+                        .id(RecommentOwner.getId())
+                        .name(RecommentOwner.getName())
+                        .nickname(RecommentOwner.getNickname())
+                        .imageUrl(RecommentOwner.getProfileImgUrl())
+                        .build();
 
         return new CommentResponseDto.CreateCommentResponse(
                 recomment.getId(),
@@ -115,17 +129,19 @@ public class CommentConverter {
     public CommentResponseDto.CommentInfo toCommentInfo(
             Comment comment,
             Boolean isMine,
-            Boolean isLiked
-            // 팔로우 기능은 V2에서 구현 예정
-            // Set<Long> followedMemberIds,
+            Boolean isLiked,
+            Boolean isFollowing
     ) {
-        CommentResponseDto.UserInfo userInfo = createUserInfo(
-                comment.getMember().getId(),
-                comment.getMember().getNickname(),
-                comment.getMember().getProfileImgUrl()
-                // 팔로우 기능은 V2에서 구현 예정
-                // followedMemberIds != null && followedMemberIds.contains(comment.getMember().getId())
-        );
+
+        Member CommentOwner = comment.getMember();
+
+        MemberResponseDto.UserInfoWithFollowing userInfo =
+                MemberResponseDto.UserInfoWithFollowing.builder()
+                        .id(CommentOwner.getId())
+                        .nickname(CommentOwner.getNickname())
+                        .imageUrl(CommentOwner.getProfileImgUrl())
+                        .isFollowed(isFollowing)
+                        .build();
 
         return new CommentResponseDto.CommentInfo(
                 comment.getId(),
@@ -153,17 +169,15 @@ public class CommentConverter {
             List<Recomment> recomments,
             Long currentMemberId,
             Set<Long> likedRecommentIds,
-            // 팔로우 기능은 V2에서 구현 예정
-            // Set<Long> followedMemberIds,
+            Set<Long> followingMemberIds,
             Long nextCursor
     ) {
         List<CommentResponseDto.RecommentInfo> recommentInfos = recomments.stream()
                 .map(recomment -> toRecommentInfo(
                         recomment,
                         currentMemberId,
-                        likedRecommentIds
-                        // 팔로우 기능은 V2에서 구현 예정
-                        // followedMemberIds
+                        likedRecommentIds,
+                        followingMemberIds
                 ))
                 .collect(Collectors.toList());
 
@@ -185,17 +199,19 @@ public class CommentConverter {
     public CommentResponseDto.RecommentInfo toRecommentInfo(
             Recomment recomment,
             Long currentMemberId,
-            Set<Long> likedRecommentIds
-            // 팔로우 기능은 V2에서 구현 예정
-            // Set<Long> followedMemberIds
+            Set<Long> likedRecommentIds,
+            Set<Long> followingMemberIds
     ) {
-        CommentResponseDto.UserInfo userInfo = createUserInfo(
-                recomment.getMember().getId(),
-                recomment.getMember().getNickname(),
-                recomment.getMember().getProfileImgUrl()
-                // 팔로우 기능은 V2에서 구현 예정
-                // followedMemberIds != null && followedMemberIds.contains(recomment.getMember().getId())
-        );
+
+        Member CommentOwner = recomment.getMember();
+
+        MemberResponseDto.UserInfoWithFollowing userInfo =
+                MemberResponseDto.UserInfoWithFollowing.builder()
+                        .id(CommentOwner.getId())
+                        .imageUrl(CommentOwner.getProfileImgUrl())
+                        .nickname(CommentOwner.getNickname())
+                        .isFollowed(followingMemberIds != null && followingMemberIds.contains(CommentOwner.getId()))
+                        .build();
 
         return new CommentResponseDto.RecommentInfo(
                 recomment.getId(),
@@ -216,14 +232,6 @@ public class CommentConverter {
      */
     public CommentResponseDto.MessageResponse toMessageResponse(String message) {
         return new CommentResponseDto.MessageResponse(message);
-    }
-
-    /**
-     * 유저 정보 DTO 생성 (중복 코드 제거를 위한 헬퍼 메서드)
-     * V2에서 팔로우 기능 구현 시 isFollowed 파라미터 추가 예정
-     */
-    public CommentResponseDto.UserInfo createUserInfo(Long id, String nickname, String profileImage) {
-        return new CommentResponseDto.UserInfo(id, nickname, profileImage);
     }
 
     /**

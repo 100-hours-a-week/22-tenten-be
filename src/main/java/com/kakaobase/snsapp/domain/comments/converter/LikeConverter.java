@@ -37,31 +37,4 @@ public class LikeConverter {
         return new RecommentLike(memberId, recommentId);
     }
 
-    /**
-     * 댓글 좋아요 토글 응답 DTO 생성
-     *
-     * @param comment 댓글 엔티티
-     * @param isLiked 좋아요 상태
-     * @return 댓글 좋아요 토글 응답 DTO
-     */
-    public CommentResponseDto.CommentLikeResponse toCommentLikeResponse(Comment comment, boolean isLiked) {
-        if (comment == null) {
-            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId", "존재하지 않는 댓글입니다.");
-        }
-        return new CommentResponseDto.CommentLikeResponse(isLiked, comment.getLikeCount());
-    }
-
-    /**
-     * 대댓글 좋아요 토글 응답 DTO 생성
-     *
-     * @param recomment 대댓글 엔티티
-     * @param isLiked 좋아요 상태
-     * @return 대댓글 좋아요 토글 응답 DTO
-     */
-    public CommentResponseDto.RecommentLikeResponse toRecommentLikeResponse(Recomment recomment, boolean isLiked) {
-        if (recomment == null) {
-            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId", "존재하지 않는 대댓글입니다.");
-        }
-        return new CommentResponseDto.RecommentLikeResponse(isLiked, recomment.getLikeCount());
-    }
 }

@@ -1,6 +1,7 @@
-package com.kakaobase.snsapp.global.fixture;
+package com.kakaobase.snsapp.global.fixture.member;
 
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
+import com.kakaobase.snsapp.global.common.email.dto.EmailRequest;
 
 import static com.kakaobase.snsapp.global.constants.MemberFixtureConstants.*;
 
@@ -407,8 +408,8 @@ public class MemberRequestFixture {
     /**
      * 정상적인 이메일 인증 코드 요청 DTO (회원가입용)
      */
-    public static MemberRequestDto.EmailVerificationRequest createValidEmailVerificationRequest() {
-        return new MemberRequestDto.EmailVerificationRequest(
+    public static EmailRequest.EmailVerificationRequest createValidEmailVerificationRequest() {
+        return new EmailRequest.EmailVerificationRequest(
                 MEMBER_EMAIL,
                 SIGN_UP_PURPOSE
         );
@@ -417,8 +418,8 @@ public class MemberRequestFixture {
     /**
      * 정상적인 이메일 인증 코드 요청 DTO (비밀번호 재설정용)
      */
-    public static MemberRequestDto.EmailVerificationRequest createValidPasswordResetVerificationRequest() {
-        return new MemberRequestDto.EmailVerificationRequest(
+    public static EmailRequest.EmailVerificationRequest createValidPasswordResetVerificationRequest() {
+        return new EmailRequest.EmailVerificationRequest(
                 MEMBER_EMAIL,
                 PASSWORD_RESET_PURPOSE
         );
@@ -427,8 +428,8 @@ public class MemberRequestFixture {
     /**
      * 정상적인 이메일 인증 코드 확인 DTO
      */
-    public static MemberRequestDto.EmailVerification createValidEmailVerificationCheck() {
-        return new MemberRequestDto.EmailVerification(
+    public static EmailRequest.EmailVerification createValidEmailVerificationCheck() {
+        return new EmailRequest.EmailVerification(
                 MEMBER_EMAIL,
                 VALID_VERIFICATION_CODE
         );
@@ -437,8 +438,8 @@ public class MemberRequestFixture {
     /**
      * 잘못된 인증 코드 형식 (5자리)
      */
-    public static MemberRequestDto.EmailVerification createInvalidCodeFormatRequest() {
-        return new MemberRequestDto.EmailVerification(
+    public static EmailRequest.EmailVerification createInvalidCodeFormatRequest() {
+        return new EmailRequest.EmailVerification(
                 MEMBER_EMAIL,
                 INVALID_CODE_FORMAT
         );
@@ -447,8 +448,8 @@ public class MemberRequestFixture {
     /**
      * 잘못된 인증 목적
      */
-    public static MemberRequestDto.EmailVerificationRequest createInvalidPurposeRequest() {
-        return new MemberRequestDto.EmailVerificationRequest(
+    public static EmailRequest.EmailVerificationRequest createInvalidPurposeRequest() {
+        return new EmailRequest.EmailVerificationRequest(
                 MEMBER_EMAIL,
                 INVALID_PURPOSE
         );

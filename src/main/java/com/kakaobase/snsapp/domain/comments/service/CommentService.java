@@ -11,11 +11,13 @@ import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
+import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.service.PostService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -44,15 +46,9 @@ public class CommentService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
     private final CommentLikeRepository commentLikeRepository;
+    private final FollowRepository followRepository;
+    private final EntityManager em;
 
-    /**
-     * 댓글을 생성합니다.
-     *
-     * @param memberId 회원 ID
-     * @param postId 게시글 ID
-     * @param request 댓글 생성 요청 DTO
-     * @return 생성된 댓글 응답 DTO
-     */
     /**
      * 댓글을 생성합니다.
      *
@@ -188,22 +184,6 @@ public class CommentService {
      * @param pageRequest 페이지 요청 DTO
      * @return 댓글 목록 응답 DTO
      */
-    /**
-     * 게시글에 달린 댓글 목록을 조회합니다.
-     *
-     * @param memberId 현재 로그인한 회원 ID
-     * @param postId 조회할 게시글 ID
-     * @param pageRequest 페이지 요청 정보
-     * @return 댓글 목록 응답 DTO
-     */
-    /**
-     * 게시글에 달린 댓글 목록을 조회합니다.
-     *
-     * @param memberId 현재 로그인한 회원 ID
-     * @param postId 조회할 게시글 ID
-     * @param pageRequest 페이지 요청 정보
-     * @return 댓글 목록 응답 DTO
-     */
     public CommentResponseDto.CommentListResponse getCommentsByPostId(Long memberId, Long postId, CommentRequestDto.CommentPageRequest pageRequest) {
         // 게시글 존재 확인
         Post post = postService.findById(postId);
@@ -285,11 +265,16 @@ public class CommentService {
         List<Long> likedRecommentIds = recommentRepository.findLikedRecommentIds(recommentIds, memberId);
         Set<Long> likedRecommentIdsSet = new HashSet<>(likedRecommentIds);
 
+
+        Member currentUser = em.getReference(Member.class, memberId);
+        Set<Long> followingIdSet = followRepository.findFollowingUserIdsByFollowerUser(currentUser);
+
         // 응답 DTO 생성
         return commentConverter.toRecommentListResponse(
                 recomments,
                 memberId,
                 likedRecommentIdsSet,
+                followingIdSet,
                 nextCursor
         );
     }
@@ -318,11 +303,18 @@ public class CommentService {
         // 댓글 작성자 확인 (본인 작성 여부)
         boolean isMine = comment.getMember().getId().equals(memberId);
 
+        Member follower = em.getReference(Member.class, memberId);
+        Member following = em.getReference(Member.class, comment.getMember().getId());
+
+        //팔로우 여부 확인
+        boolean isFollowing = followRepository.existsByFollowerUserAndFollowingUser(follower, following);
+
         // CommentInfo 생성
         CommentResponseDto.CommentInfo commentInfo = commentConverter.toCommentInfo(
                 comment,
                 isMine,
-                isLiked
+                isLiked,
+                isFollowing
         );
 
         return commentInfo;

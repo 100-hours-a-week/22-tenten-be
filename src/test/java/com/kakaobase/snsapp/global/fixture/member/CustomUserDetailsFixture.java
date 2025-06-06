@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.global.fixture;
+package com.kakaobase.snsapp.global.fixture.member;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 

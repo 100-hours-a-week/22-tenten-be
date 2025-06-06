@@ -43,11 +43,10 @@ public class CommentLikeService {
      *
      * @param commentId 댓글 ID
      * @param memberId 회원 ID
-     * @return 좋아요 응답 DTO
      * @throws CommentException 댓글이 없거나 이미 좋아요한 경우
      */
     @Transactional
-    public CommentResponseDto.CommentLikeResponse addCommentLike(Long memberId, Long commentId) {
+    public void addCommentLike(Long memberId, Long commentId) {
         // 댓글 존재 여부 확인
         Comment comment = commentRepository.findByIdAndDeletedAtIsNull(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
@@ -66,8 +65,6 @@ public class CommentLikeService {
         commentRepository.save(comment);
 
         log.info("댓글 좋아요 추가 완료: 댓글 ID={}, 회원 ID={}", commentId, memberId);
-
-        return new CommentResponseDto.CommentLikeResponse(true, comment.getLikeCount());
     }
 
     /**
@@ -79,7 +76,7 @@ public class CommentLikeService {
      * @throws CommentException 댓글이 없거나 좋아요하지 않은 경우
      */
     @Transactional
-    public CommentResponseDto.CommentLikeResponse removeCommentLike(Long memberId, Long commentId) {
+    public void removeCommentLike(Long memberId, Long commentId) {
         // 댓글 존재 여부 확인
         Comment comment = commentRepository.findByIdAndDeletedAtIsNull(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
@@ -96,8 +93,6 @@ public class CommentLikeService {
         commentRepository.save(comment);
 
         log.info("댓글 좋아요 취소 완료: 댓글 ID={}, 회원 ID={}", commentId, memberId);
-
-        return new CommentResponseDto.CommentLikeResponse(false, comment.getLikeCount());
     }
 
     /**
@@ -105,11 +100,10 @@ public class CommentLikeService {
      *
      * @param recommentId 대댓글 ID
      * @param memberId 회원 ID
-     * @return 좋아요 응답 DTO
      * @throws CommentException 대댓글이 없거나 이미 좋아요한 경우
      */
     @Transactional
-    public CommentResponseDto.RecommentLikeResponse addRecommentLike(Long memberId, Long recommentId) {
+    public void addRecommentLike(Long memberId, Long recommentId) {
         // 대댓글 존재 여부 확인
         Recomment recomment = recommentRepository.findByIdAndDeletedAtIsNull(recommentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId"));
@@ -128,8 +122,6 @@ public class CommentLikeService {
         recommentRepository.save(recomment);
 
         log.info("대댓글 좋아요 추가 완료: 대댓글 ID={}, 회원 ID={}", recommentId, memberId);
-
-        return new CommentResponseDto.RecommentLikeResponse(true, recomment.getLikeCount());
     }
 
     /**
@@ -137,11 +129,10 @@ public class CommentLikeService {
      *
      * @param recommentId 대댓글 ID
      * @param memberId 회원 ID
-     * @return 좋아요 응답 DTO
      * @throws CommentException 대댓글이 없거나 좋아요하지 않은 경우
      */
     @Transactional
-    public CommentResponseDto.RecommentLikeResponse removeRecommentLike(Long memberId, Long recommentId) {
+    public void removeRecommentLike(Long memberId, Long recommentId) {
         // 대댓글 존재 여부 확인
         Recomment recomment = recommentRepository.findByIdAndDeletedAtIsNull(recommentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId"));
@@ -159,7 +150,6 @@ public class CommentLikeService {
 
         log.info("대댓글 좋아요 취소 완료: 대댓글 ID={}, 회원 ID={}", recommentId, memberId);
 
-        return new CommentResponseDto.RecommentLikeResponse(false, recomment.getLikeCount());
     }
 
 

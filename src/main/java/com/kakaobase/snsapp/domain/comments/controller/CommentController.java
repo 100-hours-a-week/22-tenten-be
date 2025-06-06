@@ -171,19 +171,17 @@ public class CommentController {
             description = "댓글에 좋아요를 추가합니다. 이미 좋아요를 누른 경우 에러가 발생합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "좋아요 추가 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.CommentLikeResponse.class))),
+            @ApiResponse(responseCode = "200", description = "좋아요 추가 성공"),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음"),
             @ApiResponse(responseCode = "409", description = "이미 좋아요한 댓글입니다")
     })
-    public ResponseEntity<CustomResponse<CommentResponseDto.CommentLikeResponse>> addCommentLike(
+    public CustomResponse<?> addCommentLike(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long memberId = Long.valueOf(userDetails.getId());
-        CommentResponseDto.CommentLikeResponse response = commentLikeService.addCommentLike(memberId, commentId);
-        return ResponseEntity.ok(CustomResponse.success("댓글에 좋아요를 눌렀습니다.", response));
+        Long memberId = Long.valueOf(userDetails.getId());commentLikeService.addCommentLike(memberId, commentId);
+        return CustomResponse.success("좋아요가 성공적으로 등록되었습니다");
     }
 
     /**
@@ -196,19 +194,18 @@ public class CommentController {
             description = "댓글의 좋아요를 취소합니다. 좋아요하지 않은 경우 에러가 발생합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "좋아요 취소 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.CommentLikeResponse.class))),
+            @ApiResponse(responseCode = "200", description = "좋아요 취소 성공"),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음"),
             @ApiResponse(responseCode = "409", description = "좋아요하지 않은 댓글입니다")
     })
-    public ResponseEntity<CustomResponse<CommentResponseDto.CommentLikeResponse>> removeCommentLike(
+    public CustomResponse<?> removeCommentLike(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
-        CommentResponseDto.CommentLikeResponse response = commentLikeService.removeCommentLike(memberId, commentId);
-        return ResponseEntity.ok(CustomResponse.success("댓글 좋아요를 취소했습니다.", response));
+        commentLikeService.removeCommentLike(memberId, commentId);
+        return CustomResponse.success("좋아요가 성공적으로 취소되었습니다.");
     }
 
     /**
@@ -221,19 +218,18 @@ public class CommentController {
             description = "대댓글에 좋아요를 추가합니다. 이미 좋아요를 누른 경우 에러가 발생합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "좋아요 추가 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.RecommentLikeResponse.class))),
+            @ApiResponse(responseCode = "200", description = "좋아요 추가 성공"),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "대댓글을 찾을 수 없음"),
             @ApiResponse(responseCode = "409", description = "이미 좋아요한 대댓글입니다")
     })
-    public ResponseEntity<CustomResponse<CommentResponseDto.RecommentLikeResponse>> addRecommentLike(
+    public CustomResponse<?> addRecommentLike(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
-        CommentResponseDto.RecommentLikeResponse response = commentLikeService.addRecommentLike(memberId, recommentId);
-        return ResponseEntity.ok(CustomResponse.success("대댓글에 좋아요를 눌렀습니다.", response));
+        commentLikeService.addRecommentLike(memberId, recommentId);
+        return CustomResponse.success("좋아요가 성공적으로 등록되었습니다");
     }
 
     /**
@@ -246,19 +242,18 @@ public class CommentController {
             description = "대댓글의 좋아요를 취소합니다. 좋아요하지 않은 경우 에러가 발생합니다."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "좋아요 취소 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.RecommentLikeResponse.class))),
+            @ApiResponse(responseCode = "200", description = "좋아요 취소 성공"),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "대댓글을 찾을 수 없음"),
             @ApiResponse(responseCode = "409", description = "좋아요하지 않은 대댓글입니다")
     })
-    public ResponseEntity<CustomResponse<CommentResponseDto.RecommentLikeResponse>> removeRecommentLike(
+    public CustomResponse<?> removeRecommentLike(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
-        CommentResponseDto.RecommentLikeResponse response = commentLikeService.removeRecommentLike(memberId, recommentId);
-        return ResponseEntity.ok(CustomResponse.success("대댓글 좋아요를 취소했습니다.", response));
+        commentLikeService.removeRecommentLike(memberId, recommentId);
+        return CustomResponse.success("대댓글 좋아요를 취소했습니다.");
     }
 
 
@@ -277,12 +272,12 @@ public class CommentController {
             @ApiResponse(responseCode = "403", description = "본인이 작성한 대댓글만 삭제할 수 있습니다"),
             @ApiResponse(responseCode = "404", description = "해당 대댓글을 찾을 수 없습니다")
     })
-    public ResponseEntity<CustomResponse<Void>> deleteRecomment(
+    public CustomResponse<?> deleteRecomment(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
         commentService.deleteRecomment(memberId, recommentId);
-        return ResponseEntity.ok(CustomResponse.success("대댓글이 삭제되었습니다.", null));
+        return CustomResponse.success("좋아요가 성공적으로 취소되었습니다.", null);
     }
 }

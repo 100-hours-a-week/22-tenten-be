@@ -8,7 +8,7 @@ import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
-import com.kakaobase.snsapp.global.fixture.PostFixture;
+import com.kakaobase.snsapp.global.fixture.post.PostFixture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

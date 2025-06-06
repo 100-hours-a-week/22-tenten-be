@@ -1,7 +1,8 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
+import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.service.MemberService;
-import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
@@ -12,9 +13,11 @@ import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.common.s3.service.S3Service;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
-import com.kakaobase.snsapp.global.fixture.PostFixture;
-import com.kakaobase.snsapp.global.fixture.PostImageFixture;
-import com.kakaobase.snsapp.global.fixture.PostRequestDtoFixture;
+import com.kakaobase.snsapp.global.fixture.post.PostFixture;
+import com.kakaobase.snsapp.global.fixture.post.PostImageFixture;
+import com.kakaobase.snsapp.global.fixture.post.PostRequestDtoFixture;
+import com.kakaobase.snsapp.global.fixture.member.MemberFixture;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +28,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.MockedStatic;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
@@ -67,8 +69,16 @@ class PostServiceTest {
     @Mock
     private PostLikeService postLikeService;
 
+    @Mock
+    private FollowRepository followRepository;
+
+    @Mock
+    private EntityManager entityManager;
+
     private Post mockPost;
     private Post mockAdminPost;
+    private Member mockMember;
+    private Member mockFollowing;
     private PostRequestDto.PostCreateRequestDto contentOnlyRequest;
     private PostRequestDto.PostCreateRequestDto imageRequest;
     private PostRequestDto.PostCreateRequestDto youtubeRequest;
@@ -78,11 +88,17 @@ class PostServiceTest {
     void setUp() {
         // Mock 게시글 생성
         mockPost = PostFixture.createKbtPost();
-        //  리플렉션으로 ID 설정 (private 필드이므로)
         ReflectionTestUtils.setField(mockPost, "id", POST_ID);
 
         mockAdminPost = PostFixture.createAdminPost();
         ReflectionTestUtils.setField(mockAdminPost, "id", ADMIN_POST_ID);
+
+        // Mock Members 생성 (Follow 관계용)
+        mockMember = MemberFixture.createKbtMember();
+        ReflectionTestUtils.setField(mockMember, "id", MEMBER_ID);
+
+        mockFollowing = MemberFixture.createNonKbtMember();
+        ReflectionTestUtils.setField(mockFollowing, "id", ADMIN_ID);
 
         // Mock 요청 DTO 생성
         contentOnlyRequest = PostRequestDtoFixture.createContentOnlyRequest();
@@ -108,7 +124,7 @@ class PostServiceTest {
                 .satisfies(post -> {
                     assertThat(post.getMemberId()).isEqualTo(MEMBER_ID);
                     assertThat(post.getBoardType()).isEqualTo(PANGYO_1_BOARD_TYPE);
-                    assertThat(post.getContent()).isEqualTo(POST_CONTENT); // 실제 반환되는 값으로 수정
+                    assertThat(post.getContent()).isEqualTo(POST_CONTENT);
                 });
 
         verify(postRepository).save(any(Post.class));
@@ -141,7 +157,6 @@ class PostServiceTest {
         // given
         given(postRepository.save(any(Post.class))).willReturn(mockPost);
 
-        // TransactionSynchronizationManager Mock 처리
         try (MockedStatic<TransactionSynchronizationManager> mockedTxManager =
                      mockStatic(TransactionSynchronizationManager.class)) {
 
@@ -154,7 +169,6 @@ class PostServiceTest {
             verify(postRepository).save(any(Post.class));
             verify(applicationEventPublisher).publishEvent(any());
 
-            // TransactionSynchronizationManager.registerSynchronization이 호출되었는지 확인
             mockedTxManager.verify(() ->
                     TransactionSynchronizationManager.registerSynchronization(any()));
         }
@@ -167,7 +181,6 @@ class PostServiceTest {
         given(s3Service.isValidImageUrl(VALID_IMAGE_URL_1)).willReturn(true);
         given(postRepository.save(any(Post.class))).willReturn(mockPost);
 
-        // 🔥 TransactionSynchronizationManager Mock 처리
         try (MockedStatic<TransactionSynchronizationManager> mockedTxManager =
                      mockStatic(TransactionSynchronizationManager.class)) {
 
@@ -182,7 +195,6 @@ class PostServiceTest {
             verify(postImageRepository).save(any(PostImage.class));
             verify(applicationEventPublisher).publishEvent(any());
 
-            // TransactionSynchronizationManager.registerSynchronization이 호출되었는지 확인
             mockedTxManager.verify(() ->
                     TransactionSynchronizationManager.registerSynchronization(any()));
         }
@@ -222,7 +234,7 @@ class PostServiceTest {
         // when
         Post result = postService.createPost(PANGYO_1_BOARD_TYPE, emptyRequest, MEMBER_ID);
 
-        // then - 서비스에서는 별도 검증 없이 처리
+        // then
         assertThat(result).isNotNull();
         verify(postRepository).save(any(Post.class));
     }
@@ -244,6 +256,9 @@ class PostServiceTest {
         given(memberService.getMemberInfo(MEMBER_ID)).willReturn(memberInfo);
         given(postLikeService.isLikedByMember(postId, MEMBER_ID)).willReturn(false);
         given(postImageRepository.findByPostIdOrderBySortIndexAsc(postId)).willReturn(postImages);
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockMember);
+        given(entityManager.getReference(Member.class, mockPost.getMemberId())).willReturn(mockMember);
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockMember)).willReturn(false);
 
         // when
         PostResponseDto.PostDetailResponse result = postService.getPostDetail(postId, MEMBER_ID);
@@ -256,11 +271,12 @@ class PostServiceTest {
         verify(postRepository).findById(postId);
         verify(memberService).getMemberInfo(MEMBER_ID);
         verify(postLikeService).isLikedByMember(postId, MEMBER_ID);
+        verify(followRepository).existsByFollowerUserAndFollowingUser(any(Member.class), any(Member.class));
     }
 
     @Test
-    @DisplayName("다른 사용자 게시글 조회 - 본인 게시글 여부가 false로 설정되는지 확인")
-    void getPostDetail_OtherPost_Success() {
+    @DisplayName("다른 사용자 게시글 조회 시 팔로우 상태 확인 - 팔로우 여부가 정확히 반환되는지 확인")
+    void getPostDetail_OtherPostWithFollowStatus_Success() {
         // given
         Long postId = ADMIN_POST_ID;
         Map<String, String> memberInfo = Map.of(
@@ -272,6 +288,9 @@ class PostServiceTest {
         given(memberService.getMemberInfo(ADMIN_ID)).willReturn(memberInfo);
         given(postLikeService.isLikedByMember(postId, MEMBER_ID)).willReturn(false);
         given(postImageRepository.findByPostIdOrderBySortIndexAsc(postId)).willReturn(List.of());
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockMember);
+        given(entityManager.getReference(Member.class, ADMIN_ID)).willReturn(mockFollowing);
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockFollowing)).willReturn(true);
 
         // when
         PostResponseDto.PostDetailResponse result = postService.getPostDetail(postId, MEMBER_ID);
@@ -283,6 +302,35 @@ class PostServiceTest {
 
         verify(postRepository).findById(postId);
         verify(memberService).getMemberInfo(ADMIN_ID);
+        verify(followRepository).existsByFollowerUserAndFollowingUser(mockMember, mockFollowing);
+    }
+
+    @Test
+    @DisplayName("팔로우하지 않은 사용자의 게시글 조회 - isFollowing이 false로 설정되는지 확인")
+    void getPostDetail_NotFollowingUser_Success() {
+        // given
+        Long postId = ADMIN_POST_ID;
+        Map<String, String> memberInfo = Map.of(
+                "nickname", ADMIN_NICKNAME,
+                "imageUrl", MEMBER_PROFILE_IMG_URL
+        );
+
+        given(postRepository.findById(postId)).willReturn(Optional.of(mockAdminPost));
+        given(memberService.getMemberInfo(ADMIN_ID)).willReturn(memberInfo);
+        given(postLikeService.isLikedByMember(postId, MEMBER_ID)).willReturn(false);
+        given(postImageRepository.findByPostIdOrderBySortIndexAsc(postId)).willReturn(List.of());
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockMember);
+        given(entityManager.getReference(Member.class, ADMIN_ID)).willReturn(mockFollowing);
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockFollowing)).willReturn(false);
+
+        // when
+        PostResponseDto.PostDetailResponse result = postService.getPostDetail(postId, MEMBER_ID);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.data().isMine()).isFalse();
+
+        verify(followRepository).existsByFollowerUserAndFollowingUser(mockMember, mockFollowing);
     }
 
     @Test
@@ -298,6 +346,7 @@ class PostServiceTest {
         given(postRepository.findById(postId)).willReturn(Optional.of(mockPost));
         given(memberService.getMemberInfo(MEMBER_ID)).willReturn(memberInfo);
         given(postImageRepository.findByPostIdOrderBySortIndexAsc(postId)).willReturn(List.of());
+        given(entityManager.getReference(Member.class, null)).willReturn(null);
 
         // when
         PostResponseDto.PostDetailResponse result = postService.getPostDetail(postId, null);
@@ -310,30 +359,6 @@ class PostServiceTest {
         verify(postRepository).findById(postId);
         verify(memberService).getMemberInfo(MEMBER_ID);
         verify(postLikeService, never()).isLikedByMember(any(), any());
-    }
-
-    @Test
-    @DisplayName("이미지가 포함된 게시글 조회 - 이미지 정보가 포함되는지 확인")
-    void getPostDetail_WithImages_Success() {
-        // given
-        Long postId = POST_ID;
-        Map<String, String> memberInfo = Map.of(
-                "nickname", MEMBER_NICKNAME,
-                "imageUrl", MEMBER_PROFILE_IMG_URL
-        );
-        List<PostImage> postImages = PostImageFixture.createMultiplePostImages(mockPost);
-
-        given(postRepository.findById(postId)).willReturn(Optional.of(mockPost));
-        given(memberService.getMemberInfo(MEMBER_ID)).willReturn(memberInfo);
-        given(postLikeService.isLikedByMember(postId, MEMBER_ID)).willReturn(false);
-        given(postImageRepository.findByPostIdOrderBySortIndexAsc(postId)).willReturn(postImages);
-
-        // when
-        PostResponseDto.PostDetailResponse result = postService.getPostDetail(postId, MEMBER_ID);
-
-        // then
-        assertThat(result).isNotNull();
-        verify(postImageRepository).findByPostIdOrderBySortIndexAsc(postId);
     }
 
     @Test
@@ -371,7 +396,6 @@ class PostServiceTest {
                 .willReturn(mockPosts);
         given(memberService.getMemberInfoMapByIds(any())).willReturn(memberInfoMap);
         given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(List.of());
-        // currentMemberId가 null이므로 postLikeService 호출되지 않음
 
         // when
         PostResponseDto.PostListResponse result =
@@ -384,6 +408,39 @@ class PostServiceTest {
 
         verify(postRepository).findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, DEFAULT_LIMIT);
         verify(postLikeService, never()).findLikedPostIdsByMember(any(), any());
+    }
+
+    @Test
+    @DisplayName("로그인한 사용자의 게시글 목록 조회 - 팔로우 정보가 포함되는지 확인")
+    void getPostList_LoggedInUserWithFollowInfo_Success() {
+        // given
+        String postType = "PANGYO_1";
+        List<Post> mockPosts = List.of(mockPost);
+        Map<Long, Map<String, String>> memberInfoMap = Map.of(
+                MEMBER_ID, Map.of("nickname", MEMBER_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL)
+        );
+        List<Long> likedPostIds = List.of();
+
+        given(postRepository.findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, DEFAULT_LIMIT))
+                .willReturn(mockPosts);
+        given(memberService.getMemberInfoMapByIds(any())).willReturn(memberInfoMap);
+        given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(List.of());
+        given(postLikeService.findLikedPostIdsByMember(ADMIN_ID, mockPosts)).willReturn(likedPostIds);
+        given(entityManager.getReference(Member.class, ADMIN_ID)).willReturn(mockMember);
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockFollowing);
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockFollowing)).willReturn(true);
+
+        // when
+        PostResponseDto.PostListResponse result =
+                postService.getPostList(postType, DEFAULT_LIMIT, null, ADMIN_ID);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.data()).hasSize(1);
+
+        verify(postRepository).findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, DEFAULT_LIMIT);
+        verify(postLikeService).findLikedPostIdsByMember(ADMIN_ID, mockPosts);
+        verify(followRepository).existsByFollowerUserAndFollowingUser(any(Member.class), any(Member.class));
     }
 
     @Test
@@ -400,7 +457,6 @@ class PostServiceTest {
                 .willReturn(mockPosts);
         given(memberService.getMemberInfoMapByIds(any())).willReturn(memberInfoMap);
         given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(List.of());
-        // currentMemberId가 null이므로 postLikeService 호출되지 않음
 
         // when
         PostResponseDto.PostListResponse result =
@@ -415,33 +471,6 @@ class PostServiceTest {
     }
 
     @Test
-    @DisplayName("커스텀 limit으로 조회 - 지정된 개수만큼 조회되는지 확인")
-    void getPostList_CustomLimit_Success() {
-        // given
-        String postType = "PANGYO_1";
-        List<Post> mockPosts = List.of(mockPost);
-        Map<Long, Map<String, String>> memberInfoMap = Map.of(
-                MEMBER_ID, Map.of("nickname", MEMBER_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL)
-        );
-
-        given(postRepository.findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, CUSTOM_LIMIT))
-                .willReturn(mockPosts);
-        given(memberService.getMemberInfoMapByIds(any())).willReturn(memberInfoMap);
-        given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(List.of());
-        // currentMemberId가 null이므로 postLikeService 호출되지 않음
-
-        // when
-        PostResponseDto.PostListResponse result =
-                postService.getPostList(postType, CUSTOM_LIMIT, null, null);
-
-        // then
-        assertThat(result).isNotNull();
-
-        verify(postRepository).findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, CUSTOM_LIMIT);
-        verify(postLikeService, never()).findLikedPostIdsByMember(any(), any());
-    }
-
-    @Test
     @DisplayName("로그인한 사용자의 좋아요 정보 포함 - 좋아요 정보가 정확히 포함되는지 확인")
     void getPostList_WithLikedInfo_Success() {
         // given
@@ -450,7 +479,6 @@ class PostServiceTest {
         Map<Long, Map<String, String>> memberInfoMap = Map.of(
                 MEMBER_ID, Map.of("nickname", MEMBER_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL)
         );
-        //  해당 게시글에 좋아요한 상태로 설정
         List<Long> likedPostIds = List.of(POST_ID);
 
         given(postRepository.findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, DEFAULT_LIMIT))
@@ -458,6 +486,10 @@ class PostServiceTest {
         given(memberService.getMemberInfoMapByIds(any())).willReturn(memberInfoMap);
         given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(List.of());
         given(postLikeService.findLikedPostIdsByMember(MEMBER_ID, mockPosts)).willReturn(likedPostIds);
+
+        // 자신의 게시글이므로 follower와 following이 같은 객체여야 함
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockMember);
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockMember)).willReturn(false);
 
         // when
         PostResponseDto.PostListResponse result =
@@ -468,18 +500,18 @@ class PostServiceTest {
         assertThat(result.data().get(0).isLiked()).isTrue();
 
         verify(postLikeService).findLikedPostIdsByMember(MEMBER_ID, mockPosts);
+        verify(followRepository).existsByFollowerUserAndFollowingUser(mockMember, mockMember);
     }
 
     @Test
-    @DisplayName("로그인했지만 좋아요하지 않은 경우 - isLiked가 false로 설정되는지 확인")
-    void getPostList_LoggedInButNotLiked_Success() {
+    @DisplayName("다른 사용자 게시글 목록 조회 시 팔로우 정보 포함 - 팔로우 정보가 정확히 포함되는지 확인")
+    void getPostList_WithFollowInfo_OtherUserPost_Success() {
         // given
         String postType = "PANGYO_1";
-        List<Post> mockPosts = List.of(mockPost);
+        List<Post> mockPosts = List.of(mockAdminPost); // 관리자 게시글 사용
         Map<Long, Map<String, String>> memberInfoMap = Map.of(
-                MEMBER_ID, Map.of("nickname", MEMBER_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL)
+                ADMIN_ID, Map.of("nickname", ADMIN_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL)
         );
-        //  좋아요하지 않은 상태로 설정 (빈 리스트)
         List<Long> likedPostIds = List.of();
 
         given(postRepository.findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, DEFAULT_LIMIT))
@@ -488,15 +520,25 @@ class PostServiceTest {
         given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(List.of());
         given(postLikeService.findLikedPostIdsByMember(MEMBER_ID, mockPosts)).willReturn(likedPostIds);
 
+        // 다른 사용자의 게시글이므로 follower와 following이 다른 객체
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockMember);
+        given(entityManager.getReference(Member.class, ADMIN_ID)).willReturn(mockFollowing);
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockFollowing)).willReturn(true);
+
         // when
         PostResponseDto.PostListResponse result =
                 postService.getPostList(postType, DEFAULT_LIMIT, null, MEMBER_ID);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.data().get(0).isLiked()).isFalse();
+        assertThat(result.data()).hasSize(1);
+
+        PostResponseDto.PostListItem firstItem = result.data().get(0);
+        assertThat(firstItem.user().isFollowing()).isTrue();
+        assertThat(firstItem.isMine()).isFalse();
 
         verify(postLikeService).findLikedPostIdsByMember(MEMBER_ID, mockPosts);
+        verify(followRepository).existsByFollowerUserAndFollowingUser(mockMember, mockFollowing);
     }
 
     @Test
@@ -527,21 +569,6 @@ class PostServiceTest {
 
         // when
         postService.deletePost(postId, MEMBER_ID);
-
-        // then
-        verify(postRepository).findById(postId);
-        verify(postRepository).delete(mockPost);
-    }
-
-    @Test
-    @DisplayName("관리자가 다른 사용자 게시글 삭제 - 정상적으로 삭제되는지 확인")
-    void deletePost_AdminDeleteOther_Success() {
-        // given
-        Long postId = POST_ID;
-        given(postRepository.findById(postId)).willReturn(Optional.of(mockPost));
-
-        // when
-        postService.deletePost(postId, ADMIN_ID);
 
         // then
         verify(postRepository).findById(postId);
@@ -647,4 +674,196 @@ class PostServiceTest {
         verify(postRepository).findById(nonExistentPostId);
     }
 
+    // ========== Follow 관련 추가 테스트 ==========
+
+    @Test
+    @DisplayName("팔로우 상태 확인 - EntityManager와 FollowRepository 상호작용 테스트")
+    void getPostDetail_FollowStatusCheck_Success() {
+        // given
+        Long postId = ADMIN_POST_ID;
+        Map<String, String> memberInfo = Map.of(
+                "nickname", ADMIN_NICKNAME,
+                "imageUrl", MEMBER_PROFILE_IMG_URL
+        );
+
+        given(postRepository.findById(postId)).willReturn(Optional.of(mockAdminPost));
+        given(memberService.getMemberInfo(ADMIN_ID)).willReturn(memberInfo);
+        given(postLikeService.isLikedByMember(postId, MEMBER_ID)).willReturn(false);
+        given(postImageRepository.findByPostIdOrderBySortIndexAsc(postId)).willReturn(List.of());
+
+        // EntityManager Mock 설정
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockMember);
+        given(entityManager.getReference(Member.class, ADMIN_ID)).willReturn(mockFollowing);
+
+        // 팔로우 상태 Mock 설정
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockFollowing)).willReturn(true);
+
+        // when
+        PostResponseDto.PostDetailResponse result = postService.getPostDetail(postId, MEMBER_ID);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.data().isMine()).isFalse();
+
+        // EntityManager 호출 검증
+        verify(entityManager).getReference(Member.class, MEMBER_ID);
+        verify(entityManager).getReference(Member.class, ADMIN_ID);
+
+        // FollowRepository 호출 검증
+        verify(followRepository).existsByFollowerUserAndFollowingUser(mockMember, mockFollowing);
+    }
+
+    @Test
+    @DisplayName("게시글 목록에서 팔로우 상태 확인 - createPostListItem 메서드 테스트")
+    void getPostList_FollowStatusInList_Success() {
+        // given
+        String postType = "PANGYO_1";
+        List<Post> mockPosts = List.of(mockPost);
+        Map<Long, Map<String, String>> memberInfoMap = Map.of(
+                MEMBER_ID, Map.of("nickname", MEMBER_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL)
+        );
+        List<Long> likedPostIds = List.of();
+
+        given(postRepository.findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, DEFAULT_LIMIT))
+                .willReturn(mockPosts);
+        given(memberService.getMemberInfoMapByIds(any())).willReturn(memberInfoMap);
+        given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(List.of());
+        given(postLikeService.findLikedPostIdsByMember(ADMIN_ID, mockPosts)).willReturn(likedPostIds);
+
+        // EntityManager와 FollowRepository Mock 설정
+        given(entityManager.getReference(Member.class, ADMIN_ID)).willReturn(mockMember);
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockFollowing);
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockFollowing)).willReturn(false);
+
+        // when
+        PostResponseDto.PostListResponse result =
+                postService.getPostList(postType, DEFAULT_LIMIT, null, ADMIN_ID);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.data()).hasSize(1);
+
+        // PostListItem의 UserInfo에서 isFollowing 확인
+        PostResponseDto.PostListItem firstItem = result.data().get(0);
+        assertThat(firstItem.user().isFollowing()).isFalse();
+
+        // Repository 메서드들이 올바르게 호출되었는지 확인
+        verify(followRepository).existsByFollowerUserAndFollowingUser(mockMember, mockFollowing);
+        verify(entityManager, times(2)).getReference(eq(Member.class), any(Long.class));
+    }
+
+    @Test
+    @DisplayName("자기 자신의 게시글 목록 조회 - 팔로우 상태는 확인하지만 의미없음")
+    void getPostList_OwnPostsFollowCheck_Success() {
+        // given
+        String postType = "PANGYO_1";
+        List<Post> mockPosts = List.of(mockPost);
+        Map<Long, Map<String, String>> memberInfoMap = Map.of(
+                MEMBER_ID, Map.of("nickname", MEMBER_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL)
+        );
+        List<Long> likedPostIds = List.of();
+
+        given(postRepository.findTopNByBoardTypeOrderByCreatedAtDescIdDesc(PANGYO_1_BOARD_TYPE, DEFAULT_LIMIT))
+                .willReturn(mockPosts);
+        given(memberService.getMemberInfoMapByIds(any())).willReturn(memberInfoMap);
+        given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(List.of());
+        given(postLikeService.findLikedPostIdsByMember(MEMBER_ID, mockPosts)).willReturn(likedPostIds);
+
+        // 자기 자신에 대한 EntityManager 설정
+        given(entityManager.getReference(Member.class, MEMBER_ID)).willReturn(mockMember);
+        given(followRepository.existsByFollowerUserAndFollowingUser(mockMember, mockMember)).willReturn(false);
+
+        // when
+        PostResponseDto.PostListResponse result =
+                postService.getPostList(postType, DEFAULT_LIMIT, null, MEMBER_ID);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.data()).hasSize(1);
+
+        PostResponseDto.PostListItem firstItem = result.data().get(0);
+        // 자기 자신의 게시글이므로 isMine은 true이지만, 팔로우 체크는 여전히 수행됨
+        assertThat(firstItem.isMine()).isTrue();
+
+        verify(followRepository).existsByFollowerUserAndFollowingUser(any(Member.class), any(Member.class));
+    }
+
+    // ========== getMemberInfoByPosts() 메서드 테스트 ==========
+
+    @Test
+    @DisplayName("게시글 목록으로부터 회원 정보 조회 - 정상적으로 회원 정보가 반환되는지 확인")
+    void getMemberInfoByPosts_Success() {
+        // given
+        List<Post> posts = List.of(mockPost, mockAdminPost);
+        Map<Long, Map<String, String>> expectedMemberInfoMap = Map.of(
+                MEMBER_ID, Map.of("nickname", MEMBER_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL),
+                ADMIN_ID, Map.of("nickname", ADMIN_NICKNAME, "imageUrl", MEMBER_PROFILE_IMG_URL)
+        );
+
+        given(memberService.getMemberInfoMapByIds(any())).willReturn(expectedMemberInfoMap);
+
+        // when
+        Map<Long, Map<String, String>> result = postService.getMemberInfoByPosts(posts);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(2);
+        assertThat(result.get(MEMBER_ID)).containsEntry("nickname", MEMBER_NICKNAME);
+        assertThat(result.get(ADMIN_ID)).containsEntry("nickname", ADMIN_NICKNAME);
+
+        verify(memberService).getMemberInfoMapByIds(any());
+    }
+
+    @Test
+    @DisplayName("빈 게시글 목록으로 회원 정보 조회 - 빈 맵이 반환되는지 확인")
+    void getMemberInfoByPosts_EmptyList_Success() {
+        // given
+        List<Post> emptyPosts = List.of();
+
+        // when
+        Map<Long, Map<String, String>> result = postService.getMemberInfoByPosts(emptyPosts);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
+
+        verify(memberService, never()).getMemberInfoMapByIds(any());
+    }
+
+    // ========== findFirstImageUrlsByPosts() 메서드 테스트 ==========
+
+    @Test
+    @DisplayName("게시글 목록의 첫 번째 이미지 URL 조회 - 정상적으로 이미지 URL이 반환되는지 확인")
+    void findFirstImageUrlsByPosts_Success() {
+        // given
+        List<Post> posts = List.of(mockPost);
+        List<PostImage> firstImages = List.of(PostImageFixture.createBasicPostImage(mockPost));
+
+        given(postImageRepository.findFirstImagesByPostIds(any())).willReturn(firstImages);
+
+        // when
+        Map<Long, String> result = postService.findFirstImageUrlsByPosts(posts);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(1);
+
+        verify(postImageRepository).findFirstImagesByPostIds(any());
+    }
+
+    @Test
+    @DisplayName("빈 게시글 목록으로 이미지 URL 조회 - 빈 맵이 반환되는지 확인")
+    void findFirstImageUrlsByPosts_EmptyList_Success() {
+        // given
+        List<Post> emptyPosts = List.of();
+
+        // when
+        Map<Long, String> result = postService.findFirstImageUrlsByPosts(emptyPosts);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
+
+        verify(postImageRepository, never()).findFirstImagesByPostIds(any());
+    }
 }

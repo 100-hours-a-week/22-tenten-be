@@ -9,7 +9,7 @@ import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetailsService;
 import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
-import com.kakaobase.snsapp.global.fixture.CustomUserDetailsFixture;
+import com.kakaobase.snsapp.global.fixture.member.CustomUserDetailsFixture;
 import com.kakaobase.snsapp.global.security.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
