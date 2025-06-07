@@ -2,6 +2,7 @@ package com.kakaobase.snsapp.domain.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 
 /**
  * 인증 관련 응답 DTO 모음 클래스입니다.
@@ -13,6 +14,7 @@ public class AuthResponseDto {
      * - RefreshToken은 쿠키로 전달됨
      */
     @Schema(description = "로그인 또는 토큰 재발급 성공 응답 DTO")
+    @Builder
     public record LoginResponse(
 
             @Schema(description = "로그인 유저의 memberId", example = "12...")

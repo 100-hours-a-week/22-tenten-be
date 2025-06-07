@@ -1,5 +1,6 @@
 package com.kakaobase.snsapp.domain.auth.service;
 
+import com.kakaobase.snsapp.domain.auth.converter.AuthConverter;
 import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
 import com.kakaobase.snsapp.domain.auth.exception.AuthErrorCode;
@@ -8,6 +9,7 @@ import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetailsService;
 import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 
+import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
@@ -37,6 +39,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService userDetailsService;
     private final CustomUserDetailsService customUserDetailsService;
+    private final AuthConverter authConverter;
+    private final MemberRepository memberRepository;
 
     /**
      * 사용자 로그인 처리 및 인증 토큰 발급
@@ -69,8 +73,9 @@ public class AuthService {
         // 6. 액세스 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(userDetails);
 
+        AuthResponseDto.LoginResponse response = authConverter.toLoginResponseDto(userDetails, accessToken);
         log.debug("로그인 사용자 정보: id-{}, nickname-{}, className-{}, imgurl-{}", Long.valueOf(userDetails.getId()), userDetails.getNickname(), userDetails.getClassName(), userDetails.getProfileImgUrl());
-        return new AuthResponseDto.LoginResponse(Long.valueOf(userDetails.getId()), userDetails.getNickname(), userDetails.getClassName(), userDetails.getProfileImgUrl(), accessToken);
+        return response;
     }
 
 
@@ -101,7 +106,7 @@ public class AuthService {
      * 리프레시 토큰을 사용해 새 액세스 토큰 발급
      */
     @Transactional
-    public String getAccessToken(String providedRefreshToken) {
+    public AuthResponseDto.LoginResponse getAccessToken(String providedRefreshToken) {
 
         // 토큰이 없으면 예외 발생
         if (providedRefreshToken == null
@@ -111,14 +116,18 @@ public class AuthService {
             throw new CustomException(AuthErrorCode.REFRESH_TOKEN_MISSING);
         }
 
-        // 1. 리프레시 토큰 검증 및 사용자 ID 추출
         Long userId = securityTokenManager.validateRefreshTokenAndGetUserId(providedRefreshToken);
 
-        // 2. CustomUserDetailsService를 통해 인증 정보 로드
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserById(String.valueOf(userId));
 
-        // 4. 새 액세스 토큰 발급
-        return jwtTokenProvider.createAccessToken(userDetails);
+        String accessToken = jwtTokenProvider.createAccessToken(userDetails);
+
+        Member member = memberRepository.findById(userId)
+                .orElseThrow(() -> new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId"));
+
+        AuthResponseDto.LoginResponse response = authConverter.toLoginResponseDto(member, accessToken);
+
+        return response;
     }
 
     /**

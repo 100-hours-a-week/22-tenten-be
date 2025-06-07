@@ -4,6 +4,8 @@ import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
 import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.entity.RevokedRefreshToken;
+import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
+import com.kakaobase.snsapp.domain.members.entity.Member;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -81,5 +83,29 @@ public class AuthConverter {
      */
     public AuthResponseDto.TokenResponse toAccessTokenOnlyResponseDto(String accessToken) {
         return new AuthResponseDto.TokenResponse(accessToken);
+    }
+
+    public AuthResponseDto.LoginResponse toLoginResponseDto(CustomUserDetails userDetails, String accessToken) {
+        return AuthResponseDto.LoginResponse
+                .builder()
+                .memberId(Long.valueOf(userDetails.getId()))
+                .nickname(userDetails.getNickname())
+                .className(userDetails.getClassName())
+                .imageUrl(userDetails.getProfileImgUrl())
+                .accessToken(accessToken)
+                .build();
+
+    }
+
+    public AuthResponseDto.LoginResponse toLoginResponseDto(Member member, String accessToken) {
+        return AuthResponseDto.LoginResponse
+                .builder()
+                .memberId(member.getId())
+                .nickname(member.getNickname())
+                .className(member.getClassName())
+                .imageUrl(member.getProfileImgUrl())
+                .accessToken(accessToken)
+                .build();
+
     }
 }
