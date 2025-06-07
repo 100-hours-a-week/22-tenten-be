@@ -3,7 +3,9 @@ package com.kakaobase.snsapp.domain.comments.converter;
 import com.kakaobase.snsapp.domain.comments.dto.CommentRequestDto;
 import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
+import com.kakaobase.snsapp.domain.comments.entity.CommentLike;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
+import com.kakaobase.snsapp.domain.comments.entity.RecommentLike;
 import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
@@ -26,8 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CommentConverter {
 
-    private FollowRepository followRepository;
-    private EntityManager em;
+    private final EntityManager em;
 
     /**
      * 댓글 작성 요청 DTO를 댓글 엔티티로 변환
@@ -225,13 +226,33 @@ public class CommentConverter {
     }
 
     /**
-     * 단순 메시지 응답 DTO 생성
+     * 댓글 좋아요 엔티티 생성
      *
-     * @param message 메시지
-     * @return 메시지 응답 DTO
+     * @param memberId 회원 ID
+     * @param commentId 댓글 ID
+     * @return 댓글 좋아요 엔티티
      */
-    public CommentResponseDto.MessageResponse toMessageResponse(String message) {
-        return new CommentResponseDto.MessageResponse(message);
+    public CommentLike toCommentLikeEntity(Long memberId, Long commentId) {
+
+        Member proxyMember = em.getReference(Member.class, memberId);
+        Comment proxyCommennt = em.getReference(Comment.class, commentId);
+
+        return new CommentLike(proxyMember, proxyCommennt);
+    }
+
+    /**
+     * 대댓글 좋아요 엔티티 생성
+     *
+     * @param memberId 회원 ID
+     * @param recommentId 대댓글 ID
+     * @return 대댓글 좋아요 엔티티
+     */
+    public RecommentLike toRecommentLikeEntity(Long memberId, Long recommentId) {
+
+        Member proxyMember = em.getReference(Member.class, memberId);
+        Recomment proxyRecomment = em.getReference(Recomment.class, recommentId);
+
+        return new RecommentLike(proxyMember, proxyRecomment);
     }
 
     /**

@@ -55,25 +55,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      */
     boolean existsByIdAndMemberId(Long postId, Long memberId);
 
-    /**
-     * 특정 회원이 좋아요를 누른 게시글 목록을 게시글 ID 기준으로 커서 기반 페이징으로 조회합니다.
-     * 게시글 ID 내림차순으로 조회하므로 대략적인 최신순으로 볼 수 있습니다.
-     *
-     * @param memberId 회원 ID
-     * @param lastPostId 마지막으로 조회한 게시글 ID (첫 페이지에서는 null 또는 Long.MAX_VALUE)
-     * @param limit 조회할 게시글 수
-     * @return 회원이 좋아요를 누른 게시글 목록
-     */
-    @Query("SELECT p FROM Post p " +
-            "JOIN PostLike pl ON p.id = pl.postId " +
-            "WHERE pl.memberId = :memberId " +
-            "AND p.deletedAt IS NULL " +
-            "AND (:lastPostId IS NULL OR p.id < :lastPostId) " +
-            "ORDER BY p.id DESC")
-    List<Post> findPostsLikedByMemberWithCursor(
-            @Param("memberId") Long memberId,
-            @Param("lastPostId") Long lastPostId,
-            @Param("limit") int limit);
+
     /**
      * 게시글 좋아요 수를 증가시킵니다.
      *

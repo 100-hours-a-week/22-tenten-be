@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.posts.controller;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
@@ -48,7 +49,7 @@ public class PostController {
      */
     @GetMapping("/{postType}")
     @Operation(summary = "게시글 목록 조회", description = "게시판 유형별로 게시글 목록을 조회합니다.")
-    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal)")
+    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
     public ResponseEntity<PostResponseDto.PostListResponse> getPosts(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
@@ -65,7 +66,7 @@ public class PostController {
 
     @GetMapping("/{postType}/{postId}")
     @Operation(summary = "게시글 상세 조회", description = "게시글의 상세 정보를 조회합니다.")
-    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal)")
+    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
     public ResponseEntity<PostResponseDto.PostDetailResponse> getPostDetail(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
@@ -83,7 +84,7 @@ public class PostController {
      */
     @PostMapping("/{postType}")
     @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
-    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal)")
+    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
     public ResponseEntity<PostResponseDto.PostCreateResponse> createPost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Valid @RequestBody PostRequestDto.PostCreateRequestDto requestDto,
@@ -125,7 +126,7 @@ public class PostController {
      */
     @DeleteMapping("/{postType}/{postId}")
     @Operation(summary = "게시글 삭제", description = "게시글을 삭제합니다.")
-    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal) and @accessChecker.isPostOwner(#postId, authentication.principal)")
+    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal) and @accessChecker.isPostOwner(#postId, authentication.principal)")
     public ResponseEntity<PostResponseDto.PostDeleteResponse> deletePost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
@@ -148,7 +149,6 @@ public class PostController {
      */
     @PostMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 추가", description = "게시글에 좋아요를 추가합니다.")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PostResponseDto.PostLikeResponse> addLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -170,7 +170,6 @@ public class PostController {
      */
     @DeleteMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 취소", description = "게시글 좋아요를 취소합니다.")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PostResponseDto.PostLikeResponse> removeLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -186,6 +185,24 @@ public class PostController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 게시글에 좋아요를 누른 회원 목록 조회
+     */
+    @GetMapping("/{postId}/likes")
+    @Operation(summary = "게시글 좋아요한 유저 목록 조회", description = "게시글에 좋아요를 누른 유저를 조회합니다.")
+    public CustomResponse<List<MemberResponseDto.UserInfo>> getLikedMemberList(
+            @Parameter(description = "게시글 ID") @PathVariable Long postId,
+            @Parameter(description = "한 페이지에 표시할 유저 수") @RequestParam(defaultValue = "12") int limit,
+            @Parameter(description = "마지막으로 조회한 유저 ID") @RequestParam(required = false) Long cursor
+    ) {
+
+        List<MemberResponseDto.UserInfo> response= postLikeService.getLikedMembers(postId, limit, cursor);
+
+        return CustomResponse.success("좋아요 유저 목록을 성공적으로 불러왔습니다", response);
+    }
+
+
 
     /**
      * YouTube 영상 요약 요청 API

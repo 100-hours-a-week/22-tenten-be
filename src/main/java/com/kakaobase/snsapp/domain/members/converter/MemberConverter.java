@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * Member 도메인의 객체 변환을 담당하는 컨버터입니다.
  * DTO와 Entity 사이의 변환을 처리합니다.
@@ -68,5 +71,34 @@ public class MemberConverter {
                 isMe,
                 isFollowing
         );
+    }
+
+    /**
+     * Member Entity 리스트를 UserInfo DTO 리스트로 변환합니다.
+     *
+     * @param members Member Entity 리스트
+     * @return UserInfo DTO 리스트
+     */
+    public List<MemberResponseDto.UserInfo> convertToUserInfoList(List<Member> members) {
+        if (members == null) {
+            return List.of();
+        }
+
+        return members.stream()
+                .map(this::convertToUserInfo)
+                .collect(Collectors.toList());
+    }
+
+    public MemberResponseDto.UserInfo convertToUserInfo(Member member) {
+        if (member == null) {
+            return null;
+        }
+
+        return MemberResponseDto.UserInfo.builder()
+                .id(member.getId())
+                .name(member.getName())
+                .nickname(member.getNickname())
+                .imageUrl(member.getProfileImgUrl())
+                .build();
     }
 }

@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.comments.dto.CommentRequestDto;
 import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.service.CommentService;
 import com.kakaobase.snsapp.domain.comments.service.CommentLikeService;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -21,6 +22,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -279,5 +282,37 @@ public class CommentController {
         Long memberId = Long.valueOf(userDetails.getId());
         commentService.deleteRecomment(memberId, recommentId);
         return CustomResponse.success("좋아요가 성공적으로 취소되었습니다.", null);
+    }
+
+    /**
+     * 댓글에 좋아요를 누른 회원 목록 조회
+     */
+    @GetMapping("comments/{commentId}/likes")
+    @Operation(summary = "댓글 좋아요 유저 목록 조회", description = "댓글에 좋아요를 누른 유저를 조회합니다.")
+    public CustomResponse<List<MemberResponseDto.UserInfo>> getCommentLikedMemberList(
+            @Parameter(description = "댓글 ID") @PathVariable Long commentId,
+            @Parameter(description = "한 페이지에 표시할 유저 수") @RequestParam(defaultValue = "12") int limit,
+            @Parameter(description = "마지막으로 조회한 유저 ID") @RequestParam(required = false) Long cursor
+    ) {
+
+        List<MemberResponseDto.UserInfo> response= commentLikeService.getCommentLikedMembers(commentId, limit, cursor);
+
+        return CustomResponse.success("좋아요 유저 목록을 성공적으로 불러왔습니다", response);
+    }
+
+    /**
+     * 대댓글에 좋아요를 누른 회원 목록 조회
+     */
+    @GetMapping("/recomments/{recommentId}/likes")
+    @Operation(summary = "대댓글 좋아요 유저 목록 조회", description = "대댓글에 좋아요를 누른 유저를 조회합니다.")
+    public CustomResponse<List<MemberResponseDto.UserInfo>> getRecommentLikedMemberList(
+            @Parameter(description = "댓글 ID") @PathVariable Long recommentId,
+            @Parameter(description = "한 페이지에 표시할 유저 수") @RequestParam(defaultValue = "12") int limit,
+            @Parameter(description = "마지막으로 조회한 유저 ID") @RequestParam(required = false) Long cursor
+    ) {
+
+        List<MemberResponseDto.UserInfo> response= commentLikeService.getRecommentLikedMembers(recommentId, limit, cursor);
+
+        return CustomResponse.success("좋아요 유저 목록을 성공적으로 불러왔습니다", response);
     }
 }
