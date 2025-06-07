@@ -101,4 +101,21 @@ public class MemberConverter {
                 .imageUrl(member.getProfileImgUrl())
                 .build();
     }
+
+    public MemberResponseDto.Mypage toMypage(Member member, Long postCount, Boolean isMe, boolean isFollowing) {
+        return MemberResponseDto.Mypage
+                .builder()
+                .id(member.getId())
+                .name(member.getName())
+                .nickname(member.getNickname())
+                .imageUrl(member.getProfileImgUrl())
+                .className(member.getClassName())
+                .postCount(postCount)
+                .followerCount(member.getFollowerCount())
+                .followingCount(member.getFollowingCount())
+                .isMe(isMe)
+                .isFollowed(isFollowing)
+                .build();
+
+    }
 }

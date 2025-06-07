@@ -2,6 +2,7 @@ package com.kakaobase.snsapp.domain.members.service;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentRequestDto;
+import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
@@ -9,8 +10,10 @@ import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.exception.MemberErrorCode;
 import com.kakaobase.snsapp.domain.members.exception.MemberException;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
+import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.common.email.service.EmailVerificationService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import jakarta.persistence.EntityManager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +40,9 @@ public class MemberService {
     private final MemberConverter memberConverter;
     private final EmailVerificationService emailVerificationService;
     private final PasswordEncoder passwordEncoder;
+    private final PostRepository postRepository;
+    private final FollowRepository followRepository;
+    private final EntityManager em;
 
     /**
      * 회원 가입 처리
@@ -258,5 +264,35 @@ public class MemberService {
         member.updateProfile(request.imageUrl());
 
         return new MemberResponseDto.ProfileImageChange(request.imageUrl());
+    }
+
+    @Transactional(readOnly = true)
+    public MemberResponseDto.Mypage getMypageInfo(Long userId) {
+
+        Member tagetMember = memberRepository.findById(userId)
+                .orElseThrow(() -> new MemberException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId"));
+
+        Long postCount = postRepository.countByMemberId(tagetMember.getId());
+
+        Long currentUserId = getCurrentUserId();
+        Member currentMember = em.getReference(Member.class, currentUserId);
+
+        boolean isMine = false;
+        boolean isFollowing = false;
+
+        if (currentUserId.equals(tagetMember.getId())) {
+            isMine = true;
+        } else {
+            isFollowing = followRepository.existsByFollowerUserAndFollowingUser(currentMember, tagetMember);
+        }
+
+        MemberResponseDto.Mypage response = memberConverter.toMypage(tagetMember, postCount, isMine, isFollowing);
+        return response;
+    }
+
+    private Long getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+        return Long.valueOf(userDetails.getId());
     }
 }

@@ -48,6 +48,24 @@ public class MemberController {
         return CustomResponse.success("회원가입이 완료되었습니다.");
     }
 
+    @Operation(summary = "유저 마이페이지 조회", description = "특정 회원의 마이페이지에 필요한 정보를 반환합니다")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "유저 마이페이지 조회에 성공하였습니다",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class))),
+            @ApiResponse(responseCode = "401", description = "로그인 되지 않음"),
+            @ApiResponse(responseCode = "404", description = "해당 사용자를 찾을 수 없음")
+    })
+    @GetMapping("/{userId}")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CustomResponse<MemberResponseDto.Mypage> getUserMyPage(
+            @Parameter(description = "조회할 유저의 id", required = true)
+            @PathVariable Long userId
+    ) {
+        MemberResponseDto.Mypage response = memberService.getMypageInfo(userId);
+
+        return CustomResponse.success("유저 마이페이지 조회에 성공하였습니다", response);
+    }
+
     @Operation(summary = "비밀번호 수정", description = "회원의 비밀번호를 수정합니다")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "비밀번호 수정성공",

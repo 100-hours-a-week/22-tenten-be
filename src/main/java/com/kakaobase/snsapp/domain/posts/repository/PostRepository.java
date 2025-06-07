@@ -57,6 +57,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
 
     /**
+     * 특정 회원이 작성한 게시글 수를 조회합니다.
+     *
+     * @param memberId 회원 ID
+     * @return 회원이 작성한 게시글 수
+     */
+    long countByMemberId(Long memberId);
+
+    /**
      * 게시글 좋아요 수를 증가시킵니다.
      *
      * @param postId 게시글 ID

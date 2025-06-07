@@ -98,5 +98,46 @@ public class MemberResponseDto {
             @Schema(description = "팔로우 여부", example = "false")
             @JsonProperty("is_followed")
             boolean isFollowed
+    ) {}
+
+    @Schema(description = "마이페이지 조회 회원 정보 DTO")
+    @Builder
+    public record Mypage(
+            @Schema(description = "회원 ID", example = "10")
+            Long id,
+
+            @Schema(description = "회원 이름", example = "홍길동")
+            String name,
+
+            @Schema(description = "회원 닉네임", example = "gildong.hond")
+            String nickname,
+
+            @Schema(description = "회원 프로필 이미지 URL", example = "https://cdn.service.com/img1.jpg", nullable = true)
+            @JsonProperty("image_url")
+            String imageUrl,
+
+            @Schema(description = "기수명", example = "PANGYO_1")
+            @JsonProperty("class_name")
+            String className,
+
+            @Schema(description = "회원이 작성한 게시글 수", example = "10")
+            @JsonProperty("post_cont")
+            Long postCount,
+            
+            @Schema(description = "회원의 팔로워 수", example = "14")
+            @JsonProperty("follower_count")
+            Integer followerCount,
+
+            @Schema(description = "회원의 팔로잉 수", example = "55")
+            @JsonProperty("following_count")
+            Integer followingCount,
+
+            @Schema(description = "본인 여부", example = "true")
+            @JsonProperty("is_me")
+            boolean isMe,
+
+            @Schema(description = "팔로우 여부", example = "false")
+            @JsonProperty("is_followed")
+            boolean isFollowed
     ){}
 }
