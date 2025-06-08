@@ -56,25 +56,21 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
      */
     List<Member> findByIdIn(List<Long> ids);
 
-    /**
-     * 이름으로 활성 회원을 검색합니다. (부분 일치)
-     * 성능 최적화를 위해 JPQL 사용
-     *
-     * @param name 검색할 이름
-     * @return 이름이 포함된 회원 목록
-     */
-    @Query("SELECT m FROM Member m WHERE m.name LIKE %:name% AND m.deletedAt IS NULL")
+    // MemberRepository.java 수정
+    @Query("SELECT m FROM Member m WHERE " +
+            "(:name IS NOT NULL AND :name != '' AND m.name LIKE %:name%) " +
+            "AND m.deletedAt IS NULL")
     List<Member> searchByName(@Param("name") String name);
 
-    /**
-     * 닉네임으로 활성 회원을 검색합니다. (부분 일치)
-     * 성능 최적화를 위해 JPQL 사용
-     *
-     * @param nickname 검색할 닉네임
-     * @return 닉네임이 포함된 회원 목록
-     */
-    @Query("SELECT m FROM Member m WHERE m.nickname LIKE %:nickname% AND m.deletedAt IS NULL")
+    @Query("SELECT m FROM Member m WHERE " +
+            "(:nickname IS NOT NULL AND :nickname != '' AND m.nickname LIKE %:nickname%) " +
+            "AND m.deletedAt IS NULL")
     List<Member> searchByNickname(@Param("nickname") String nickname);
+
+    @Query("SELECT m FROM Member m WHERE " +
+            "(:nickname IS NOT NULL AND :nickname != '' AND LOWER(m.nickname) LIKE LOWER(CONCAT('%', :nickname, '%'))) " +
+            "ORDER BY m.nickname ASC LIMIT :limit")
+    List<Member> findByNicknameContainingLimit(@Param("nickname") String nickname, @Param("limit") int limit);
 
     /**
      * 특정 회원의 프로필 정보와 팔로우 통계를 조회합니다.
@@ -94,17 +90,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
      * @return 조회된 회원 엔티티 목록
      */
     List<Member> findAllByIdIn(List<Long> ids);
-
-    /**
-     * 닉네임 일부로 회원을 검색하고 결과 수를 제한합니다.
-     * 회원 검색 기능에 사용되며, 대소문자를 구분하지 않고 일부만 일치해도 결과에 포함됩니다.
-     *
-     * @param nickname 검색할 닉네임 문자열 (부분 일치)
-     * @param limit 최대 결과 수
-     * @return 검색된 회원 엔티티 목록 (최대 limit개)
-     */
-    @Query("SELECT m FROM Member m WHERE LOWER(m.nickname) LIKE LOWER(CONCAT('%', :nickname, '%')) ORDER BY m.nickname ASC LIMIT :limit")
-    List<Member> findByNicknameContainingLimit(String nickname, int limit);
 
     /**
      * 정확한 닉네임으로 회원을 조회합니다.

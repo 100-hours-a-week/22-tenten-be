@@ -1,57 +1,56 @@
-# src/test/resources/application.yml
+# 통합 테스트용 설정 파일
+# src/test/resources/application-test.yml
 
 spring:
   application:
-  # 테스트 시 불필요한 자동 설정 비활성화
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
-      - io.awspring.cloud.autoconfigure.s3.S3AutoConfiguration
-
-  # 데이터베이스 설정 (H2 인메모리)
+    name: 22-tenten-be-integration-test
+  
+  # H2 인메모리 데이터베이스 설정 (통합 테스트 최적화)
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL;DATABASE_TO_LOWER=TRUE
-    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:integration_testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;TRACE_LEVEL_SYSTEM_OUT=0
     username: sa
     password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 1 # 통합 테스트에서는 단일 커넥션 사용
 
-  # H2 콘솔 설정 (테스트 시 디버깅용)
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
-  # JPA 설정
+  # JPA 설정 (통합 테스트용)
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create-drop  # 테스트 시작 시 생성, 종료 시 삭제
-    show-sql: true
+      ddl-auto: create-drop
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: false # 통합 테스트에서는 SQL 로그 최소화
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         jdbc:
           time_zone: UTC
-        default_batch_fetch_size: 100
+          batch_size: 5
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+    defer-datasource-initialization: true
 
-  # SQL 로깅 설정
-  sql:
-    init:
-      mode: embedded
+  # H2 콘솔 비활성화 (통합 테스트에서는 불필요)
+  h2:
+    console:
+      enabled: false
 
-  # 메일 설정 (테스트용 - 실제 전송 안함)
+  # Redis 비활성화 (통합 테스트에서는 불필요)
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+  # 메일 설정 (Mock으로 처리)
   mail:
     host: localhost
     port: 25
-    username: test
-    password: test
-    properties:
-      mail:
-        smtp:
-          auth: false
-          starttls:
-            enable: false
+    test-connection: false # 실제 연결 테스트 비활성화
 
+  # AWS 설정 비활성화
   cloud:
     aws:
       credentials:
@@ -61,47 +60,66 @@ spring:
         static: ap-northeast-2
       s3:
         bucket: test-bucket
+        enabled: false
+      stack:
+        auto: false
 
-# JWT 설정 (테스트용)
+# 서버 설정 (통합 테스트용)
+server:
+  port: 0 # 랜덤 포트로 포트 충돌 방지
+
+# JWT 설정 (통합 테스트용 - 짧은 만료 시간)
 app:
   jwt:
-    secret: test-jwt-secret-key-for-testing-minimum-256-bits-required-for-hmac-sha256-algorithm
-    issuer: kakaobase-test
-    audience: web-test
-    secure: false
+    secret: test-secret-key-for-integration-testing-with-sufficient-length-to-meet-minimum-requirements
+    issuer: kakaobase-integration-test
+    audience: integration-test
     access:
-      expiration-time: 3600000 # 1시간 (테스트용으로 길게)
+      expiration-time: 3600000 # 1시간 (테스트 실행 시간 고려)
     refresh:
-      expiration-time: 86400000 # 1일 (테스트용으로 짧게)
-      token-name: kakaobase_test_refresh_token
-      path: /auth/tokens
-      domain: localhost
+      expiration-time: 7200000 # 2시간
+      token-name: kakaobase_integration_test_refresh_token
+      path: api/auth/tokens
+  s3:
+    expiration-time: 300
+    max-file-size: 1048576 # 1MB (테스트용으로 축소)
 
-
-# AI 서버 설정 (테스트용)
+# AI 서버 설정 (Mock으로 처리)
 ai:
   server:
-    url: http://localhost:8080/mock-ai
+    url: http://localhost:8888/integration-test
+    enabled: false
 
-# 로깅 설정
+# 로깅 설정 (통합 테스트 최적화)
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    com.amazonaws.util.EC2MetadataUtils: ERROR
-    com.amazonaws.services.s3: DEBUG
-    com.kakaobase.snsapp.global.security: DEBUG
-    com.kakaobase.snsapp.domain.auth: DEBUG
-    com.kakaobase.snsapp.domain.posts: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web: DEBUG
-    root: INFO
+    root: WARN # 전체적으로 로그 레벨 높임
+    org.springframework: ERROR
+    org.springframework.security: WARN # Security 관련만 WARN
+    org.springframework.test: ERROR
+    org.springframework.boot.test: ERROR
+    org.springframework.web: ERROR
+    org.hibernate: ERROR
+    org.hibernate.SQL: ERROR
+    org.h2: ERROR
+    org.testcontainers: ERROR
+    org.mockito: ERROR
+    com.kakaobase.snsapp: INFO # 프로젝트 로그만 INFO
 
-# 테스트 전용 설정들
-test:
-  auto-config-test-database: replace
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{20} - %msg%n"
 
-# 테스트 실행 속도 향상을 위한 설정
+# 테스트 성능 최적화
 management:
   endpoints:
-    enabled-by-default: false
+    enabled-by-default: false # Actuator 엔드포인트 비활성화
+
+# JUnit 설정
+junit:
+  jupiter:
+    execution:
+      parallel:
+        enabled: false # 통합 테스트는 순차 실행
+    testinstance:
+      lifecycle:
+        default: per_method # 각 테스트 메서드마다 인스턴스 생성
