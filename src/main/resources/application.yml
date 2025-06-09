@@ -63,3 +63,15 @@ app:
 ai:
   server:
     url: ${AI_SERVER_URL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    defaults:
+      enabled: false
