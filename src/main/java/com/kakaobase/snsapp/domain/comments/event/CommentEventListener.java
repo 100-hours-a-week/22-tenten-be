@@ -25,7 +25,7 @@ public class CommentEventListener {
      * <p>봇이 작성한 게시글에 일반 사용자가 댓글을 달았을 때 AI 대댓글을 생성합니다.</p>
      *
      * @param event 댓글 생성 이벤트
-     */
+
     @EventListener
     @Async("taskExecutor")  // AsyncConfig에서 정의한 빈 이름 명시
     public void handleCommentCreated(CommentCreatedEvent event) {
@@ -60,16 +60,6 @@ public class CommentEventListener {
             // 모니터링을 위해 추가적인 처리 필요시 여기에 구현
             // 예: 메트릭 수집, 알림 발송 등
         }
-    }
+    }*/
 
-    /**
-     * 댓글 삭제 이벤트 처리 (향후 구현 예정)
-     *
-     * @param event 댓글 삭제 이벤트
-     */
-    // @EventListener
-    // @Async("taskExecutor")
-    // public void handleCommentDeleted(CommentDeletedEvent event) {
-    //     // 향후 댓글 삭제 시 봇 대댓글도 처리하는 로직 구현
-    // }
 }

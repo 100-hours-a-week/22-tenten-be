@@ -21,6 +21,8 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,8 @@ public class CommentService {
     private final CommentLikeRepository commentLikeRepository;
     private final FollowRepository followRepository;
     private final EntityManager em;
+
+    private final BotRecommentService botRecommentService;
 
     /**
      * 댓글을 생성합니다.
@@ -103,7 +107,7 @@ public class CommentService {
         CommentCreatedEvent event = new CommentCreatedEvent(
                 savedComment.getId(),
                 postId,
-                post.getMemberId(),  // 게시글 작성자 ID
+                post.getMember().getId(),  // 게시글 작성자 ID
                 memberId,  // 댓글 작성자 ID
                 savedComment.getContent(),
                 savedComment.getCreatedAt()
@@ -111,6 +115,15 @@ public class CommentService {
         eventPublisher.publishEvent(event);
 
         log.debug("댓글 생성 이벤트 발행: {}", event);
+
+        // 게시물 작성자가 소셜봇이면 소셜봇 대댓글 로직 구현하도록
+        if (post.getMember().getRole().equals("BOT")) {
+            log.info("🤖 [Trigger] 소셜봇 게시글이므로 트리거 실행!");
+            botRecommentService.triggerAsync(post, savedComment);
+        } else {
+            log.info("🙅 [Skip] 게시글 작성자가 소셜봇이 아님 → 트리거 생략");
+        }
+
 
         return commentConverter.toCreateCommentResponse(savedComment);
     }
@@ -279,11 +292,34 @@ public class CommentService {
         );
     }
 
+
+    //특정 유저의 댓글 조회
+    @Transactional(readOnly = true)
+    public List<CommentResponseDto.CommentInfo> getUserCommentList(int limit, Long cursor, Long memberId) {
+
+        if(memberRepository.existsById(memberId)) {
+            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId");
+        }
+
+        Pageable pageable = PageRequest.of(0, limit);
+
+        // 댓글 목록 조회
+        List<Comment> comments = commentRepository.findByMemberIdWithCursor(memberId, cursor, pageable); // 다음 페이지 확인을 위해 limit + 1개 조회
+
+
+        // 개별 댓글 정보를 가져와서 CommentInfo 리스트 생성
+        List<CommentResponseDto.CommentInfo> commentInfoList = comments.stream()
+                .map(comment -> getCommentInfo(memberId, comment.getId()))
+                .collect(Collectors.toList());
+
+        // CommentListResponse 생성하여 반환
+        return commentInfoList;
+    }
+
     public CommentResponseDto.CommentDetailResponse getCommentDetail(Long memberId, Long commentId) {
         CommentResponseDto.CommentInfo commentInfo = getCommentInfo(memberId, commentId);
         return new CommentResponseDto.CommentDetailResponse(commentInfo);
     }
-
 
     /**
      * 댓글 정보를 반환
@@ -295,7 +331,7 @@ public class CommentService {
     public CommentResponseDto.CommentInfo getCommentInfo(Long memberId, Long commentId) {
         // 댓글 조회
         Comment comment = commentRepository.findByIdAndDeletedAtIsNull(commentId)
-                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId", "댓글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
 
         // 댓글 좋아요 여부 확인
         boolean isLiked = commentLikeRepository.existsByMemberIdAndCommentId(memberId, commentId);

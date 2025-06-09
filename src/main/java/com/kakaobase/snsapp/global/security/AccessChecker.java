@@ -94,7 +94,7 @@ public class AccessChecker {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND,"postId"));
 
-        if(!post.getMemberId().equals(memberId)) {
+        if(!post.getMember().getId().equals(memberId)) {
             throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
 

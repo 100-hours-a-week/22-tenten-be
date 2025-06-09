@@ -56,14 +56,13 @@ public class PostLikeService {
         }
 
         Member proxyMember = em.getReference(Member.class, memberId);
-        Post proxyPost = em.getReference(Post.class, postId);
 
         // 좋아요 엔티티 생성 및 저장
-        PostLike postLike = new PostLike(proxyMember, proxyPost);
+        PostLike postLike = new PostLike(proxyMember, post);
         postLikeRepository.save(postLike);
 
         // 게시글 좋아요 수 증가
-        postRepository.increaseLikeCount(postId);
+        post.increaseLikeCount();
 
         log.info("게시글 좋아요 추가 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
     }
@@ -89,7 +88,7 @@ public class PostLikeService {
         postLikeRepository.delete(postLike);
 
         // 게시글 좋아요 수 감소
-        postRepository.decreaseLikeCount(postId);
+        post.decreaseLikeCount();
 
         log.info("게시글 좋아요 취소 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
     }

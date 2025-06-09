@@ -109,4 +109,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
      * @return 조회된 회원 엔티티 목록
      */
     List<Member> findAllByNicknameIn(List<String> nicknames);
+
+    Optional<Member> findFirstByRole(Member.Role role);
 }

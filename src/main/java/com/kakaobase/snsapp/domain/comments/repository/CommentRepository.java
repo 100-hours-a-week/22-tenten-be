@@ -2,6 +2,7 @@
 package com.kakaobase.snsapp.domain.comments.repository;
 
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -56,6 +57,20 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             @Param("postId") Long postId,
             @Param("cursor") Long cursor,
             @Param("limit") int limit);
+
+    
+    //특정 유저가 작성한 댓글 조회
+    @Query("SELECT c FROM Comment c " +
+            "JOIN FETCH c.member " +
+            "JOIN FETCH c.post " +
+            "WHERE c.member.id = :memberId " +
+            "AND c.deletedAt IS NULL " +
+            "AND (:cursor IS NULL OR c.id < :cursor) " +
+            "ORDER BY c.createdAt DESC, c.id DESC")
+    List<Comment> findByMemberIdWithCursor(
+            @Param("memberId") Long memberId,
+            @Param("cursor") Long cursor,
+            Pageable pageable);
 
     /**
      * 특정 게시글의 댓글 수를 조회합니다.

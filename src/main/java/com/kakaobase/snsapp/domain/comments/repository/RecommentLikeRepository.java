@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.members.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -98,6 +99,7 @@ public interface RecommentLikeRepository extends JpaRepository<RecommentLike, Re
      * @param recommentIds 대댓글 ID 목록
      * @return 삭제된 좋아요 수
      */
+    @Modifying
     @Query("DELETE FROM RecommentLike rl WHERE rl.recomment.id IN :recommentIds")
     int deleteByRecommentIdIn(@Param("recommentIds") List<Long> recommentIds);
 

@@ -189,7 +189,7 @@ public class MemberService {
      * @param memberId 회원 ID
      * @return BotUser DTO (닉네임, 기수)
      * @throws MemberException 회원을 찾을 수 없는 경우
-     */
+
     @Transactional(readOnly = true)
     public BotRecommentRequestDto.UserInfo getMemberBotInfo(Long memberId) {
         Member member = memberRepository.findById(memberId)
@@ -199,7 +199,7 @@ public class MemberService {
                 member.getNickname(),
                 member.getClassName()
         );
-    }
+    }*/
 
     @Transactional
     public void unregister() {

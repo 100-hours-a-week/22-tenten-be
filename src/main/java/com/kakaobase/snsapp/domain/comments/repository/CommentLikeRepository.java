@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.members.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -81,13 +82,7 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, Commen
     @Query("SELECT cl FROM CommentLike cl WHERE cl.member.id = :memberId")
     Page<CommentLike> findByMemberId(@Param("memberId") Long memberId, Pageable pageable);
 
-    /**
-     * 특정 댓글의 모든 좋아요를 삭제합니다.
-     * 댓글 삭제 시 관련 좋아요도 함께 삭제하는 데 사용됩니다.
-     *
-     * @param commentId 댓글 ID
-     * @return 삭제된 좋아요 수
-     */
+    @Modifying
     @Query("DELETE FROM CommentLike cl WHERE cl.comment.id = :commentId")
     int deleteByCommentId(@Param("commentId") Long commentId);
 

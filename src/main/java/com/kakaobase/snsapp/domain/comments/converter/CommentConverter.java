@@ -267,4 +267,35 @@ public class CommentConverter {
             throw new CommentException(CommentErrorCode.CONTENT_LENGTH_EXCEEDED);
         }
     }
+
+    /**
+     * 소셜봇용 대댓글 응답 DTO 생성
+     *
+     * 로그인 사용자 정보 없이 기본 정보만 포함합니다.
+     * 좋아요 수, is_mine, is_liked, is_followed 모두 false 또는 0으로 초기화됩니다.
+     *
+     * @param recomment 생성된 대댓글 엔티티
+     * @param bot       소셜봇 사용자
+     * @return 대댓글 응답 DTO
+     */
+    public CommentResponseDto.RecommentInfo toRecommentInfoForBot(Recomment recomment, Member bot) {
+        MemberResponseDto.UserInfoWithFollowing userInfo =
+                MemberResponseDto.UserInfoWithFollowing.builder()
+                        .id(bot.getId())
+                        .nickname(bot.getNickname())
+                        .imageUrl(bot.getProfileImgUrl())
+                        .isFollowed(false)
+                        .build();
+
+        return new CommentResponseDto.RecommentInfo(
+                recomment.getId(),
+                userInfo,
+                recomment.getContent(),
+                recomment.getCreatedAt(),
+                0,       // like_count
+                false,   // is_mine
+                false    // is_liked
+        );
+    }
+
 }

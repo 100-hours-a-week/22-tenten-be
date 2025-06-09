@@ -1,7 +1,6 @@
 // RecommentRepository.java
 package com.kakaobase.snsapp.domain.comments.repository;
 
-import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -102,20 +101,5 @@ public interface RecommentRepository extends JpaRepository<Recomment, Long> {
             nativeQuery = true)
     List<Long> findLikedRecommentIds(
             @Param("recommentIds") List<Long> recommentIds,
-            @Param("memberId") Long memberId);
-
-    /**
-     * 특정 회원이 특정 대댓글에 좋아요를 했는지 확인합니다.
-     *
-     * @param recommentId 대댓글 ID
-     * @param memberId 회원 ID
-     * @return 좋아요 여부
-     */
-    @Query(value = "SELECT COUNT(*) > 0 FROM recomment_likes rl " +
-            "WHERE rl.recomment_id = :recommentId " +
-            "AND rl.member_id = :memberId",
-            nativeQuery = true)
-    boolean existsRecommentLike(
-            @Param("recommentId") Long recommentId,
             @Param("memberId") Long memberId);
 }

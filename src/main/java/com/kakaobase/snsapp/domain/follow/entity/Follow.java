@@ -16,16 +16,19 @@ public class Follow extends BaseCreatedTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(columnDefinition = "INT UNSIGNED AUTO_INCREMENT")
     private Long id;
 
     //팔로잉 요청건 사람
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "follower_user_id", nullable = false)
+    @JoinColumn(name = "follower_user_id", nullable = false,
+                columnDefinition = "INT UNSIGNED")
     private Member followerUser;
 
     //팔로잉 요청 받은 사람
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "following_id", nullable = false)
+    @JoinColumn(name = "following_id", nullable = false,
+            columnDefinition = "INT UNSIGNED")
     private Member followingUser;
 
     @Builder
