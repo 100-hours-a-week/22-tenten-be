@@ -254,6 +254,7 @@ public class MemberService {
         member.updateGithubUrl(request.githubUrl());
     }
 
+    @Transactional
     public MemberResponseDto.ProfileImageChange changProfileImageUrl(MemberRequestDto.@Valid ProfileImageChange request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
