@@ -1,6 +1,5 @@
 package com.kakaobase.snsapp.domain.auth.principal;
 
-import com.kakaobase.snsapp.domain.members.entity.Member;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
@@ -38,7 +37,7 @@ public class CustomUserDetails implements UserDetails {
         this.isEnabled = isEnabled;
     }
 
-    //로그인 시 사용
+    //로그인, 엑세스 토큰 재발급 시 사용
     public CustomUserDetails(String email, String password, String id, String role, String name, String className, String nickname, String  profileImgUrl, boolean isEnabled) {
         this.id = id;
         this.email = email;
