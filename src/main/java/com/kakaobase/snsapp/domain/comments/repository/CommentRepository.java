@@ -26,6 +26,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Query("SELECT c FROM Comment c WHERE c.id = :id AND c.deletedAt IS NULL")
     Optional<Comment> findByIdAndDeletedAtIsNull(@Param("id") Long id);
 
+    //특정 회원이 해당 게시글을 작성했는 지 확인
+    //삭제시 권한확인용
+    boolean existsByIdAndMember_Id(Long id, Long memberId);
+
     /**
      * 특정 댓글을 ID와 회원 ID로 조회합니다.
      * 댓글의 소유자 확인에 사용됩니다.

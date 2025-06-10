@@ -16,6 +16,8 @@ import java.util.Optional;
 @Repository
 public interface RecommentRepository extends JpaRepository<Recomment, Long> {
 
+    boolean existsByIdAndMember_Id(Long recommentId, Long memberId);
+
     /**
      * 특정 대댓글을 ID로 조회합니다. 삭제된 대댓글은 포함하지 않습니다.
      *
@@ -24,17 +26,6 @@ public interface RecommentRepository extends JpaRepository<Recomment, Long> {
      */
     @Query("SELECT r FROM Recomment r WHERE r.id = :id AND r.deletedAt IS NULL")
     Optional<Recomment> findByIdAndDeletedAtIsNull(@Param("id") Long id);
-
-    /**
-     * 특정 대댓글을 ID와 회원 ID로 조회합니다.
-     * 대댓글의 소유자 확인에 사용됩니다.
-     *
-     * @param id 대댓글 ID
-     * @param memberId 회원 ID
-     * @return 대댓글 (Optional)
-     */
-    @Query("SELECT r FROM Recomment r WHERE r.id = :id AND r.member.id = :memberId AND r.deletedAt IS NULL")
-    Optional<Recomment> findByIdAndMemberId(@Param("id") Long id, @Param("memberId") Long memberId);
 
     /**
      * 특정 댓글의 대댓글을 모두 조회합니다. (댓글 목록 조회 시 사용)
@@ -76,16 +67,6 @@ public interface RecommentRepository extends JpaRepository<Recomment, Long> {
             @Param("commentId") Long commentId,
             @Param("cursor") Long cursor,
             @Param("limit") int limit);
-
-    /**
-     * 특정 댓글의 대댓글 수를 조회합니다.
-     * 삭제되지 않은 대댓글만 계산합니다.
-     *
-     * @param commentId 댓글 ID
-     * @return 대댓글 수
-     */
-    @Query("SELECT COUNT(r) FROM Recomment r WHERE r.comment.id = :commentId AND r.deletedAt IS NULL")
-    long countByCommentIdAndDeletedAtIsNull(@Param("commentId") Long commentId);
 
     /**
      * 특정 대댓글들의 좋아요 상태를 한번에 조회합니다.
