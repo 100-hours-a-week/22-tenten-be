@@ -175,7 +175,7 @@ public class CommentService {
     @Transactional
     public void deleteRecomment(Long memberId, Long recommentId) {
         // 대댓글 조회
-        Recomment recomment = recommentRepository.findById(recommentId)
+        Recomment recomment = recommentRepository.findByIdAndDeletedAtIsNull(recommentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId", "해당 대댓글을 찾을 수 없습니다."));
 
         // 대댓글의 좋아요 삭제
