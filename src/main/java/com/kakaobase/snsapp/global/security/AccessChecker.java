@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
+import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
@@ -29,6 +30,7 @@ public class AccessChecker {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final RecommentRepository recommentRepository;
+    private final MemberRepository memberRepository;
 
     /**
      * 사용자가 특정 게시판에 접근할 권한이 있는지 검증합니다.
@@ -87,19 +89,9 @@ public class AccessChecker {
 
         // 사용자 ID 확인
         Long memberId = Long.valueOf(userDetails.getId());
-        if (memberId == null) {
-            return false;
-        }
-
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND,"postId"));
-
-        if(!post.getMember().getId().equals(memberId)) {
-            throw new CustomException(GeneralErrorCode.FORBIDDEN);
-        }
 
         // 게시글 조회
-        return true;
+        return postRepository.existsByIdAndMemberId(postId, memberId);
     }
 
     /**
@@ -126,7 +118,7 @@ public class AccessChecker {
         }
 
         // 댓글 조회
-        return commentRepository.findByIdAndMemberId(commentId, memberId).isPresent();
+        return commentRepository.existsByIdAndMember_Id(commentId, memberId);
     }
 
     /**
@@ -164,15 +156,7 @@ public class AccessChecker {
             return false;
         }
 
-        Recomment recomment = recommentRepository.findById(recommentId)
-                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId"));
-
-        if(!recomment.getMember().getId().equals(memberId)) {
-            throw new CustomException(GeneralErrorCode.FORBIDDEN);
-        }
-
-
-        return true;
+        return recommentRepository.existsByIdAndMember_Id(recommentId, memberId);
     }
 
     /**
