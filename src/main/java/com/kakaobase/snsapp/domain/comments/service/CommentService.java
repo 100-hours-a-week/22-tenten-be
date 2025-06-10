@@ -5,7 +5,6 @@ import com.kakaobase.snsapp.domain.comments.dto.CommentRequestDto;
 import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
-import com.kakaobase.snsapp.domain.comments.event.CommentCreatedEvent;
 import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
@@ -15,6 +14,7 @@ import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.service.PostService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
@@ -44,7 +44,6 @@ public class CommentService {
     private final CommentConverter commentConverter;
     private final PostService postService;
     private final CommentLikeService commentLikeService;
-    private final ApplicationEventPublisher eventPublisher;
 
     private static final int DEFAULT_PAGE_SIZE = 12;
     private final CommentLikeRepository commentLikeRepository;
@@ -52,6 +51,7 @@ public class CommentService {
     private final EntityManager em;
 
     private final BotRecommentService botRecommentService;
+    private final PostRepository postRepository;
 
     /**
      * 댓글을 생성합니다.
@@ -64,57 +64,42 @@ public class CommentService {
     @Transactional
     public CommentResponseDto.CreateCommentResponse createComment(Long memberId, Long postId, CommentRequestDto.CreateCommentRequest request) {
         // 게시글 존재 확인
-        Post post = postService.findById(postId);
+        if(!postRepository.existsById(postId)) {
+            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId");
+        }
 
-        // 회원 조회
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "memberId", "회원을 찾을 수 없습니다."));
+        Member proxyMember = em.getReference(Member.class, memberId);
 
         // 대댓글인 경우
         if (request.parent_id() != null) {
-            Comment parentComment = commentRepository.findByIdAndDeletedAtIsNull(request.parent_id())
-                    .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "parent_id", "부모 댓글을 찾을 수 없습니다."));
 
-            // 부모 댓글이 같은 게시글에 속하는지 확인
-            if (!parentComment.getPost().getId().equals(postId)) {
-                throw new CommentException(CommentErrorCode.INVALID_PARENT_COMMENT, "parent_id", "부모 댓글이 다른 게시글에 속합니다.");
+            if(!commentRepository.existsById(request.parent_id())) {
+                throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "parentId");
             }
 
+            Comment proxyComment = em.getReference(Comment.class, request.parent_id());
+
             // 대댓글 엔티티 생성 및 저장
-            Recomment recomment = commentConverter.toRecommentEntity(parentComment, member, request);
+            Recomment recomment = commentConverter.toRecommentEntity(proxyComment, proxyMember, request);
             Recomment savedRecomment = recommentRepository.save(recomment);
 
             //부모 댓글 대댓글 카운트 증가
-            parentComment.increaseRecommentCount();
-
-            log.info("대댓글 생성 완료: 대댓글 ID={}, 작성자 ID={}, 부모 댓글 ID={}",
-                    savedRecomment.getId(), memberId, parentComment.getId());
+            commentRepository.incrementRecommentCount(request.parent_id());
 
             return commentConverter.toCreateRecommentResponse(savedRecomment);
         }
 
         // 일반 댓글인 경우
-        Comment comment = commentConverter.toCommentEntity(post, member, request);
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
+        Comment comment = commentConverter.toCommentEntity(post, proxyMember, request);
         Comment savedComment = commentRepository.save(comment);
 
         //게시글의 댓글 수 추가
-        post.increaseCommentCount();
+        postRepository.incrementCommentCount(postId);
 
         log.info("댓글 생성 완료: 댓글 ID={}, 작성자 ID={}, 게시글 ID={}",
                 savedComment.getId(), memberId, postId);
-
-        // 댓글 생성 이벤트 발행 (대댓글이 아닌 경우에만)
-        CommentCreatedEvent event = new CommentCreatedEvent(
-                savedComment.getId(),
-                postId,
-                post.getMember().getId(),  // 게시글 작성자 ID
-                memberId,  // 댓글 작성자 ID
-                savedComment.getContent(),
-                savedComment.getCreatedAt()
-        );
-        eventPublisher.publishEvent(event);
-
-        log.debug("댓글 생성 이벤트 발행: {}", event);
 
         // 게시물 작성자가 소셜봇이면 소셜봇 대댓글 로직 구현하도록
         if (post.getMember().getRole().equals("BOT")) {
@@ -123,7 +108,6 @@ public class CommentService {
         } else {
             log.info("🙅 [Skip] 게시글 작성자가 소셜봇이 아님 → 트리거 생략");
         }
-
 
         return commentConverter.toCreateCommentResponse(savedComment);
     }

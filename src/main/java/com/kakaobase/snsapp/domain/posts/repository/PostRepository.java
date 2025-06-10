@@ -1,7 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.repository;
 
 import com.kakaobase.snsapp.domain.posts.entity.Post;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -10,7 +9,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 게시글 엔티티에 대한 데이터 액세스 객체
@@ -29,11 +27,15 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     /**
      * 특정 회원이 작성한 게시글 수를 조회합니다.
-     *
-     * @param memberId 회원 ID
-     * @return 회원이 작성한 게시글 수
      */
     long countByMemberId(Long memberId);
+
+    /**
+     * Post의 CommentCount를 1올리는 벌크 업데이트 메서드
+     */
+    @Modifying
+    @Query("UPDATE Post p SET p.commentCount = p.commentCount + 1 WHERE p.id = :postId")
+    int incrementCommentCount(@Param("postId") Long postId);
 
 
     /**

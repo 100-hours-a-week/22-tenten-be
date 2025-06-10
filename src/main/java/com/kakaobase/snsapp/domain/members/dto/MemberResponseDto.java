@@ -121,7 +121,7 @@ public class MemberResponseDto {
             String className,
 
             @Schema(description = "회원이 작성한 게시글 수", example = "10")
-            @JsonProperty("post_cont")
+            @JsonProperty("post_count")
             Long postCount,
             
             @Schema(description = "회원의 팔로워 수", example = "14")
