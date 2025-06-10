@@ -5,7 +5,6 @@ import com.kakaobase.snsapp.domain.comments.dto.CommentRequestDto;
 import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
-import com.kakaobase.snsapp.domain.comments.event.CommentCreatedEvent;
 import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
@@ -45,7 +44,6 @@ public class CommentService {
     private final CommentConverter commentConverter;
     private final PostService postService;
     private final CommentLikeService commentLikeService;
-    private final ApplicationEventPublisher eventPublisher;
 
     private static final int DEFAULT_PAGE_SIZE = 12;
     private final CommentLikeRepository commentLikeRepository;
