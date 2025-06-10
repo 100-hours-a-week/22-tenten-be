@@ -3,6 +3,7 @@ package com.kakaobase.snsapp.domain.comments.repository;
 
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -83,4 +84,8 @@ public interface RecommentRepository extends JpaRepository<Recomment, Long> {
     List<Long> findLikedRecommentIds(
             @Param("recommentIds") List<Long> recommentIds,
             @Param("memberId") Long memberId);
+
+    @Modifying
+    @Query("UPDATE Recomment r SET r.deletedAt = CURRENT_TIMESTAMP WHERE r.comment.id = :commentId AND r.deletedAt IS NULL")
+    int softDeleteRecommentsByCommentId(@Param("commentId") Long commentId);
 }
