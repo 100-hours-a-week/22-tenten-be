@@ -89,6 +89,7 @@ public interface RecommentLikeRepository extends JpaRepository<RecommentLike, Re
      * @param recommentId 대댓글 ID
      * @return 삭제된 좋아요 수
      */
+    @Modifying
     @Query("DELETE FROM RecommentLike rl WHERE rl.recomment.id = :recommentId")
     int deleteByRecommentId(@Param("recommentId") Long recommentId);
 
