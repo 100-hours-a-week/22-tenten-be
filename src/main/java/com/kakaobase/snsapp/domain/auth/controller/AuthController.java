@@ -43,10 +43,9 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = AuthResponseDto.RefreshTokenInvalid.class)))
     })
     @PostMapping("/tokens")
-    public ResponseEntity<CustomResponse<AuthResponseDto.LoginResponse>>  login(
+    public ResponseEntity<CustomResponse<AuthResponseDto.UserAuthInfo>>  login(
             @Parameter(description = "로그인 정보", required = true)
             @Valid @RequestBody AuthRequestDto.Login request,
-            HttpServletResponse httpResponse,
             @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken,
             @Parameter(hidden = true) @RequestHeader(value = "User-Agent", required = true) String userAgent
     ) {
@@ -54,16 +53,23 @@ public class AuthController {
         log.info("로그인 요청: {}", request.email());
 
         // 로그인 처리 및 토큰 발급
-        AuthResponseDto.LoginResponse response = authService.login(request);
+        AuthResponseDto.UserAuthInfo response = authService.login(request);
 
         ResponseCookie refreshCookie = authService.getRefreshCookie(providedRefreshToken, userAgent);
 
+        String newRefreshToken = refreshCookie.getValue();
+
+        ResponseCookie accessTokenCookie = authService.getAccessTokenCookie(newRefreshToken);
+
         log.info("로그인 성공: {}", request.email());
+
 
         // 액세스 토큰을 응답 본문에 포함
         return ResponseEntity
                 .ok()
-                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE,
+                        refreshCookie.toString(),
+                        accessTokenCookie.toString())
                 .body(CustomResponse.success("로그인에 성공하였습니다", response));
     }
 
@@ -78,17 +84,21 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = AuthResponseDto.RefreshTokenInvalid.class)))
     })
     @PostMapping("/tokens/refresh")
-    public CustomResponse<AuthResponseDto.LoginResponse> refreshToken(
+    public ResponseEntity<CustomResponse<AuthResponseDto.UserAuthInfo>> refreshToken(
             @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken) {
 
         log.info("액세스 토큰 재발급 요청");
 
-        AuthResponseDto.LoginResponse response = authService.getAccessToken(providedRefreshToken);
+        ResponseCookie accessTokenCookie = authService.getAccessTokenCookie(providedRefreshToken);
+
+        AuthResponseDto.UserAuthInfo response = authService.getUserInfo();
 
         log.info("액세스 토큰 재발급 성공");
 
         // 새 액세스 토큰을 응답 본문에 포함
-        return CustomResponse.success("Access Token이 재발급되었습니다.", response);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
+                .body(CustomResponse.success("Access Token이 재발급되었습니다.", response));
     }
 
     /**
