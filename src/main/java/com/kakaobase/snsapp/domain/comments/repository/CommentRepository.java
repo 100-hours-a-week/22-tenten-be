@@ -4,6 +4,7 @@ package com.kakaobase.snsapp.domain.comments.repository;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -77,13 +78,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             Pageable pageable);
 
     /**
-     * 특정 게시글의 댓글 수를 조회합니다.
-     * 삭제되지 않은 댓글만 계산합니다.
-     *
-     * @param postId 게시글 ID
-     * @return 댓글 수
+     * 특정 댓글의 RecommentCount수를 1증가시키는 벌크 업데이트 메서드
      */
-    @Query("SELECT COUNT(c) FROM Comment c WHERE c.post.id = :postId AND c.deletedAt IS NULL")
-    long countByPostIdAndDeletedAtIsNull(@Param("postId") Long postId);
+    @Modifying
+    @Query("UPDATE Comment c SET c.recommentCount = c.recommentCount + 1 WHERE c.id = :commentId")
+    int incrementRecommentCount(@Param("commentId") Long commentId);
 
 }
