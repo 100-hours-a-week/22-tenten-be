@@ -4,7 +4,6 @@ import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
 import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.entity.RevokedRefreshToken;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
-import com.kakaobase.snsapp.domain.members.entity.Member;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -73,18 +72,9 @@ public class AuthConverter {
         return new AuthResponseDto.TokenResponse(accessToken);
     }
 
-    /**
-     * 액세스 토큰만으로 응답 DTO를 생성합니다.
-     * 리프레시 토큰은 쿠키로 전송되므로 응답 본문에는 포함되지 않습니다.
-     *
-     * @param accessToken 액세스 토큰
-     * @return 토큰 응답 DTO
-     */
-    public AuthResponseDto.TokenResponse toAccessTokenOnlyResponseDto(String accessToken) {
-        return new AuthResponseDto.TokenResponse(accessToken);
-    }
 
     public AuthResponseDto.UserAuthInfo toUserAuthInfoDto(CustomUserDetails userDetails) {
+
         return AuthResponseDto.UserAuthInfo
                 .builder()
                 .memberId(Long.valueOf(userDetails.getId()))
@@ -93,15 +83,5 @@ public class AuthConverter {
                 .imageUrl(userDetails.getProfileImgUrl())
                 .build();
 
-    }
-
-    public AuthResponseDto.UserAuthInfo toUserAuthInfoDto(Member member) {
-        return AuthResponseDto.UserAuthInfo
-                .builder()
-                .memberId(member.getId())
-                .nickname(member.getNickname())
-                .className(member.getClassName())
-                .imageUrl(member.getProfileImgUrl())
-                .build();
     }
 }
