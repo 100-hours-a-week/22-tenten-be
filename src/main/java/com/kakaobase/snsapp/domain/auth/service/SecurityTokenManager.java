@@ -64,7 +64,7 @@ public class SecurityTokenManager {
     }
 
     /**
-     * 리프레시 토큰 검증 및 사용자 ID 반환
+     * 리프레시 토큰 검증
      */
     @Transactional
     public void validateRefreshToken(String rawToken) {
