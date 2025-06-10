@@ -1,6 +1,5 @@
 package com.kakaobase.snsapp.domain.auth.converter;
 
-import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
 import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.entity.RevokedRefreshToken;
@@ -85,27 +84,24 @@ public class AuthConverter {
         return new AuthResponseDto.TokenResponse(accessToken);
     }
 
-    public AuthResponseDto.LoginResponse toLoginResponseDto(CustomUserDetails userDetails, String accessToken) {
-        return AuthResponseDto.LoginResponse
+    public AuthResponseDto.UserAuthInfo toUserAuthInfoDto(CustomUserDetails userDetails) {
+        return AuthResponseDto.UserAuthInfo
                 .builder()
                 .memberId(Long.valueOf(userDetails.getId()))
                 .nickname(userDetails.getNickname())
                 .className(userDetails.getClassName())
                 .imageUrl(userDetails.getProfileImgUrl())
-                .accessToken(accessToken)
                 .build();
 
     }
 
-    public AuthResponseDto.LoginResponse toLoginResponseDto(Member member, String accessToken) {
-        return AuthResponseDto.LoginResponse
+    public AuthResponseDto.UserAuthInfo toUserAuthInfoDto(Member member) {
+        return AuthResponseDto.UserAuthInfo
                 .builder()
                 .memberId(member.getId())
                 .nickname(member.getNickname())
                 .className(member.getClassName())
                 .imageUrl(member.getProfileImgUrl())
-                .accessToken(accessToken)
                 .build();
-
     }
 }
