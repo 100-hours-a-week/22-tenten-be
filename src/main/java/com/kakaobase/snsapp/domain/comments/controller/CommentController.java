@@ -281,7 +281,7 @@ public class CommentController {
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
         commentService.deleteRecomment(memberId, recommentId);
-        return CustomResponse.success("좋아요가 성공적으로 취소되었습니다.", null);
+        return CustomResponse.success("대댓글이 삭제되었습니다.", null);
     }
 
     /**
