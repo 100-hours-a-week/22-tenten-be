@@ -153,15 +153,10 @@ public class CommentService {
         commentLikeService.deleteAllCommentLikesByCommentId(commentId);
 
         // 댓글에 달린 모든 대댓글 삭제 (삭제된 것 포함)
-        List<Recomment> recomments = recommentRepository.findAllByCommentId(commentId);
-        for (Recomment recomment : recomments) {
-            commentLikeService.deleteAllRecommentLikesByRecommentId(recomment.getId());
-            recommentRepository.delete(recomment);
-        }
+        recommentRepository.softDeleteRecommentsByCommentId(commentId);
 
         // 댓글 삭제 (Soft Delete)
         comment.softDelete();
-        commentRepository.save(comment);
 
         log.info("댓글 삭제 완료: 댓글 ID={}, 삭제자 ID={}", commentId, memberId);
     }
