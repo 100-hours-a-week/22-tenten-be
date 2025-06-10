@@ -67,7 +67,7 @@ public class PostConverter {
                 .build();
     }
 
-    public List<PostResponseDto.PostDetails> convertToPostListItems(List<Post> posts, Long currentMemberId) {
+    public List<PostResponseDto.PostDetails> convertToPostListItems(List<Post> posts, Long memberId) {
         if (posts.isEmpty()) {
             return Collections.emptyList();
         }
@@ -81,14 +81,14 @@ public class PostConverter {
 
         // 2. 배치로 추가 데이터 조회 (기존 Repository 메서드 활용)
         Map<Long, String> postImageMap = getFirstImagesByPostIds(postIds);
-        Set<Long> likedPostIds = currentMemberId != null ?
-                getLikedPostIds(currentMemberId, postIds) : Collections.emptySet();
-        Set<Long> followedMemberIds = currentMemberId != null ?
-                getFollowedMemberIds(currentMemberId, memberIds) : Collections.emptySet();
+        Set<Long> likedPostIds = memberId != null ?
+                getLikedPostIds(memberId, postIds) : Collections.emptySet();
+        Set<Long> followedMemberIds = memberId != null ?
+                getFollowedMemberIds(memberId, memberIds) : Collections.emptySet();
 
         // 3. 각 Post를 PostListItem으로 변환
         return posts.stream()
-                .map(post -> convertToPostDetail(post, currentMemberId, postImageMap, likedPostIds, followedMemberIds))
+                .map(post -> convertToPostDetail(post, memberId, postImageMap, likedPostIds, followedMemberIds))
                 .toList();
     }
 

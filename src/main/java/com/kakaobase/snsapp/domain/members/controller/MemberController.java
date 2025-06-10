@@ -81,14 +81,11 @@ public class MemberController {
     @GetMapping("/{userId}/posts")
     @Operation(summary = "유저가 작성한 게시글 목록 조회", description = "유저가 작성한 게시글 목록을 조회합니다.")
     public CustomResponse<List<PostResponseDto.PostDetails>> getUserPosts(
+            @Parameter(description = "조회할 유저id") @PathVariable Long userId,
             @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
-            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor
     ) {
-
-        Long memberId = Long.valueOf(userDetails.getId());
-
-        List<PostResponseDto.PostDetails> response = postService.getUserPostList(limit, cursor, memberId);
+        List<PostResponseDto.PostDetails> response = postService.getUserPostList(limit, cursor, userId);
 
         return CustomResponse.success("유저 게시글이조회에 성공하였습니다",response);
     }
