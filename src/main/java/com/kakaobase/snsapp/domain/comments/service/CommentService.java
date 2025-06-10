@@ -14,13 +14,13 @@ import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.service.PostService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -276,8 +276,12 @@ public class CommentService {
     @Transactional(readOnly = true)
     public List<CommentResponseDto.CommentInfo> getUserCommentList(int limit, Long cursor, Long memberId) {
 
-        if(memberRepository.existsById(memberId)) {
+        if(!memberRepository.existsById(memberId)) {
             throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId");
+        }
+
+        if (limit < 1) {
+            throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit");
         }
 
         Pageable pageable = PageRequest.of(0, limit);
