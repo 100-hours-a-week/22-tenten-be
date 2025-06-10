@@ -5,8 +5,10 @@ import com.kakaobase.snsapp.global.error.code.BaseErrorCode;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -126,6 +128,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(GeneralErrorCode.INVALID_QUERY_PARAMETER.getStatus())
                 .body(GeneralErrorCode.INVALID_QUERY_PARAMETER.getErrorResponse());
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<CustomResponse<Void>> handleAuthorizationDenied(AuthorizationDeniedException e) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(CustomResponse.failure(GeneralErrorCode.FORBIDDEN.getError(), GeneralErrorCode.FORBIDDEN.getMessage()));
     }
 
     /**
