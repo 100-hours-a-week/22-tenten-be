@@ -64,43 +64,12 @@ public class SecurityTokenManager {
     }
 
     /**
-     * 리프레시 토큰 검증
-     */
-    @Transactional
-    public void validateRefreshToken(String rawToken) {
-        String hashedToken = hashToken(rawToken);
-
-        // 1. 취소된 토큰인지 확인
-        if (revokedTokenRepository.existsByRefreshTokenHash(hashedToken)) {
-            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_REVOKED);
-        }
-
-        // 2. 토큰 조회
-        AuthToken refreshToken = authTokenRepository.findByRefreshTokenHash(hashedToken)
-                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID));
-
-        // 3. 만료 확인
-        if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            revokeRefreshToken(rawToken);
-            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
-        }
-    }
-
-    /**
      * 리프레시 토큰 취소
      */
     @Transactional
     public void revokeRefreshToken(String rawToken) {
-        String hashedToken = hashToken(rawToken);
 
-        boolean exists = authTokenRepository.existsByRefreshTokenHash(hashedToken);
-        if (!exists) {
-            log.debug("리프레시 토큰 없음 - 무시하고 통과");
-            return;
-        }
-
-        AuthToken refeshToken = authTokenRepository.findByRefreshTokenHash(hashedToken)
-                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID, "해당 리프레시 토큰값을 DB에서 조회할 수 없음"));
+        AuthToken refeshToken = findByRefreshToken(rawToken);
 
         // AuthConverter를 사용하여 취소된 토큰 엔티티 생성
         RevokedRefreshToken revokedToken = authConverter.toRevokedTokenEntity(
@@ -111,6 +80,25 @@ public class SecurityTokenManager {
         // 기존 토큰 삭제 및 취소 토큰 저장
         authTokenRepository.delete(refeshToken);
         revokedTokenRepository.save(revokedToken);
+    }
+
+    @Transactional
+    public boolean isExistRefreshToken(String rawToken) {
+        String hashedToken = hashToken(rawToken);
+        return authTokenRepository.existsByRefreshTokenHash(hashedToken);
+    }
+
+    @Transactional
+    public boolean isRevokedToken(String rawToken) {
+        String hashedToken = hashToken(rawToken);
+        return revokedTokenRepository.existsByRefreshTokenHash(hashedToken);
+    }
+
+    @Transactional
+    public AuthToken findByRefreshToken(String rawToken) {
+        String hashedToken = hashToken(rawToken);
+        return authTokenRepository.findByRefreshTokenHash(hashedToken)
+                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID));
     }
 
     /**
