@@ -15,7 +15,7 @@ public class AuthResponseDto {
      */
     @Schema(description = "로그인 또는 토큰 재발급 성공 응답 DTO")
     @Builder
-    public record LoginResponse(
+    public record UserAuthInfo(
 
             @Schema(description = "로그인 유저의 memberId", example = "12...")
             @JsonProperty("member_id")
@@ -31,12 +31,7 @@ public class AuthResponseDto {
 
             @Schema(description = "유저의 프로필 이미지")
             @JsonProperty("image_url")
-            String imageUrl,
-
-            @Schema(description = "AccessToken (JWT 형식)", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6...")
-            @JsonProperty("access_token")
-            String accessToken
-
+            String imageUrl
     ) {}
 
     /**

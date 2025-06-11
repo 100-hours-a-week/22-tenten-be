@@ -19,6 +19,7 @@ public class CustomUserDetails implements UserDetails {
 
     private transient String email;
     private transient String password;
+    private transient String name;
     private transient String nickname;
     private transient String profileImgUrl;
     private final String id;
@@ -36,12 +37,13 @@ public class CustomUserDetails implements UserDetails {
         this.isEnabled = isEnabled;
     }
 
-    //로그인 시 사용
-    public CustomUserDetails(String email, String password, String id, String role, String className, String nickname, String  profileImgUrl, boolean isEnabled) {
+    //로그인, 엑세스 토큰 재발급 시 사용
+    public CustomUserDetails(String email, String password, String id, String role, String name, String className, String nickname, String  profileImgUrl, boolean isEnabled) {
+        this.id = id;
         this.email = email;
         this.password = password;
+        this.name = name;
         this.nickname = nickname;
-        this.id = id;
         this.role = role;
         this.className = className;
         this.profileImgUrl = profileImgUrl;

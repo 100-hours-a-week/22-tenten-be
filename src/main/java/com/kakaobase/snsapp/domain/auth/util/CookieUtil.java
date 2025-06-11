@@ -25,6 +25,15 @@ public class CookieUtil {
     @Value("${app.jwt.refresh.path}")
     private String refreshTokenCookiePath;
 
+    @Value("${app.jwt.access.token-name}")
+    private String accessTokenCookieName;
+
+    @Value("${app.jwt.access.expiration-time}")
+    private long accessTokenExpiration;
+
+    @Value("${app.jwt.access.path}")
+    private String accessTokenCookiePath;
+
     @Value("${app.jwt.secure}")
     private boolean secureCookie;
 
@@ -34,22 +43,32 @@ public class CookieUtil {
     @Value("${app.jwt.refresh.same-site}")
     private String cookieSameSite;
 
-    /**
-     * 리프레시 토큰을 담은 쿠키를 생성합니다.
-     * 생성된 쿠키는 JavaScript에서 접근할 수 없도록 HttpOnly로 설정
-     */
-    public ResponseCookie createRefreshTokenCookie(String refreshToken) {
-        return ResponseCookie.from(refreshTokenCookieName, refreshToken)
-                .path(refreshTokenCookiePath)
+    public ResponseCookie createRefreshTokenToCookie(String refreshToken) {
+        return createTokenToCookie(refreshToken, refreshTokenCookieName, refreshTokenCookiePath, refreshTokenExpiration);
+    }
+
+    public ResponseCookie createTokenToAccessCookie(String accessToken) {
+        return createTokenToCookie(accessToken, accessTokenCookieName, accessTokenCookiePath, accessTokenExpiration);
+    }
+
+    public ResponseCookie createEmptyAccessCookie() {
+        return createTokenToCookie("", accessTokenCookieName, accessTokenCookiePath, 1000L);
+    }
+
+    public ResponseCookie createEmptyRefreshCookie() {
+        return createTokenToCookie("", refreshTokenCookieName, refreshTokenCookiePath, 1000L);
+    }
+
+    private ResponseCookie createTokenToCookie(String token, String tokenCookieName,String path,Long maxAge) {
+        return ResponseCookie.from(tokenCookieName, token)
+                .path(path)
                 .domain(cookieDomain)
-                .maxAge(refreshTokenExpiration / 1000)
+                .maxAge(maxAge / 1000)
                 .httpOnly(true)
                 .secure(secureCookie)
                 .sameSite(cookieSameSite)
                 .build();
     }
-
-
 
     /**
      * HTTP 요청의 쿠키에서 리프레시 토큰을 추출합니다.
@@ -67,22 +86,5 @@ public class CookieUtil {
             }
         }
         return null;
-    }
-
-    /**
-     * 로그아웃 시 사용할 빈 리프레시 토큰 쿠키를 생성합니다.
-     * 생성된 쿠키는 즉시 만료되도록 설정됩니다.
-     *
-     * @return 만료된 쿠키
-     */
-    public ResponseCookie createEmptyRefreshCookie() {
-        return ResponseCookie.from(refreshTokenCookieName, "")
-                .maxAge(0) // 즉시 만료
-                .path(refreshTokenCookiePath)
-                .httpOnly(true)
-                .secure(secureCookie)
-                .domain(cookieDomain)
-                .build();
-
     }
 }
