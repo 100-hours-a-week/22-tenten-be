@@ -51,6 +51,14 @@ public class CookieUtil {
         return createTokenToCookie(accessToken, accessTokenCookieName, accessTokenCookiePath, accessTokenExpiration);
     }
 
+    public ResponseCookie createEmptyAccessCookie() {
+        return createTokenToCookie("", accessTokenCookieName, accessTokenCookiePath, 1000L);
+    }
+
+    public ResponseCookie createEmptyRefreshCookie() {
+        return createTokenToCookie("", refreshTokenCookieName, refreshTokenCookiePath, 1000L);
+    }
+
     private ResponseCookie createTokenToCookie(String token, String tokenCookieName,String path,Long maxAge) {
         return ResponseCookie.from(tokenCookieName, token)
                 .path(path)
@@ -78,22 +86,5 @@ public class CookieUtil {
             }
         }
         return null;
-    }
-
-    /**
-     * 로그아웃 시 사용할 빈 리프레시 토큰 쿠키를 생성합니다.
-     * 생성된 쿠키는 즉시 만료되도록 설정됩니다.
-     *
-     * @return 만료된 쿠키
-     */
-    public ResponseCookie createEmptyRefreshCookie() {
-        return ResponseCookie.from(refreshTokenCookieName, "")
-                .maxAge(0) // 즉시 만료
-                .path(refreshTokenCookiePath)
-                .httpOnly(true)
-                .secure(secureCookie)
-                .domain(cookieDomain)
-                .build();
-
     }
 }
