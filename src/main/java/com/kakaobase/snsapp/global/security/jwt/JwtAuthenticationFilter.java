@@ -81,7 +81,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         log.debug("JwtAuthenticationFilter 실행 - URI: {}, 메서드: {}", request.getRequestURI(), request.getMethod());
 
         // 요청에서 JWT 토큰 추출
-        String token = jwtUtil.resolveToken(request);
+        String token = jwtUtil.resolveTokenFromCookie(request);
         log.debug("추출된 토큰: {}", token != null ? "존재함 (길이: " + token.length() + ")" : "없음");
 
         // 토큰이 존재하고 현재 인증 정보가 없는 경우에만 처리
