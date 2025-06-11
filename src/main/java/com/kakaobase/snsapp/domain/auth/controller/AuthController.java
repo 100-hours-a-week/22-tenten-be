@@ -3,6 +3,7 @@ package com.kakaobase.snsapp.domain.auth.controller;
 import com.kakaobase.snsapp.domain.auth.dto.AuthRequestDto;
 import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
 import com.kakaobase.snsapp.domain.auth.service.AuthService;
+import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -11,7 +12,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final CookieUtil cookieUtil;
 
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인하고 JWT 토큰을 발급합니다")
     @ApiResponses(value = {
@@ -46,7 +47,7 @@ public class AuthController {
     public ResponseEntity<CustomResponse<AuthResponseDto.UserAuthInfo>>  login(
             @Parameter(description = "로그인 정보", required = true)
             @Valid @RequestBody AuthRequestDto.Login request,
-            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken,
+            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String oldRefreshToken,
             @Parameter(hidden = true) @RequestHeader(value = "User-Agent", required = true) String userAgent
     ) {
 
@@ -55,11 +56,9 @@ public class AuthController {
         // 로그인 처리 및 토큰 발급
         AuthResponseDto.UserAuthInfo response = authService.login(request);
 
-        ResponseCookie refreshCookie = authService.getRefreshCookie(providedRefreshToken, userAgent);
+        ResponseCookie refreshCookie = authService.getRefreshCookie(response.memberId(), oldRefreshToken, userAgent);
 
-        String newRefreshToken = refreshCookie.getValue();
-
-        ResponseCookie accessTokenCookie = authService.getAccessTokenCookie(newRefreshToken);
+        ResponseCookie accessTokenCookie = authService.getAccessCookie();
 
         log.info("로그인 성공: {}", request.email());
 
@@ -85,13 +84,12 @@ public class AuthController {
     })
     @PostMapping("/tokens/refresh")
     public ResponseEntity<CustomResponse<AuthResponseDto.UserAuthInfo>> refreshToken(
-            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken) {
+            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String oldRefreshToken) {
 
         log.info("액세스 토큰 재발급 요청");
 
-        ResponseCookie accessTokenCookie = authService.getAccessTokenCookie(providedRefreshToken);
-
-        AuthResponseDto.UserAuthInfo response = authService.getUserInfo();
+        AuthResponseDto.UserAuthInfo response = authService.getUserInfo(oldRefreshToken);
+        ResponseCookie accessTokenCookie = authService.getAccessCookie();
 
         log.info("액세스 토큰 재발급 성공");
 
@@ -117,18 +115,18 @@ public class AuthController {
     })
     @DeleteMapping("/tokens")
     public ResponseEntity<CustomResponse<Void>> logout(
-            HttpServletResponse httpResponse,
-            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String providedRefreshToken
+            @Parameter(hidden = true) @CookieValue(value = "kakaobase_refresh_token", required = false, defaultValue = "") String oldRefreshToken
             ) {
 
         log.info("로그아웃 요청 수신");
 
-        authService.logout(providedRefreshToken);
-        ResponseCookie emptyRefreshCookie = authService.logout(providedRefreshToken);
+        authService.logout(oldRefreshToken);
+        ResponseCookie emptyRefreshCookie = cookieUtil.createEmptyRefreshCookie();
+        ResponseCookie emptyAccessTokenCookie = cookieUtil.createEmptyAccessCookie();
 
         return ResponseEntity
                 .ok()
-                .header(HttpHeaders.SET_COOKIE, emptyRefreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, emptyRefreshCookie.toString(), emptyAccessTokenCookie.toString())
                 .body(CustomResponse.success("정상적으로 로그아웃되었습니다."));
 
     }
