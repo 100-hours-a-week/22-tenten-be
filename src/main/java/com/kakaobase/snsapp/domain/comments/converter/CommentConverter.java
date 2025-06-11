@@ -144,16 +144,18 @@ public class CommentConverter {
                         .isFollowed(isFollowing)
                         .build();
 
-        return new CommentResponseDto.CommentInfo(
-                comment.getId(),
-                userInfo,
-                comment.getContent(),
-                comment.getCreatedAt(),
-                comment.getLikeCount(),
-                comment.getRecommentCount(),
-                isMine,
-                isLiked
-        );
+        return CommentResponseDto.CommentInfo
+                .builder()
+                .id(comment.getId())
+                .PostId(comment.getPost().getId())
+                .user(userInfo)
+                .content(comment.getContent())
+                .created_at(comment.getCreatedAt())
+                .like_count(comment.getLikeCount())
+                .recomment_count(comment.getRecommentCount())
+                .is_mine(isMine)
+                .is_liked(isLiked)
+                .build();
     }
 
 

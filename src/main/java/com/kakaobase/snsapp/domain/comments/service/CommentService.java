@@ -226,9 +226,6 @@ public class CommentService {
      * @return 대댓글 목록 응답 DTO
      */
     public CommentResponseDto.RecommentListResponse getRecommentsByCommentId(Long memberId, Long commentId, CommentRequestDto.RecommentPageRequest pageRequest) {
-        // 댓글 존재 확인
-        Comment comment = commentRepository.findByIdAndDeletedAtIsNull(commentId)
-                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId", "해당 댓글을 찾을 수 없습니다."));
 
         // 페이지 설정
         int limit = pageRequest.limit() != null ? pageRequest.limit() : DEFAULT_PAGE_SIZE;
@@ -329,14 +326,12 @@ public class CommentService {
         boolean isFollowing = followRepository.existsByFollowerUserAndFollowingUser(follower, following);
 
         // CommentInfo 생성
-        CommentResponseDto.CommentInfo commentInfo = commentConverter.toCommentInfo(
+        return commentConverter.toCommentInfo(
                 comment,
                 isMine,
                 isLiked,
                 isFollowing
         );
-
-        return commentInfo;
     }
 
     /**
