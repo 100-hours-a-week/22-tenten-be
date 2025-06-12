@@ -4,6 +4,7 @@ import com.kakaobase.snsapp.domain.auth.dto.AuthResponseDto;
 import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.entity.RevokedRefreshToken;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
+import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -81,6 +82,18 @@ public class AuthConverter {
                 .nickname(userDetails.getNickname())
                 .className(userDetails.getClassName())
                 .imageUrl(userDetails.getProfileImgUrl())
+                .build();
+
+    }
+
+    public AuthResponseDto.UserAuthInfo toUserAuthInfoDto(CacheRecord.UserAuthCache userAuthCache) {
+
+        return AuthResponseDto.UserAuthInfo
+                .builder()
+                .memberId(userAuthCache.memberId())
+                .nickname(userAuthCache.nickname())
+                .className(userAuthCache.className())
+                .imageUrl(userAuthCache.imageUrl())
                 .build();
 
     }
