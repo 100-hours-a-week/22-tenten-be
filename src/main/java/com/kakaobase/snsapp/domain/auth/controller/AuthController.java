@@ -58,7 +58,7 @@ public class AuthController {
 
         ResponseCookie refreshCookie = authService.getRefreshCookie(response.memberId(), oldRefreshToken, userAgent);
 
-        ResponseCookie accessTokenCookie = authService.getAccessCookie();
+        ResponseCookie accessTokenCookie = authService.getAccessCookie(refreshCookie.getValue());
 
         log.info("로그인 성공: {}", request.email());
 
@@ -89,7 +89,7 @@ public class AuthController {
         log.info("액세스 토큰 재발급 요청");
 
         AuthResponseDto.UserAuthInfo response = authService.getUserInfo(oldRefreshToken);
-        ResponseCookie accessTokenCookie = authService.getAccessCookie();
+        ResponseCookie accessTokenCookie = authService.getAccessCookie(oldRefreshToken);
 
         log.info("액세스 토큰 재발급 성공");
 
