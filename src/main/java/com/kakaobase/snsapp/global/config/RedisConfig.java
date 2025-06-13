@@ -111,10 +111,10 @@ public class RedisConfig {
 
         // Embedded Redis도 Connection Pool 적용 (Spring Boot 3.4.5 + Java 21 호환)
         GenericObjectPoolConfig<?> poolConfig = new GenericObjectPoolConfig<>();
-        poolConfig.setMaxTotal(10);        // 개발환경이므로 더 적게
-        poolConfig.setMaxIdle(5);
-        poolConfig.setMinIdle(2);
-        poolConfig.setMaxWait(Duration.ofSeconds(2)); // 2초 - 새로운 방식
+        poolConfig.setMaxTotal(50);
+        poolConfig.setMaxIdle(20);
+        poolConfig.setMinIdle(10);
+        poolConfig.setMaxWait(Duration.ofSeconds(2));
 
         LettucePoolingClientConfiguration clientConfig =
                 LettucePoolingClientConfiguration.builder()
