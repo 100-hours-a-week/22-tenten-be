@@ -33,7 +33,7 @@ public class AuthCacheService {
      * @param userDetails 캐싱할 사용자 정보
      * @param expiresAt 토큰 만료시간 (서울시간)
      */
-    public void cacheRefreshToken(String refreshTokenHash, CustomUserDetails userDetails, LocalDateTime expiresAt) {
+    public void createRefreshCache(String refreshTokenHash, CustomUserDetails userDetails, LocalDateTime expiresAt) {
         try {
             String key = AUTH_INFO_PREFIX + refreshTokenHash;
 
@@ -84,7 +84,7 @@ public class AuthCacheService {
      * @param refreshTokenHash 해싱 전 원본 리프레시 토큰
      * @return UserAuthCache 또는 null (Cache Miss/실패 시)
      */
-    public CacheRecord.UserAuthCache getAuthUserInfo(String refreshTokenHash) {
+    public CacheRecord.UserAuthCache getRefreshCache(String refreshTokenHash) {
         try {
             String key = AUTH_INFO_PREFIX + refreshTokenHash;
 
@@ -118,12 +118,12 @@ public class AuthCacheService {
      * @param newImageUrl 새로운 프로필 이미지 URL
      * @return 업데이트 성공 여부
      */
-    public boolean updateProfileImage(String refreshTokenHash, String newImageUrl) {
+    public boolean updateRefershCacheImage(String refreshTokenHash, String newImageUrl) {
         try {
             String key = AUTH_INFO_PREFIX + refreshTokenHash;
 
             // 해당 키가 존재하는지 확인
-            if (!redisTemplate.hasKey(key)) {
+            if (!Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
                 log.debug("Cache Miss - 업데이트할 데이터 없음: {}", key);
                 return false;
             }
@@ -149,7 +149,7 @@ public class AuthCacheService {
     /**
      * rawRefreshToken을 키로 Redis Hash에서 데이터 삭제
      */
-    public void deleteUserDetailsFromRedis(String refreshTokenHash) throws AuthException {
+    public void deleteRefreshCache(String refreshTokenHash) throws AuthException {
         try {
             String key = AUTH_INFO_PREFIX + refreshTokenHash;
             Boolean deleted = redisTemplate.delete(key);

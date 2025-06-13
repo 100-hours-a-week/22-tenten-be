@@ -73,7 +73,7 @@ public class SecurityTokenManager {
                 .plus(Duration.ofMillis(refreshTokenExpirationTimeMillis));
 
         try{
-            authCacheService.cacheRefreshToken(hashedToken, userDetails, expiryTime);
+            authCacheService.createRefreshCache(hashedToken, userDetails, expiryTime);
         }catch(AuthException e){
             return false;
         }
@@ -83,13 +83,13 @@ public class SecurityTokenManager {
     //RDB에 refresh토큰 존재시 캐싱
     public void cacheRefreshToken(String rawRefreshToken, CustomUserDetails userDetails, AuthToken authToken){
         String hashedToken = hashToken(rawRefreshToken);
-        authCacheService.cacheRefreshToken(hashedToken, userDetails, authToken.getExpiresAt());
+        authCacheService.createRefreshCache(hashedToken, userDetails, authToken.getExpiresAt());
     }
 
     public CacheRecord.UserAuthCache getUserAuthCache(String rawRefreshToken){
         String hashedToken = hashToken(rawRefreshToken);
         try{
-            return authCacheService.getAuthUserInfo(hashedToken);
+            return authCacheService.getRefreshCache(hashedToken);
         }catch(AuthException e){
             return null;
         }
