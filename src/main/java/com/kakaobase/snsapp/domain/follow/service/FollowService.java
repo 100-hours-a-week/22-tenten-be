@@ -11,7 +11,6 @@ import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +26,6 @@ public class FollowService {
     private final FollowRepository followRepository;
     private final FollowConverter followConverter;
     private final MemberRepository memberRepository;
-    private final EntityManager entityManager;
 
 
     @Transactional
@@ -51,11 +49,11 @@ public class FollowService {
             throw new FollowException(FollowErrorCode.ALREADY_FOLLOWING);
         }
 
-        followerUser.incrementFollowingCount();
-        followingUser.incrementFollowerCount();
-
         Follow follow = followConverter.toFollowEntity(followerUser, followingUser);
         followRepository.save(follow);
+
+        followerUser.incrementFollowingCount();
+        followingUser.incrementFollowerCount();
     }
 
     @Transactional
@@ -71,10 +69,10 @@ public class FollowService {
         Follow follow = followRepository.findByFollowerUserAndFollowingUser(followerUser, followingUser)
                 .orElseThrow(()-> new FollowException(FollowErrorCode.ALREADY_UNFOLLOWING));
 
+        followRepository.delete(follow);
+
         followerUser.decrementFollowingCount();
         followingUser.decrementFollowerCount();
-
-        followRepository.delete(follow);
     }
 
 
