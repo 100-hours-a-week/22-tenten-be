@@ -77,10 +77,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include:
+          - health
+          - info
+          - prometheus
   endpoint:
     health:
       show-details: never
   health:
     defaults:
       enabled: false
+  metrics:
+    tags:
+      application: sns-app
