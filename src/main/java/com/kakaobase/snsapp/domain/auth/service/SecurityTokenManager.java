@@ -66,20 +66,6 @@ public class SecurityTokenManager {
         return rawToken;
     }
 
-    //로그인시 첫 캐싱에 사용
-    public boolean cacheRefreshToken(String rawRefreshToken, CustomUserDetails userDetails){
-        String hashedToken = hashToken(rawRefreshToken);
-        LocalDateTime expiryTime = LocalDateTime.now()
-                .plus(Duration.ofMillis(refreshTokenExpirationTimeMillis));
-
-        try{
-            authCacheService.createRefreshCache(hashedToken, userDetails, expiryTime);
-        }catch(AuthException e){
-            return false;
-        }
-        return true;
-    }
-
     //RDB에 refresh토큰 존재시 캐싱
     public void cacheRefreshToken(String rawRefreshToken, CustomUserDetails userDetails, AuthToken authToken){
         String hashedToken = hashToken(rawRefreshToken);

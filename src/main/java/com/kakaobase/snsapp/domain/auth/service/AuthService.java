@@ -40,7 +40,6 @@ public class AuthService {
     private final CustomUserDetailsService userDetailsService;
     private final AuthConverter authConverter;
     private final MemberRepository memberRepository;
-    private final AuthCacheService authCacheService;
 
     /**
      * 사용자 로그인 처리 및 인증 토큰 발급
@@ -112,11 +111,6 @@ public class AuthService {
         securityTokenManager.deleteRefreshCache(oldRefreshToken);
 
         CustomUserDetails userDetails = getCustomUserDetails();
-
-        //refresh토큰 캐싱시도
-        if(!securityTokenManager.cacheRefreshToken(refreshToken, userDetails)){
-            log.error("리프래시 토큰 저장 실패. 유저이름: {}", userDetails.getName());
-        }
 
         return cookieUtil.createRefreshTokenToCookie(refreshToken);
     }
