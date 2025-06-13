@@ -8,12 +8,10 @@ import com.kakaobase.snsapp.domain.auth.exception.AuthErrorCode;
 import com.kakaobase.snsapp.domain.auth.exception.AuthException;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetailsService;
-import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
 import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
-import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +24,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Duration;
-import java.time.LocalDateTime;
 
 /**
  * 사용자 인증 관련 비즈니스 로직을 처리하는 서비스
@@ -43,7 +38,6 @@ public class AuthService {
     private final CookieUtil cookieUtil;
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService userDetailsService;
-    private final CustomUserDetailsService customUserDetailsService;
     private final AuthConverter authConverter;
     private final MemberRepository memberRepository;
 
@@ -58,7 +52,7 @@ public class AuthService {
 
         //이메일 인증 겸 인증객체 생성
         try{
-            userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(email);
+            userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(email);
         }catch (UsernameNotFoundException e){
             throw new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, email);
         }
@@ -94,7 +88,7 @@ public class AuthService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId"));
 
-        CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(member.getEmail());
+        CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(member.getEmail());
 
         securityTokenManager.cacheRefreshToken(oldRefreshToken, userDetails, refreshToken);
         setCustomUserDetails(userDetails);
@@ -151,6 +145,8 @@ public class AuthService {
         if (securityTokenManager.isExistRefreshToken(oldRefreshToken)) {
             securityTokenManager.revokeRefreshToken(oldRefreshToken);
         }
+
+
     }
 
     private void setCustomUserDetails(CustomUserDetails userDetails) {
