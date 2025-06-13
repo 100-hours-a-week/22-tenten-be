@@ -86,12 +86,23 @@ public class SecurityTokenManager {
         authCacheService.createRefreshCache(hashedToken, userDetails, authToken.getExpiresAt());
     }
 
+    //캐싱된 Refersh토큰값을 조회
     public CacheRecord.UserAuthCache getUserAuthCache(String rawRefreshToken){
         String hashedToken = hashToken(rawRefreshToken);
         try{
             return authCacheService.getRefreshCache(hashedToken);
         }catch(AuthException e){
             return null;
+        }
+    }
+
+    //캐싱된 Refresh토큰 값 삭제
+    public void deleteRefreshCache(String oldRefreshToken) {
+        String hashedToken = hashToken(oldRefreshToken);
+        try{
+            authCacheService.deleteRefreshCache(hashedToken);
+        }catch (AuthException e){
+            log.error("캐시 삭제 실패");
         }
     }
 
