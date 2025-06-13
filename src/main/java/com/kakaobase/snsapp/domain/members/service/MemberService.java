@@ -1,6 +1,10 @@
 package com.kakaobase.snsapp.domain.members.service;
 
+import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
+import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
+import com.kakaobase.snsapp.domain.auth.service.AuthCacheService;
+import com.kakaobase.snsapp.domain.auth.service.SecurityTokenManager;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
@@ -42,6 +46,9 @@ public class MemberService {
     private final PostRepository postRepository;
     private final FollowRepository followRepository;
     private final EntityManager em;
+    private final AuthTokenRepository authTokenRepository;
+    private final SecurityTokenManager securityTokenManager;
+    private final AuthCacheService authCacheService;
 
     /**
      * 회원 가입 처리
@@ -175,7 +182,35 @@ public class MemberService {
 
         member.updateProfile(request.imageUrl());
 
+        updateAuthCacheUserImage(member.getId(), request.imageUrl());
+
         return new MemberResponseDto.ProfileImageChange(request.imageUrl());
+    }
+
+    private void updateAuthCacheUserImage(Long memberId, String newImageUrl) {
+        List<AuthToken> refreshTokens = authTokenRepository.findAllByMemberId(memberId);
+
+        if (refreshTokens.isEmpty()) {
+            log.debug("업데이트할 RefreshToken이 없음: memberId={}", memberId);
+            return;
+        }
+
+        for (AuthToken authToken : refreshTokens) {
+            try {
+                String refreshTokenHash = authToken.getRefreshTokenHash();
+
+                boolean updateResult = authCacheService.updateRefershCacheImage(refreshTokenHash, newImageUrl);
+
+                if (updateResult) {
+                    log.debug("캐시 이미지 업데이트 성공: memberId={}, tokenHash={}", memberId, refreshTokenHash);
+                } else {
+                    log.debug("캐시 이미지 업데이트 실패 혹은 해당 캐시 없음: memberId={}, tokenHash={}", memberId, refreshTokenHash);
+                }
+            } catch (Exception e) {
+                log.error("개별 토큰 캐시 업데이트 중 예외 발생: authTokenId={}, memberId={}, error={}",
+                        authToken.getId(), memberId, e.getMessage(), e);
+            }
+        }
     }
 
     @Transactional(readOnly = true)
