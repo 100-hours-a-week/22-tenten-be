@@ -3,6 +3,7 @@ package com.kakaobase.snsapp.domain.comments.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,7 +16,6 @@ import java.util.List;
  */
 @Schema(description = "댓글 관련 응답 DTO 클래스")
 public class CommentResponseDto {
-
 
     /**
      * 대댓글 정보 DTO
@@ -48,9 +48,14 @@ public class CommentResponseDto {
      * 댓글 정보 DTO
      */
     @Schema(description = "댓글 정보")
+    @Builder
     public record CommentInfo(
             @Schema(description = "댓글 ID", example = "101")
             Long id,
+
+            @Schema(description = "댓글이 달린 Post ID", example = "24")
+            @JsonProperty("post_id")
+            Long PostId,
 
             @Schema(description = "작성자 정보")
             MemberResponseDto.UserInfoWithFollowing user,

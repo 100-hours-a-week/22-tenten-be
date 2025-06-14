@@ -15,7 +15,7 @@ public class AuthException extends CustomException {
      *
      * @param errorCode 인증 에러 코드 (AuthErrorCode)
      */
-    public AuthException(AuthErrorCode errorCode) {
+    public AuthException(BaseErrorCode errorCode) {
         super(errorCode);
     }
 

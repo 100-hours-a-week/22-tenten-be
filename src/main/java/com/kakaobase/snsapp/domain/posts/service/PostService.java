@@ -1,7 +1,9 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
+import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.members.service.MemberService;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
@@ -51,6 +53,7 @@ public class PostService {
     private final FollowRepository followRepository;
     private final EntityManager em;
     private final PostConverter postConverter;
+    private final MemberRepository memberRepository;
 
     /**
      * 게시글을 생성합니다.
@@ -188,7 +191,7 @@ public class PostService {
     /**
      * 유저가 작성한 게시글 조회
      */
-    public List<PostResponseDto.PostDetails> getUserPostList(int limit, Long cursor, Long currentMemberId) {
+    public List<PostResponseDto.PostDetails> getUserPostList(int limit, Long cursor, Long memberId) {
         // 1. 유효성 검증
         if (limit < 1) {
             throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit", "limit는 1 이상이어야 합니다.");
@@ -197,26 +200,30 @@ public class PostService {
         Pageable pageable = PageRequest.of(0, limit);
 
         // 3. 게시글 조회
-        List<Post> posts = postRepository.findByMemberIdWithCursor(currentMemberId, cursor, pageable);
+        List<Post> posts = postRepository.findByMemberIdWithCursor(memberId, cursor, pageable);
 
         // 3. PostListItem으로 변환
-        return postConverter.convertToPostListItems(posts, currentMemberId);
+        return postConverter.convertToPostListItems(posts, memberId);
 
     }
 
-    public List<PostResponseDto.PostDetails> getLikedPostList(int limit, Long cursor, Long currentMemberId) {
-        // 1. 유효성 검증
+    public List<PostResponseDto.PostDetails> getLikedPostList(int limit, Long cursor, Long memberId) {
+
+        if(!memberRepository.existsById(memberId)){
+            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId");
+        }
+
         if (limit < 1) {
-            throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit", "limit는 1 이상이어야 합니다.");
+            throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit");
         }
 
         Pageable pageable = PageRequest.of(0, limit);
 
         // 3. 게시글 조회
-        List<Post> posts = postRepository.findLikedPostsByMemberIdWithCursor(currentMemberId, cursor, pageable);
+        List<Post> posts = postRepository.findLikedPostsByMemberIdWithCursor(memberId, cursor, pageable);
 
         // 3. PostListItem으로 변환
-        return postConverter.convertToPostListItems(posts, currentMemberId);
+        return postConverter.convertToPostListItems(posts, memberId);
     }
 
     /**

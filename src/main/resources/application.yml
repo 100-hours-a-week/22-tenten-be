@@ -51,10 +51,12 @@ app:
     issuer: kakaobase
     audience: web
     access:
+      token-name: kakaobase_access_token
       expiration-time: 1800000 # 30분
+      path: /
     refresh:
-      expiration-time: 604800000 # 7일
       token-name: kakaobase_refresh_token
+      expiration-time: 604800000 # 7일
       path: api/auth/tokens
   s3:
     expiration-time: 300
@@ -63,3 +65,15 @@ app:
 ai:
   server:
     url: ${AI_SERVER_URL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    defaults:
+      enabled: false

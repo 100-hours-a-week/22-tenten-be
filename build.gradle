@@ -33,6 +33,7 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
     //implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:2.7.0'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     //AWS
     implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.0.2") // BOM

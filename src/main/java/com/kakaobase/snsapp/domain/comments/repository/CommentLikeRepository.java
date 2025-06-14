@@ -82,18 +82,10 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, Commen
     @Query("SELECT cl FROM CommentLike cl WHERE cl.member.id = :memberId")
     Page<CommentLike> findByMemberId(@Param("memberId") Long memberId, Pageable pageable);
 
+
     @Modifying
     @Query("DELETE FROM CommentLike cl WHERE cl.comment.id = :commentId")
     int deleteByCommentId(@Param("commentId") Long commentId);
-
-    /**
-     * 특정 회원의 모든 좋아요를 삭제합니다.
-     * 회원 탈퇴 시 관련 좋아요도 함께 삭제하는 데 사용됩니다.
-     *
-     * @param memberId 회원 ID
-     */
-    @Query("DELETE FROM CommentLike cl WHERE cl.member.id = :memberId")
-    void deleteByMemberId(@Param("memberId") Long memberId);
 
     /**
      * 특정 댓글에 좋아요를 누른 회원을 커서 기반으로 조회합니다.

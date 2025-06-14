@@ -49,29 +49,6 @@ public class MemberConverter {
 
     }
 
-    /**
-     * Member 엔티티를 프로필 응답 DTO로 변환합니다.
-     *
-     * @param member Member 엔티티
-     * @param isMe 본인 여부
-     * @param isFollowing 팔로우 여부
-     * @return 프로필 응답 DTO
-     */
-    public MemberResponseDto.Profile toProfileResponseDto(Member member, boolean isMe, boolean isFollowing) {
-        return new MemberResponseDto.Profile(
-                member.getId(),
-                member.getEmail(),
-                member.getName(),
-                member.getNickname(),
-                member.getClassName(),
-                member.getProfileImgUrl(),
-                member.getGithubUrl(),
-                member.getFollowerCount(),
-                member.getFollowingCount(),
-                isMe,
-                isFollowing
-        );
-    }
 
     /**
      * Member Entity 리스트를 UserInfo DTO 리스트로 변환합니다.
@@ -109,6 +86,7 @@ public class MemberConverter {
                 .name(member.getName())
                 .nickname(member.getNickname())
                 .imageUrl(member.getProfileImgUrl())
+                .githubUrl(member.getGithubUrl())
                 .className(member.getClassName())
                 .postCount(postCount)
                 .followerCount(member.getFollowerCount())
