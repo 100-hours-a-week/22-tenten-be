@@ -101,7 +101,7 @@ public class RedisConfig {
     }
 
     /**
-     * Embedded Redis 연결 팩토리 생성 (Connection Pool 포함)
+     * Embedded Redis 연결 팩토리 생성
      */
     private RedisConnectionFactory createEmbeddedRedisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
