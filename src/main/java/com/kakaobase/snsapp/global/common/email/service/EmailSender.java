@@ -49,19 +49,4 @@ public class EmailSender {
             throw new RuntimeException("Failed to send email", e);
         }
     }
-
-    private String getSubjectByPurpose(String purpose) {
-        return switch (purpose) {
-            case "sign-up" -> "[KakaoBase] 회원가입 인증 코드";
-            case "password-reset" -> "[KakaoBase] 비밀번호 재설정 인증 코드";
-            default -> "[KakaoBase] 인증 코드";
-        };
-    }
-
-    private String createEmailContent(String code, String purpose) {
-        Context context = new Context();
-        context.setVariable("code", code);
-        context.setVariable("purpose", purpose);
-        return templateEngine.process("verification-email", context);
-    }
 }
