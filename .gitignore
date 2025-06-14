@@ -71,5 +71,14 @@ tmp/
 *.key
 *.crt
 
+### Redis
+CONFIG
+*.rdb
+*.aof
+*.pid
+*.log
+/tmp/redis*
+
+
 ### Custom Project Artifacts ###
 fileHashs.lock

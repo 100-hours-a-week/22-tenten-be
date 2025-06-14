@@ -1,7 +1,10 @@
 package com.kakaobase.snsapp.domain.members.service;
 
+import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
-import com.kakaobase.snsapp.domain.comments.dto.BotRecommentRequestDto;
+import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
+import com.kakaobase.snsapp.domain.auth.service.AuthCacheService;
+import com.kakaobase.snsapp.domain.auth.service.SecurityTokenManager;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
@@ -43,6 +46,9 @@ public class MemberService {
     private final PostRepository postRepository;
     private final FollowRepository followRepository;
     private final EntityManager em;
+    private final AuthTokenRepository authTokenRepository;
+    private final SecurityTokenManager securityTokenManager;
+    private final AuthCacheService authCacheService;
 
     /**
      * 회원 가입 처리
@@ -112,94 +118,6 @@ public class MemberService {
                 ));
     }
 
-    /**
-     * 닉네임으로 회원을 검색합니다.
-     *
-     * @param nickname 검색할 닉네임 (부분 일치)
-     * @param limit 최대 검색 결과 수
-     * @return 검색된 회원 ID 목록
-     */
-    @Transactional(readOnly = true)
-    public List<Long> searchMembersByNickname(String nickname, int limit) {
-        return memberRepository.findByNicknameContainingLimit(nickname, limit)
-                .stream()
-                .map(Member::getId)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 닉네임으로 회원을 조회합니다.
-     *
-     * @param nickname 닉네임 (정확히 일치)
-     * @return 회원 ID (없으면 null)
-     */
-    @Transactional(readOnly = true)
-    public Long findIdByNickname(String nickname) {
-        return memberRepository.findByNickname(nickname)
-                .map(Member::getId)
-                .orElse(null);
-    }
-
-    /**
-     * 여러 닉네임에 대한 회원 ID를 일괄 조회합니다.
-     *
-     * @param nicknames 닉네임 목록
-     * @return 닉네임을 키로 하고 회원 ID를 값으로 하는 맵
-     */
-    @Transactional(readOnly = true)
-    public Map<String, Long> getMemberIdsByNicknames(List<String> nicknames) {
-        List<Member> members = memberRepository.findAllByNicknameIn(nicknames);
-
-        return members.stream()
-                .collect(Collectors.toMap(
-                        Member::getNickname,
-                        Member::getId
-                ));
-    }
-
-    /**
-     * 회원의 className(기수)을 조회합니다.
-     *
-     * @param memberId 회원 ID
-     * @return 회원의 className
-     * @throws MemberException 회원을 찾을 수 없는 경우
-     */
-    @Transactional(readOnly = true)
-    public String getMemberClassName(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND, "memberId"));
-
-        return member.getClassName();
-    }
-
-    /**
-     * 회원이 존재하는지 확인합니다.
-     *
-     * @param memberId 회원 ID
-     * @return 존재 여부
-     */
-    @Transactional(readOnly = true)
-    public boolean existsById(Long memberId) {
-        return memberRepository.existsById(memberId);
-    }
-
-    /**
-     * 회원의 닉네임과 기수 정보만 조회합니다.
-     *
-     * @param memberId 회원 ID
-     * @return BotUser DTO (닉네임, 기수)
-     * @throws MemberException 회원을 찾을 수 없는 경우
-
-    @Transactional(readOnly = true)
-    public BotRecommentRequestDto.UserInfo getMemberBotInfo(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_NOT_FOUND, "memberId"));
-
-        return new BotRecommentRequestDto.UserInfo(
-                member.getNickname(),
-                member.getClassName()
-        );
-    }*/
 
     @Transactional
     public void unregister() {
@@ -264,7 +182,35 @@ public class MemberService {
 
         member.updateProfile(request.imageUrl());
 
+        updateAuthCacheUserImage(member.getId(), request.imageUrl());
+
         return new MemberResponseDto.ProfileImageChange(request.imageUrl());
+    }
+
+    private void updateAuthCacheUserImage(Long memberId, String newImageUrl) {
+        List<AuthToken> refreshTokens = authTokenRepository.findAllByMemberId(memberId);
+
+        if (refreshTokens.isEmpty()) {
+            log.debug("업데이트할 RefreshToken이 없음: memberId={}", memberId);
+            return;
+        }
+
+        for (AuthToken authToken : refreshTokens) {
+            try {
+                String refreshTokenHash = authToken.getRefreshTokenHash();
+
+                boolean updateResult = authCacheService.updateRefershCacheImage(refreshTokenHash, newImageUrl);
+
+                if (updateResult) {
+                    log.debug("캐시 이미지 업데이트 성공: memberId={}, tokenHash={}", memberId, refreshTokenHash);
+                } else {
+                    log.debug("캐시 이미지 업데이트 실패 혹은 해당 캐시 없음: memberId={}, tokenHash={}", memberId, refreshTokenHash);
+                }
+            } catch (Exception e) {
+                log.error("개별 토큰 캐시 업데이트 중 예외 발생: authTokenId={}, memberId={}, error={}",
+                        authToken.getId(), memberId, e.getMessage(), e);
+            }
+        }
     }
 
     @Transactional(readOnly = true)
@@ -287,8 +233,7 @@ public class MemberService {
             isFollowing = followRepository.existsByFollowerUserAndFollowingUser(currentMember, tagetMember);
         }
 
-        MemberResponseDto.Mypage response = memberConverter.toMypage(tagetMember, postCount, isMine, isFollowing);
-        return response;
+        return memberConverter.toMypage(tagetMember, postCount, isMine, isFollowing);
     }
 
     private Long getCurrentUserId() {

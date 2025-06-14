@@ -38,11 +38,14 @@ spring:
     console:
       enabled: false
 
-  # Redis 비활성화 (통합 테스트에서는 불필요)
+# Redis 설정
   data:
     redis:
       repositories:
-        enabled: false
+        enabled: true  # 테스트에서는 Redis Repository 활성화
+      host: localhost
+      port: 16379  # Embedded Redis 포트
+      timeout: 1000ms  # 테스트용 짧은 타임아웃
 
   # 메일 설정 (Mock으로 처리)
   mail:

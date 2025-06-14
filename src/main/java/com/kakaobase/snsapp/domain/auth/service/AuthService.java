@@ -8,7 +8,6 @@ import com.kakaobase.snsapp.domain.auth.exception.AuthErrorCode;
 import com.kakaobase.snsapp.domain.auth.exception.AuthException;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetailsService;
-import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
 import com.kakaobase.snsapp.domain.auth.util.CookieUtil;
 
 import com.kakaobase.snsapp.domain.members.entity.Member;
@@ -26,8 +25,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 /**
  * 사용자 인증 관련 비즈니스 로직을 처리하는 서비스
  */
@@ -41,10 +38,8 @@ public class AuthService {
     private final CookieUtil cookieUtil;
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService userDetailsService;
-    private final CustomUserDetailsService customUserDetailsService;
     private final AuthConverter authConverter;
     private final MemberRepository memberRepository;
-    private final AuthTokenRepository authTokenRepository;
 
     /**
      * 사용자 로그인 처리 및 인증 토큰 발급
@@ -57,7 +52,7 @@ public class AuthService {
 
         //이메일 인증 겸 인증객체 생성
         try{
-            userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(email);
+            userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(email);
         }catch (UsernameNotFoundException e){
             throw new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, email);
         }
@@ -73,40 +68,37 @@ public class AuthService {
         return authConverter.toUserAuthInfoDto(userDetails);
     }
 
-
+    //AccessToken재발급 시 응답Dto반환 메서드
     @Transactional
     public AuthResponseDto.UserAuthInfo getUserInfo(String oldRefreshToken) {
 
-        validateRefreshToken(oldRefreshToken);
+        var cache = securityTokenManager.getUserAuthCache(oldRefreshToken);
 
-        AuthToken refreshToken = securityTokenManager.findByRefreshToken(oldRefreshToken);
+        // 1차로 캐싱 조회
+        if( cache != null) {
+            return authConverter.toUserAuthInfoDto(cache);
+        }
 
+        // 없으면 유효성 검사 후 해당 AuthToken가져옴
+        AuthToken refreshToken= securityTokenManager.validateRefreshToken(oldRefreshToken);
+
+        // 유효하면 해당 refresh토큰 캐싱
         Long memberId = refreshToken.getMemberId();
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new AuthException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId"));
 
-        CustomUserDetails userDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(member.getEmail());
+        CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(member.getEmail());
 
+        securityTokenManager.cacheRefreshToken(oldRefreshToken, userDetails, refreshToken);
         setCustomUserDetails(userDetails);
 
         return authConverter.toUserAuthInfoDto(userDetails);
     }
 
-    //ContextHolder를 사용하여 AccessCookie생성
-    public ResponseCookie getAccessCookie() {
-
-        CustomUserDetails userDetails = getCustomUserDetails();
-
-        String accessToken = jwtTokenProvider.createAccessToken(userDetails);
-
-        return cookieUtil.createTokenToAccessCookie(accessToken);
-    }
-
     //refresh토큰 쿠키 생성
     @Transactional
     public ResponseCookie getRefreshCookie(Long userId, String oldRefreshToken, String userAgent){
-
         // 기존 리프레시 토큰이 있다면 기존 토큰 파기
         if (securityTokenManager.isExistRefreshToken(oldRefreshToken)){
             securityTokenManager.revokeRefreshToken(oldRefreshToken);
@@ -115,7 +107,30 @@ public class AuthService {
                 userId,
                 userAgent
         );
+
+        securityTokenManager.deleteRefreshCache(oldRefreshToken);
+
+        CustomUserDetails userDetails = getCustomUserDetails();
+
         return cookieUtil.createRefreshTokenToCookie(refreshToken);
+    }
+
+    //ContextHolder를 사용하여 AccessCookie생성
+    public ResponseCookie getAccessCookie(String refreshToken) {
+
+        var cache = securityTokenManager.getUserAuthCache(refreshToken);
+        // 캐시 조회
+        if( cache != null) {
+            String accessToken = jwtTokenProvider.createAccessToken(cache);
+            return cookieUtil.createTokenToAccessCookie(accessToken);
+        }
+
+        // 캐싱 실패시 ContexHoler의 정보로 AccessToken 생성
+        CustomUserDetails userDetails = getCustomUserDetails();
+
+        String accessToken = jwtTokenProvider.createAccessToken(userDetails);
+
+        return cookieUtil.createTokenToAccessCookie(accessToken);
     }
 
     /**
@@ -127,6 +142,8 @@ public class AuthService {
         if (securityTokenManager.isExistRefreshToken(oldRefreshToken)) {
             securityTokenManager.revokeRefreshToken(oldRefreshToken);
         }
+
+        securityTokenManager.deleteRefreshCache(oldRefreshToken);
     }
 
     private void setCustomUserDetails(CustomUserDetails userDetails) {
@@ -145,24 +162,4 @@ public class AuthService {
         return (CustomUserDetails) auth.getPrincipal();
     }
 
-
-    /**
-     * 리프레시 토큰 검증
-     */
-    private void validateRefreshToken(String rawToken) {
-
-        // 1. 취소된 토큰인지 확인
-        if (securityTokenManager.isRevokedToken(rawToken)) {
-            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_REVOKED);
-        }
-
-        // 2. 토큰 조회
-        AuthToken refreshToken = securityTokenManager.findByRefreshToken(rawToken);
-
-        // 3. 만료 확인
-        if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            securityTokenManager.revokeRefreshToken(rawToken);
-            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
-        }
-    }
 }

@@ -84,7 +84,7 @@ public class MemberController {
     ) {
         List<PostResponseDto.PostDetails> response = postService.getUserPostList(limit, cursor, userId);
 
-        return CustomResponse.success("유저 게시글이조회에 성공하였습니다",response);
+        return CustomResponse.success("유저 게시글 조회에 성공하였습니다",response);
     }
 
     @GetMapping("/{userId}/comments")

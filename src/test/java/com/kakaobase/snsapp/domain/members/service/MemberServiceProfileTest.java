@@ -138,68 +138,6 @@ class MemberServiceProfileTest {
         verify(memberRepository).findAllByIdIn(emptyList);
     }
 
-    @Test
-    @DisplayName("회원 존재 여부를 확인한다")
-    void existsById_WithValidId_ReturnsTrue() {
-        // given
-        Long memberId = 1L;
-        given(memberRepository.existsById(memberId)).willReturn(true);
-
-        // when
-        boolean result = memberService.existsById(memberId);
-
-        // then
-        assertThat(result).isTrue();
-        verify(memberRepository).existsById(memberId);
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 회원 ID로 존재 여부 확인 시 false를 반환한다")
-    void existsById_WithInvalidId_ReturnsFalse() {
-        // given
-        Long invalidId = 999L;
-        given(memberRepository.existsById(invalidId)).willReturn(false);
-
-        // when
-        boolean result = memberService.existsById(invalidId);
-
-        // then
-        assertThat(result).isFalse();
-        verify(memberRepository).existsById(invalidId);
-    }
-
-    @Test
-    @DisplayName("회원의 기수 정보를 조회한다")
-    void getMemberClassName_WithValidId_ReturnsClassName() {
-        // given
-        Long memberId = 1L;
-        given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
-
-        // when
-        String result = memberService.getMemberClassName(memberId);
-
-        // then
-        assertThat(result).isNotNull();
-        assertThat(result).isEqualTo(member.getClassName().toString());
-
-        verify(memberRepository).findById(memberId);
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 회원의 기수 조회 시 예외가 발생한다")
-    void getMemberClassName_WithInvalidId_ThrowsException() {
-        // given
-        Long invalidId = 999L;
-        given(memberRepository.findById(invalidId)).willReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> memberService.getMemberClassName(invalidId))
-                .isInstanceOf(MemberException.class)
-                .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.MEMBER_NOT_FOUND);
-
-        verify(memberRepository).findById(invalidId);
-    }
-
     @ParameterizedTest
     @DisplayName("다양한 개수의 회원 ID 목록으로 일괄 조회가 성공한다")
     @CsvSource({

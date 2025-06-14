@@ -1,11 +1,11 @@
 package com.kakaobase.snsapp.global.security.jwt;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
+import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -45,6 +45,25 @@ public class JwtTokenProvider {
         String userId = customUserDetail.getId();
         String role = customUserDetail.getRole();
         String className = customUserDetail.getClassName();
+
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);
+
+        return Jwts.builder()
+                .setSubject(userId)
+                .claim("role", role)
+                .claim("class_name", className)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String createAccessToken(CacheRecord.UserAuthCache cache) {
+
+        String userId = String.valueOf(cache.memberId());
+        String role = cache.role();
+        String className = cache.className();
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);
