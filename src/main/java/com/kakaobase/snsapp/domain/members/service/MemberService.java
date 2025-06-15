@@ -237,17 +237,6 @@ public class MemberService {
         return memberConverter.toMypage(tagetMember, postCount, isMine, isFollowing);
     }
 
-    @PostConstruct
-    public void initializeFollowCounts() {
-        try {
-            syncMemberFollowCount();
-            System.out.println("✅ 팔로우 카운트 동기화 완료");
-        } catch (Exception e) {
-            System.err.println("❌ 팔로우 카운트 동기화 실패: " + e.getMessage());
-            // 실패해도 애플리케이션은 정상 시작되도록 예외를 삼킴
-        }
-    }
-
     @Transactional
     public void syncMemberFollowCount() {
         List<Member> members = memberRepository.findAll();
