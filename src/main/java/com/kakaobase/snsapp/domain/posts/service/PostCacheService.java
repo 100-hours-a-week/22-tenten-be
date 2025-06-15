@@ -229,7 +229,7 @@ public class PostCacheService {
     /**
      * 캐시 삭제
      */
-    public void deletePostStats(Long postId) {
+    public void deletePostCache(Long postId) {
         try {
             String key = POST_STATS_PREFIX + postId;
             redisTemplate.delete(key);
@@ -241,6 +241,24 @@ public class PostCacheService {
 
         } catch (Exception e) {
             log.error("게시글 통계 캐시 삭제 실패: postId={}, error={}", postId, e.getMessage());
+        }
+    }
+
+    /**
+     * 동기화 필요 목록에서 제거
+     */
+    public void removeFromSyncNeeded(Long postId) {
+        try {
+            Long removedCount = stringRedisTemplate.opsForSet().remove(POSTS_NEED_SYNC, postId.toString());
+
+            if (removedCount != null && removedCount > 0) {
+                log.debug("동기화 필요 목록에서 제거: postId={}", postId);
+            } else {
+                log.debug("동기화 목록에 없던 게시글: postId={}", postId);
+            }
+
+        } catch (Exception e) {
+            log.warn("동기화 필요 목록 제거 실패: postId={}, error={}", postId, e.getMessage());
         }
     }
 
@@ -258,24 +276,6 @@ public class PostCacheService {
 
         } catch (Exception e) {
             log.warn("동기화 필요 목록 추가 실패: postId={}, error={}", postId, e.getMessage());
-        }
-    }
-
-    /**
-     * 동기화 필요 목록에서 제거
-     */
-    private void removeFromSyncNeeded(Long postId) {
-        try {
-            Long removedCount = stringRedisTemplate.opsForSet().remove(POSTS_NEED_SYNC, postId.toString());
-
-            if (removedCount != null && removedCount > 0) {
-                log.debug("동기화 필요 목록에서 제거: postId={}", postId);
-            } else {
-                log.debug("동기화 목록에 없던 게시글: postId={}", postId);
-            }
-
-        } catch (Exception e) {
-            log.warn("동기화 필요 목록 제거 실패: postId={}, error={}", postId, e.getMessage());
         }
     }
 }
