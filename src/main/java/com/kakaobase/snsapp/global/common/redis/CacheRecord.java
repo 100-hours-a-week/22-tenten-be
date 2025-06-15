@@ -16,4 +16,11 @@ public class CacheRecord {
             String imageUrl,
             boolean isEnabled
     ) {}
+
+    @Builder
+    public record PostStatsCache(
+            Long postId,
+            Long likeCount,
+            Long commentCount
+    ) {}
 }
