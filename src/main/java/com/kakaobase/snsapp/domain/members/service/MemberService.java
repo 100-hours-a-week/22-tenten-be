@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
 import com.kakaobase.snsapp.domain.auth.service.AuthCacheService;
 import com.kakaobase.snsapp.domain.auth.service.SecurityTokenManager;
+import com.kakaobase.snsapp.domain.follow.dto.FollowCount;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
@@ -16,6 +17,7 @@ import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.common.email.service.EmailVerificationService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +49,6 @@ public class MemberService {
     private final FollowRepository followRepository;
     private final EntityManager em;
     private final AuthTokenRepository authTokenRepository;
-    private final SecurityTokenManager securityTokenManager;
     private final AuthCacheService authCacheService;
 
     /**
@@ -235,6 +236,56 @@ public class MemberService {
 
         return memberConverter.toMypage(tagetMember, postCount, isMine, isFollowing);
     }
+
+    @PostConstruct
+    public void initializeFollowCounts() {
+        try {
+            syncMemberFollowCount();
+            System.out.println("✅ 팔로우 카운트 동기화 완료");
+        } catch (Exception e) {
+            System.err.println("❌ 팔로우 카운트 동기화 실패: " + e.getMessage());
+            // 실패해도 애플리케이션은 정상 시작되도록 예외를 삼킴
+        }
+    }
+
+    @Transactional
+    public void syncMemberFollowCount() {
+        List<Member> members = memberRepository.findAll();
+
+        // 배치 조회 (Record 방식)
+        Map<Long, Long> followingCounts = followRepository.findFollowingCounts()
+                .stream()
+                .collect(Collectors.toMap(
+                        FollowCount::memberId,
+                        FollowCount::count
+                ));
+
+        Map<Long, Long> followerCounts = followRepository.findFollowerCounts()
+                .stream()
+                .collect(Collectors.toMap(
+                        FollowCount::memberId,
+                        FollowCount::count
+                ));
+
+        // 업데이트
+        members.forEach(member -> {
+            Long id = member.getId();
+
+            // 팔로잉 카운트 동기화
+            Integer newFollowingCount = followingCounts.getOrDefault(id, 0L).intValue();
+            if (!member.getFollowingCount().equals(newFollowingCount)) {
+                member.updateFollowingCount(newFollowingCount);
+            }
+
+            // 팔로워 카운트 동기화
+            Integer newFollowerCount = followerCounts.getOrDefault(id, 0L).intValue();
+            if (!member.getFollowerCount().equals(newFollowerCount)) {
+                member.updateFollowerCount(newFollowerCount);
+            }
+        });
+    }
+
+
 
     private Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
