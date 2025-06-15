@@ -135,6 +135,11 @@ public class Member extends BaseSoftDeletableEntity {
         this.isBanned = isBanned;
     }
 
+
+    public void updateFollowingCount(Integer followingCount) {
+        this.followingCount = followingCount;
+    }
+
     /**
      * 팔로잉 카운트를 증가시킵니다.
      */
@@ -149,6 +154,10 @@ public class Member extends BaseSoftDeletableEntity {
         if (this.followingCount > 0) {
             this.followingCount--;
         }
+    }
+
+    public void updateFollowerCount(Integer followerCount) {
+        this.followerCount = followerCount;
     }
 
     /**
