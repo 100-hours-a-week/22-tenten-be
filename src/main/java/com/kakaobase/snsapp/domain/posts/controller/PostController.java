@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.posts.controller;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
@@ -48,8 +49,8 @@ public class PostController {
      */
     @GetMapping("/{postType}")
     @Operation(summary = "게시글 목록 조회", description = "게시판 유형별로 게시글 목록을 조회합니다.")
-    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal)")
-    public ResponseEntity<PostResponseDto.PostListResponse> getPosts(
+    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
+    public CustomResponse<List<PostResponseDto.PostDetails>> getPosts(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
             @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor,
@@ -58,24 +59,24 @@ public class PostController {
 
         Long memberId = Long.valueOf(userDetails.getId());
 
-        PostResponseDto.PostListResponse response = postService.getPostList(postType, limit, cursor, memberId);
+        List<PostResponseDto.PostDetails> response = postService.getPostList(postType, limit, cursor, memberId);
 
-        return ResponseEntity.ok(response);
+        return CustomResponse.success("게시글을 불러오는데 성공하였습니다", response);
     }
 
     @GetMapping("/{postType}/{postId}")
     @Operation(summary = "게시글 상세 조회", description = "게시글의 상세 정보를 조회합니다.")
-    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal)")
-    public ResponseEntity<PostResponseDto.PostDetailResponse> getPostDetail(
+    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
+    public CustomResponse<PostResponseDto.PostDetails> getPostDetail(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
 
-        PostResponseDto.PostDetailResponse response = postService.getPostDetail(postId, memberId);
+        PostResponseDto.PostDetails response = postService.getPostDetail(postId, memberId);
 
-        return ResponseEntity.ok(response);
+        return CustomResponse.success("게시글 상세 정보를 불러왔습니다.", response);
     }
 
     /**
@@ -83,8 +84,8 @@ public class PostController {
      */
     @PostMapping("/{postType}")
     @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
-    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal)")
-    public ResponseEntity<PostResponseDto.PostCreateResponse> createPost(
+    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
+    public CustomResponse<PostResponseDto.PostDetails> createPost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Valid @RequestBody PostRequestDto.PostCreateRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -106,18 +107,9 @@ public class PostController {
         Post.BoardType boardType = PostConverter.toBoardType(postType);
 
         // 게시글 생성
-        Post createdPost = postService.createPost(boardType, requestDto, memberId);
+        PostResponseDto.PostDetails response = postService.createPost(boardType, requestDto, memberId);;
 
-        // 작성자 정보 조회
-        Map<String, String> userInfo = postService.getMemberInfo(memberId);
-
-        String ImageUrl = requestDto.image_url();
-
-        // 응답 생성
-        PostResponseDto.PostCreateResponse response = PostConverter.toPostCreateResponse(
-                createdPost, userInfo, ImageUrl,false);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return CustomResponse.success("게시글이 작성되었습니다.", response);
     }
 
     /**
@@ -125,8 +117,8 @@ public class PostController {
      */
     @DeleteMapping("/{postType}/{postId}")
     @Operation(summary = "게시글 삭제", description = "게시글을 삭제합니다.")
-    @PreAuthorize("isAuthenticated() && @accessChecker.hasAccessToBoard(#postType, authentication.principal) and @accessChecker.isPostOwner(#postId, authentication.principal)")
-    public ResponseEntity<PostResponseDto.PostDeleteResponse> deletePost(
+    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal) and @accessChecker.isPostOwner(#postId, authentication.principal)")
+    public CustomResponse<?> deletePost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -137,10 +129,7 @@ public class PostController {
         // 게시글 삭제
         postService.deletePost(postId, memberId);
 
-        // 응답 생성
-        PostResponseDto.PostDeleteResponse response = PostConverter.toPostDeleteResponse();
-
-        return ResponseEntity.ok(response);
+        return CustomResponse.success("게시글이 삭제되었습니다");
     }
 
     /**
@@ -148,8 +137,7 @@ public class PostController {
      */
     @PostMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 추가", description = "게시글에 좋아요를 추가합니다.")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PostResponseDto.PostLikeResponse> addLike(
+    public CustomResponse<?> addLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
@@ -159,10 +147,7 @@ public class PostController {
         // 좋아요 추가
         postLikeService.addLike(postId, memberId);
 
-        // 응답 생성
-        PostResponseDto.PostLikeResponse response = PostConverter.toPostLikeResponse(true);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return CustomResponse.success("좋아요가 성공적으로 등록되었습니다");
     }
 
     /**
@@ -170,8 +155,7 @@ public class PostController {
      */
     @DeleteMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 취소", description = "게시글 좋아요를 취소합니다.")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PostResponseDto.PostLikeResponse> removeLike(
+    public CustomResponse<?> removeLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
@@ -181,11 +165,26 @@ public class PostController {
         // 좋아요 취소
         postLikeService.removeLike(postId, memberId);
 
-        // 응답 생성
-        PostResponseDto.PostLikeResponse response = PostConverter.toPostLikeResponse(false);
-
-        return ResponseEntity.ok(response);
+        return CustomResponse.success("좋아요가 성공적으로 취소되었습니다");
     }
+
+    /**
+     * 게시글에 좋아요를 누른 회원 목록 조회
+     */
+    @GetMapping("/{postId}/likes")
+    @Operation(summary = "게시글 좋아요한 유저 목록 조회", description = "게시글에 좋아요를 누른 유저를 조회합니다.")
+    public CustomResponse<List<MemberResponseDto.UserInfo>> getLikedMemberList(
+            @Parameter(description = "게시글 ID") @PathVariable Long postId,
+            @Parameter(description = "한 페이지에 표시할 유저 수") @RequestParam(defaultValue = "12") int limit,
+            @Parameter(description = "마지막으로 조회한 유저 ID") @RequestParam(required = false) Long cursor
+    ) {
+
+        List<MemberResponseDto.UserInfo> response= postLikeService.getLikedMembers(postId, limit, cursor);
+
+        return CustomResponse.success("좋아요 유저 목록을 성공적으로 불러왔습니다", response);
+    }
+
+
 
     /**
      * YouTube 영상 요약 요청 API

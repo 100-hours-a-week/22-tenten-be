@@ -1,5 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.entity;
 
+import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.global.common.entity.BaseSoftDeletableEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,8 +38,9 @@ public class Post extends BaseSoftDeletableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "member_id", nullable = false)
-    private Long memberId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false)
+    private Member member;
 
     @Column(name = "board_type", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
@@ -61,8 +63,8 @@ public class Post extends BaseSoftDeletableEntity {
 
 
     @Builder
-    public Post(Long memberId, BoardType boardType, String content, String youtubeUrl) {
-        this.memberId = memberId;
+    public Post(Member member, BoardType boardType, String content, String youtubeUrl) {
+        this.member = member;
         this.boardType = boardType;
         this.content = content;
         this.youtubeUrl = youtubeUrl;

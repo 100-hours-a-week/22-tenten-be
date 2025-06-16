@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * Member 도메인의 객체 변환을 담당하는 컨버터입니다.
  * DTO와 Entity 사이의 변환을 처리합니다.
@@ -46,27 +49,51 @@ public class MemberConverter {
 
     }
 
+
     /**
-     * Member 엔티티를 프로필 응답 DTO로 변환합니다.
+     * Member Entity 리스트를 UserInfo DTO 리스트로 변환합니다.
      *
-     * @param member Member 엔티티
-     * @param isMe 본인 여부
-     * @param isFollowing 팔로우 여부
-     * @return 프로필 응답 DTO
+     * @param members Member Entity 리스트
+     * @return UserInfo DTO 리스트
      */
-    public MemberResponseDto.Profile toProfileResponseDto(Member member, boolean isMe, boolean isFollowing) {
-        return new MemberResponseDto.Profile(
-                member.getId(),
-                member.getEmail(),
-                member.getName(),
-                member.getNickname(),
-                member.getClassName(),
-                member.getProfileImgUrl(),
-                member.getGithubUrl(),
-                member.getFollowerCount(),
-                member.getFollowingCount(),
-                isMe,
-                isFollowing
-        );
+    public List<MemberResponseDto.UserInfo> convertToUserInfoList(List<Member> members) {
+        if (members == null) {
+            return List.of();
+        }
+
+        return members.stream()
+                .map(this::convertToUserInfo)
+                .collect(Collectors.toList());
+    }
+
+    public MemberResponseDto.UserInfo convertToUserInfo(Member member) {
+        if (member == null) {
+            return null;
+        }
+
+        return MemberResponseDto.UserInfo.builder()
+                .id(member.getId())
+                .name(member.getName())
+                .nickname(member.getNickname())
+                .imageUrl(member.getProfileImgUrl())
+                .build();
+    }
+
+    public MemberResponseDto.Mypage toMypage(Member member, Long postCount, Boolean isMe, boolean isFollowing) {
+        return MemberResponseDto.Mypage
+                .builder()
+                .id(member.getId())
+                .name(member.getName())
+                .nickname(member.getNickname())
+                .imageUrl(member.getProfileImgUrl())
+                .githubUrl(member.getGithubUrl())
+                .className(member.getClassName())
+                .postCount(postCount)
+                .followerCount(member.getFollowerCount())
+                .followingCount(member.getFollowingCount())
+                .isMe(isMe)
+                .isFollowed(isFollowing)
+                .build();
+
     }
 }

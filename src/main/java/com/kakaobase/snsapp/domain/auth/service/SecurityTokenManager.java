@@ -5,8 +5,10 @@ import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.entity.RevokedRefreshToken;
 import com.kakaobase.snsapp.domain.auth.exception.AuthErrorCode;
 import com.kakaobase.snsapp.domain.auth.exception.AuthException;
+import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
 import com.kakaobase.snsapp.domain.auth.repository.RevokedRefreshTokenRepository;
+import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,6 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
-import java.util.List;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -34,6 +35,7 @@ public class SecurityTokenManager {
     private final AuthTokenRepository authTokenRepository;
     private final RevokedRefreshTokenRepository revokedTokenRepository;
     private final AuthConverter authConverter;
+    private final AuthCacheService authCacheService;
 
     @Value("${app.jwt.refresh.expiration-time}")
     private long refreshTokenExpirationTimeMillis;
@@ -64,28 +66,30 @@ public class SecurityTokenManager {
         return rawToken;
     }
 
-    /**
-     * 리프레시 토큰 검증 및 사용자 ID 반환
-     */
-    public Long validateRefreshTokenAndGetUserId(String rawToken) {
-        String hashedToken = hashToken(rawToken);
+    //RDB에 refresh토큰 존재시 캐싱
+    public void cacheRefreshToken(String rawRefreshToken, CustomUserDetails userDetails, AuthToken authToken){
+        String hashedToken = hashToken(rawRefreshToken);
+        authCacheService.createRefreshCache(hashedToken, userDetails, authToken.getExpiresAt());
+    }
 
-        // 1. 취소된 토큰인지 확인
-        if (isTokenRevoked(hashedToken)) {
-            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_REVOKED);
+    //캐싱된 Refersh토큰값을 조회
+    public CacheRecord.UserAuthCache getUserAuthCache(String rawRefreshToken){
+        String hashedToken = hashToken(rawRefreshToken);
+        try{
+            return authCacheService.getRefreshCache(hashedToken);
+        }catch(AuthException e){
+            return null;
         }
+    }
 
-        // 2. 토큰 조회
-        AuthToken tokenEntity = authTokenRepository.findByRefreshTokenHash(hashedToken)
-                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID));
-
-        // 3. 만료 확인
-        if (isTokenExpired(tokenEntity)) {
-            revokeToken(tokenEntity);
-            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
+    //캐싱된 Refresh토큰 값 삭제
+    public void deleteRefreshCache(String oldRefreshToken) {
+        String hashedToken = hashToken(oldRefreshToken);
+        try{
+            authCacheService.deleteRefreshCache(hashedToken);
+        }catch (AuthException e){
+            log.error("캐시 삭제 실패");
         }
-
-        return tokenEntity.getMemberId();
     }
 
     /**
@@ -95,63 +99,49 @@ public class SecurityTokenManager {
     public void revokeRefreshToken(String rawToken) {
         String hashedToken = hashToken(rawToken);
 
-        boolean exists = authTokenRepository.existsByRefreshTokenHash(hashedToken);
-        if (!exists) {
-            log.debug("리프레시 토큰 없음 - 무시하고 통과");
-            return;
-        }
+        AuthToken refreshToken = authTokenRepository.findByRefreshTokenHash(hashedToken)
+                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID));
 
-        AuthToken tokenEntity = authTokenRepository.findByRefreshTokenHash(hashedToken)
-                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID, "해당 리프레시 토큰값을 DB에서 조회할 수 없음"));
-
-        revokeToken(tokenEntity);
-    }
-
-    /**
-     * 토큰 취소 처리 (내부 메서드)
-     */
-    @Transactional
-    public void revokeToken(AuthToken token) {
         // AuthConverter를 사용하여 취소된 토큰 엔티티 생성
         RevokedRefreshToken revokedToken = authConverter.toRevokedTokenEntity(
-                token.getRefreshTokenHash(),
-                token.getMemberId()
+                refreshToken.getRefreshTokenHash(),
+                refreshToken.getMemberId()
         );
 
         // 기존 토큰 삭제 및 취소 토큰 저장
-        authTokenRepository.delete(token);
+        authTokenRepository.delete(refreshToken);
         revokedTokenRepository.save(revokedToken);
     }
 
     /**
-     * 현재 토큰을 제외한 모든 토큰 취소
+     * 리프레시 토큰 검증
      */
     @Transactional
-    public void revokeAllTokensExcept(Long memberId, String currentRawToken) {
-        String currentHashedToken = hashToken(currentRawToken);
-        List<AuthToken> tokens = authTokenRepository.findAllByMemberId(memberId);
+    public AuthToken validateRefreshToken(String rawToken) {
+        String hashedToken = hashToken(rawToken);
 
-        for (AuthToken token : tokens) {
-            if (!token.getRefreshTokenHash().equals(currentHashedToken)) {
-                revokeToken(token);
-            }
+        // 1. 취소된 토큰인지 확인
+        if (revokedTokenRepository.existsByRefreshTokenHash(hashedToken)) {
+            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_REVOKED);
         }
+
+        // 2. 토큰 조회
+        AuthToken refreshToken = authTokenRepository.findByRefreshTokenHash(hashedToken)
+                .orElseThrow(() -> new AuthException(AuthErrorCode.REFRESH_TOKEN_INVALID));
+
+        // 3. 만료 확인
+        if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            revokeRefreshToken(rawToken);
+            throw new AuthException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
+        }
+
+        return refreshToken;
     }
 
-
-
-    /**
-     * 토큰이 취소되었는지 확인
-     */
-    private boolean isTokenRevoked(String hashedToken) {
-        return revokedTokenRepository.existsByRefreshTokenHash(hashedToken);
-    }
-
-    /**
-     * 토큰 만료 여부 확인
-     */
-    private boolean isTokenExpired(AuthToken token) {
-        return token.getExpiresAt().isBefore(LocalDateTime.now());
+    @Transactional
+    public boolean isExistRefreshToken(String rawToken) {
+        String hashedToken = hashToken(rawToken);
+        return authTokenRepository.existsByRefreshTokenHash(hashedToken);
     }
 
     /**
