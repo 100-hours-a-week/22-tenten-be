@@ -36,6 +36,7 @@ public class PostLikeService {
     private final PostRepository postRepository;
     private final EntityManager em;
     private final MemberConverter memberConverter;
+    private final PostCacheService postCacheService;
 
     /**
      * 게시글에 좋아요를 추가합니다.
@@ -46,23 +47,24 @@ public class PostLikeService {
      */
     @Transactional
     public void addLike(Long postId, Long memberId) {
-        // 게시글 존재 여부 확인
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
 
         // 이미 좋아요한 경우 확인
         if (postLikeRepository.existsByMemberIdAndPostId(memberId, postId)) {
             throw new PostException(PostErrorCode.ALREADY_LIKED);
         }
 
+        Post proxyPost = em.getReference(Post.class, postId);
         Member proxyMember = em.getReference(Member.class, memberId);
 
         // 좋아요 엔티티 생성 및 저장
-        PostLike postLike = new PostLike(proxyMember, post);
+        PostLike postLike = new PostLike(proxyMember, proxyPost);
         postLikeRepository.save(postLike);
 
-        // 게시글 좋아요 수 증가
-        post.increaseLikeCount();
+
+        if(!postCacheService.existsPostCache(postId)){
+            postCacheService.createPostStatCache(postId);
+        }
+        postCacheService.incrementLikeCount(postId);
 
         log.info("게시글 좋아요 추가 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
     }
@@ -77,8 +79,9 @@ public class PostLikeService {
     @Transactional
     public void removeLike(Long postId, Long memberId) {
         // 게시글 존재 여부 확인
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
+        if(!postRepository.existsById(postId)) {
+            throw new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId");
+        }
 
         // 좋아요 존재 여부 확인
         PostLike postLike = postLikeRepository.findByMemberIdAndPostId(memberId, postId)
@@ -87,8 +90,11 @@ public class PostLikeService {
         // 좋아요 삭제
         postLikeRepository.delete(postLike);
 
-        // 게시글 좋아요 수 감소
-        post.decreaseLikeCount();
+
+        if(!postCacheService.existsPostCache(postId)){
+            postCacheService.createPostStatCache(postId);
+        }
+        postCacheService.decrementLikeCount(postId);
 
         log.info("게시글 좋아요 취소 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
     }
@@ -129,6 +135,7 @@ public class PostLikeService {
         return postLikeRepository.findPostIdsByMemberIdAndPostIdIn(memberId, postIds);
     }
 
+    //특정 게시물에 좋아요를 누른 유저 정보 조회
     @Transactional(readOnly = true)
     public List<MemberResponseDto.UserInfo> getLikedMembers(Long postId, int limit, Long cursor) {
 
@@ -138,9 +145,7 @@ public class PostLikeService {
 
         List<Member> members = postLikeRepository.findMembersByPostIdWithCursor(postId, cursor, limit);
 
-        List<MemberResponseDto.UserInfo> result = memberConverter.convertToUserInfoList(members);
-
-        return result;
+        return memberConverter.convertToUserInfoList(members);
     }
 
     /**
