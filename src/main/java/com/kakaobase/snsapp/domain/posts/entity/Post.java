@@ -7,9 +7,6 @@ import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * 게시글 정보를 담는 엔티티
  * <p>
@@ -56,10 +53,10 @@ public class Post extends BaseSoftDeletableEntity {
     private String youtubeSummary;
 
     @Column(name = "like_count", nullable = false)
-    private Integer likeCount = 0;
+    private Long likeCount = 0L;
 
     @Column(name = "comment_count", nullable = false)
-    private Integer commentCount = 0;
+    private Long commentCount = 0L;
 
 
     @Builder
