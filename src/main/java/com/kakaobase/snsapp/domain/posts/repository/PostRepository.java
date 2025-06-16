@@ -92,4 +92,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             @Param("memberId") Long memberId,
             @Param("cursor") Long cursor,
             Pageable pageable);
+
+    @Query("SELECT p FROM Post p WHERE p.id IN :postIds AND p.deletedAt IS NULL")
+    List<Post> findAllByIdIn(@Param("postIds") List<Long> postIds);
 }

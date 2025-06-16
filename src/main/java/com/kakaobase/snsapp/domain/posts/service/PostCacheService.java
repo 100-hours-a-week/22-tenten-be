@@ -170,6 +170,83 @@ public class PostCacheService {
         }
     }
 
+
+    public Map<Long, CacheRecord.PostStatsCache> getPostStatsBatch(List<Long> postIds) {
+        if (postIds == null || postIds.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        // 1. Redis MultiGet으로 캐시된 PostStatus 값을 List<Object>로 조회
+        List<String> keys = postIds.stream()
+                .map(postId -> POST_STATS_PREFIX + postId)
+                .collect(Collectors.toList());
+
+        List<Object> rawValues = redisTemplate.opsForValue().multiGet(keys);
+
+        // 2. result에 Map<Long(postId), PostStatsCache> 형태로 저장
+        Map<Long, CacheRecord.PostStatsCache> result = new HashMap<>();
+        List<Long> cacheMissPostIds = new ArrayList<>();
+
+        for (int i = 0; i < postIds.size(); i++) {
+            Long postId = postIds.get(i);
+            Object rawValue = rawValues != null && i < rawValues.size() ? rawValues.get(i) : null;
+
+            if (rawValue != null) {
+                try {
+                    // PostCacheUtil을 사용해서 Object를 PostStatsCache로 변환
+                    String key = POST_STATS_PREFIX + postId;
+                    CacheRecord.PostStatsCache statsCache = postCacheUtil.load(key);
+
+                    if (statsCache != null) {
+                        result.put(postId, statsCache);
+                        log.debug("캐시 히트: postId={}", postId);
+                    } else {
+                        log.debug("캐시 값 파싱 실패: postId={}", postId);
+                        cacheMissPostIds.add(postId);
+                    }
+                } catch (Exception e) {
+                    log.warn("캐시 데이터 로드 실패: postId={}", postId, e);
+                    cacheMissPostIds.add(postId);
+                }
+            } else {
+                // 3. 해당 postId에 해당하는 값이 비어있다면 cacheMissPosts에 저장
+                log.debug("캐시 미스: postId={}", postId);
+                cacheMissPostIds.add(postId);
+            }
+        }
+
+        // 4. PostRepo를 이용해 해당 postId의 해당하는 post를 불러들이고,
+        //    이를 기반으로 PostStatsCache를 생성, result에 반영하고 createPostStatCache를 통해 캐싱
+        if (!cacheMissPostIds.isEmpty()) {
+            log.info("캐시 미스 {} 개 게시글을 DB에서 조회 후 캐싱", cacheMissPostIds.size());
+
+            List<Post> posts = postRepository.findAllByIdIn(cacheMissPostIds);
+
+            for (Post post : posts) {
+                CacheRecord.PostStatsCache statsCache = CacheRecord.PostStatsCache.builder()
+                        .postId(post.getId())
+                        .likeCount(post.getLikeCount())
+                        .commentCount(post.getCommentCount())
+                        .build();
+
+                // result에 반영
+                result.put(post.getId(), statsCache);
+
+                // createPostStatCache를 통해 캐싱 (내부적으로 PostCacheUtil 사용)
+                createPostStatCache(post.getId(), statsCache);
+
+                log.debug("DB에서 조회 후 캐싱: postId={}, like={}, comment={}",
+                        post.getId(), post.getLikeCount(), post.getCommentCount());
+            }
+        }
+
+        log.debug("게시글 통계 배치 조회 완료: {} 개 (캐시 히트: {}, 미스: {})",
+                postIds.size(), postIds.size() - cacheMissPostIds.size(), cacheMissPostIds.size());
+
+        // 5. 최종 결과인 result 반환
+        return result;
+    }
+
     /**
      * 게시글 캐시 조회
      */
@@ -210,6 +287,22 @@ public class PostCacheService {
 
         } catch (Exception e) {
             log.error("게시글 통계 초기화 실패: postId={}, error={}", postId, e.getMessage());
+        }
+    }
+
+    public void createPostStatCache(Long postId, CacheRecord.PostStatsCache statsCache) {
+        try {
+            String key = POST_STATS_PREFIX + postId;
+
+            // PostCacheUtil을 사용해서 캐시에 저장
+            postCacheUtil.save(key, statsCache);
+            redisTemplate.expire(key, Duration.ofHours(24));
+
+            log.debug("게시글 통계 캐싱 완료: postId={}, likeCount={}, commentCount={}",
+                    postId, statsCache.likeCount(), statsCache.commentCount());
+
+        } catch (Exception e) {
+            log.error("게시글 통계 캐싱 실패: postId={}, error={}", postId, e.getMessage());
         }
     }
 
