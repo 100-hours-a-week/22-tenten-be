@@ -54,6 +54,7 @@ public class PostService {
     private final EntityManager em;
     private final PostConverter postConverter;
     private final MemberRepository memberRepository;
+    private final PostCacheService postCacheService;
 
     /**
      * 게시글을 생성합니다.
@@ -156,6 +157,10 @@ public class PostService {
 
         // 소프트 삭제 처리
         postRepository.delete(post);
+
+        if(postCacheService.existsPostCache(postId)){
+            postCacheService.deletePostCache(postId);
+        }
 
         log.info("게시글 삭제 완료: 게시글 ID={}, 삭제자 ID={}", postId, memberId);
     }
