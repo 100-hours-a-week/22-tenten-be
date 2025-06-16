@@ -1,8 +1,12 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.domain.posts.exception.PostException;
+import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.util.PostCacheUtil;
 import com.kakaobase.snsapp.domain.posts.util.PostLuaScripts;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
+import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,6 +32,19 @@ public class PostCacheService {
     private static final String POST_STATS_PREFIX = "post:stats:";
     private static final String POSTS_NEED_SYNC = "posts:need_sync";
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final PostRepository postRepository;
+
+
+    public boolean existsPostCache(Long postId) {
+        String key = POST_STATS_PREFIX + postId;
+
+        try {
+            return redisTemplate.hasKey(key);
+        } catch (Exception e) {
+            log.warn("키 존재 여부 확인 중 오류 발생: {}", key, e);
+            return false;
+        }
+    }
 
     /**
      * 좋아요 수 증가 (좋아요 생성 시)
@@ -170,15 +187,18 @@ public class PostCacheService {
     /**
      * 초기 캐시 데이터 설정 (DB에서 불러온 초기 값으로)
      */
-    public void createPostStatCache(Long postId, long likeCount, long commentCount) {
+    public void createPostStatCache(Long postId) {
         try {
             String key = POST_STATS_PREFIX + postId;
             LocalDateTime currentTime = LocalDateTime.now();
 
+            Post post = postRepository.findById(postId)
+                    .orElseThrow(()-> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
+
             CacheRecord.PostStatsCache caheDto = CacheRecord.PostStatsCache.builder()
                     .postId(postId)
-                    .likeCount(likeCount)
-                    .commentCount(commentCount)
+                    .likeCount(post.getLikeCount())
+                    .commentCount(post.getCommentCount())
                     .build();
 
             // PostCacheUtil 사용
@@ -186,7 +206,7 @@ public class PostCacheService {
             redisTemplate.expire(key, Duration.ofHours(24));
 
             log.debug("게시글 통계 초기화 완료: postId={}, likeCount={}, commentCount={}, time={}",
-                    postId, likeCount, commentCount, currentTime);
+                    postId, post.getLikeCount(), post.getCommentCount(), currentTime);
 
         } catch (Exception e) {
             log.error("게시글 통계 초기화 실패: postId={}, error={}", postId, e.getMessage());
