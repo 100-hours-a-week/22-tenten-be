@@ -8,6 +8,7 @@ import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -159,12 +160,15 @@ public class PostCacheService {
             return new HashMap<>();
         }
 
-        // 1. Redis MultiGet으로 캐시된 PostStatus 값을 List<Object>로 조회
-        List<String> keys = posts.stream()
-                .map(post -> POST_STATS_PREFIX + post.getId())
-                .toList();
-
-        List<Object> rawValues = redisTemplate.opsForValue().multiGet(keys);
+        // 1. 캐시된 PostStatus 값을 List<Object>로 조회
+        List<Object> rawValues = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (Post post : posts) {
+                String key = POST_STATS_PREFIX + post.getId();
+                // 새로운 API 사용
+                connection.hashCommands().hGetAll(key.getBytes());
+            }
+            return null;
+        });
 
         // 2. result에 Map<Long(postId), PostStatsCache> 형태로 저장
         Map<Long, CacheRecord.PostStatsCache> result = new HashMap<>();
@@ -176,7 +180,7 @@ public class PostCacheService {
 
         for (int i = 0; i < posts.size(); i++) {
             Long postId = posts.get(i).getId();
-            Object rawValue = rawValues != null && i < rawValues.size() ? rawValues.get(i) : null;
+            Object rawValue = i < rawValues.size() ? rawValues.get(i) : null;
 
             if (rawValue != null) {
                 try {
