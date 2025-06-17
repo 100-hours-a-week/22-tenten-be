@@ -4,7 +4,6 @@ import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.util.PostCacheUtil;
-import com.kakaobase.snsapp.domain.posts.util.PostLuaScripts;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,11 +26,9 @@ public class PostCacheService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
     private final PostCacheUtil postCacheUtil;
-    private final PostLuaScripts postLuaScripts;
 
     private static final String POST_STATS_PREFIX = "post:stats:";
     private static final String POSTS_NEED_SYNC = "posts:need_sync";
-    private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final PostRepository postRepository;
 
 
@@ -52,28 +49,21 @@ public class PostCacheService {
     public void incrementLikeCount(Long postId) {
         try {
             String key = POST_STATS_PREFIX + postId;
-            String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
 
-            Long result = redisTemplate.execute(
-                    postLuaScripts.getIncrementLikeScript(),
-                    Collections.singletonList(key),
-                    timestamp, "1"  // 항상 1씩 증가
-            );
+            // HINCRBY로 원자적으로 likeCount 필드를 1 증가
+            Long newCount = redisTemplate.opsForHash().increment(key, "likeCount", 1);
 
-            if (result == 1) {
-                // TTL 갱신 (Sliding Expiration)
-                redisTemplate.expire(key, Duration.ofHours(24));
+            // TTL 갱신 (Sliding Expiration)
+            redisTemplate.expire(key, Duration.ofHours(24));
 
-                // 동기화 필요 목록에 추가
-                addToSyncNeeded(postId);
+            // 동기화 필요 목록에 추가
+            addToSyncNeeded(postId);
 
-                log.debug("좋아요 수 증가 완료: postId={}", postId);
-            } else {
-                log.warn("좋아요 증가 실패 - 캐시 초기화 필요: postId={}", postId);
-            }
+            log.debug("좋아요 수 증가 완료: postId={}, newCount={}", postId, newCount);
 
         } catch (Exception e) {
             log.error("좋아요 수 증가 실패: postId={}, error={}", postId, e.getMessage());
+            throw new RuntimeException("좋아요 수 증가 실패", e);
         }
     }
 
@@ -83,28 +73,28 @@ public class PostCacheService {
     public void decrementLikeCount(Long postId) {
         try {
             String key = POST_STATS_PREFIX + postId;
-            String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
 
-            Long result = redisTemplate.execute(
-                    postLuaScripts.getDecrementLikeScript(),
-                    Collections.singletonList(key),
-                    timestamp, "1"  // 항상 1씩 감소
-            );
+            // HINCRBY로 원자적으로 likeCount 필드를 1 감소
+            Long newCount = redisTemplate.opsForHash().increment(key, "likeCount", -1);
 
-            if (result == 1) {
-                // TTL 갱신 (Sliding Expiration)
-                redisTemplate.expire(key, Duration.ofHours(24));
-
-                // 동기화 필요 목록에 추가
-                addToSyncNeeded(postId);
-
-                log.debug("좋아요 수 감소 완료: postId={}", postId);
-            } else {
-                log.warn("좋아요 감소 실패 - 캐시 초기화 필요: postId={}", postId);
+            // 음수 방지 - 0보다 작으면 0으로 설정
+            if (newCount < 0) {
+                redisTemplate.opsForHash().put(key, "likeCount", "0");
+                newCount = 0L;
+                log.warn("좋아요 수가 음수가 되어 0으로 조정: postId={}", postId);
             }
+
+            // TTL 갱신 (Sliding Expiration)
+            redisTemplate.expire(key, Duration.ofHours(24));
+
+            // 동기화 필요 목록에 추가
+            addToSyncNeeded(postId);
+
+            log.debug("좋아요 수 감소 완료: postId={}, newCount={}", postId, newCount);
 
         } catch (Exception e) {
             log.error("좋아요 수 감소 실패: postId={}, error={}", postId, e.getMessage());
+            throw new RuntimeException("좋아요 수 감소 실패", e);
         }
     }
 
@@ -114,28 +104,21 @@ public class PostCacheService {
     public void incrementCommentCount(Long postId) {
         try {
             String key = POST_STATS_PREFIX + postId;
-            String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
 
-            Long result = redisTemplate.execute(
-                    postLuaScripts.getIncrementCommentScript(),
-                    Collections.singletonList(key),
-                    timestamp, "1"  // 항상 1씩 증가
-            );
+            // HINCRBY로 원자적으로 commentCount 필드를 1 증가
+            Long newCount = redisTemplate.opsForHash().increment(key, "commentCount", 1);
 
-            if (result == 1) {
-                // TTL 갱신 (Sliding Expiration)
-                redisTemplate.expire(key, Duration.ofHours(24));
+            // TTL 갱신 (Sliding Expiration)
+            redisTemplate.expire(key, Duration.ofHours(24));
 
-                // 동기화 필요 목록에 추가
-                addToSyncNeeded(postId);
+            // 동기화 필요 목록에 추가
+            addToSyncNeeded(postId);
 
-                log.debug("댓글 수 증가 완료: postId={}", postId);
-            } else {
-                log.warn("댓글 증가 실패 - 캐시 초기화 필요: postId={}", postId);
-            }
+            log.debug("댓글 수 증가 완료: postId={}, newCount={}", postId, newCount);
 
         } catch (Exception e) {
             log.error("댓글 수 증가 실패: postId={}, error={}", postId, e.getMessage());
+            throw new RuntimeException("댓글 수 증가 실패", e);
         }
     }
 
@@ -145,41 +128,41 @@ public class PostCacheService {
     public void decrementCommentCount(Long postId) {
         try {
             String key = POST_STATS_PREFIX + postId;
-            String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
 
-            Long result = redisTemplate.execute(
-                    postLuaScripts.getDecrementCommentScript(),
-                    Collections.singletonList(key),
-                    timestamp, "1"  // 항상 1씩 감소
-            );
+            // HINCRBY로 원자적으로 commentCount 필드를 1 감소
+            long newCount = redisTemplate.opsForHash().increment(key, "commentCount", -1);
 
-            if (result == 1) {
-                // TTL 갱신 (Sliding Expiration)
-                redisTemplate.expire(key, Duration.ofHours(24));
-
-                // 동기화 필요 목록에 추가
-                addToSyncNeeded(postId);
-
-                log.debug("댓글 수 감소 완료: postId={}", postId);
-            } else {
-                log.warn("댓글 감소 실패 - 캐시 초기화 필요: postId={}", postId);
+            // 음수 방지 - 0보다 작으면 0으로 설정
+            if (newCount < 0) {
+                redisTemplate.opsForHash().put(key, "commentCount", "0");
+                newCount = 0L;
+                log.warn("댓글 수가 음수가 되어 0으로 조정: postId={}", postId);
             }
+
+            // TTL 갱신 (Sliding Expiration)
+            redisTemplate.expire(key, Duration.ofHours(24));
+
+            // 동기화 필요 목록에 추가
+            addToSyncNeeded(postId);
+
+            log.debug("댓글 수 감소 완료: postId={}, newCount={}", postId, newCount);
 
         } catch (Exception e) {
             log.error("댓글 수 감소 실패: postId={}, error={}", postId, e.getMessage());
+            throw new RuntimeException("댓글 수 감소 실패", e);
         }
     }
 
 
-    public Map<Long, CacheRecord.PostStatsCache> getPostStatsBatch(List<Long> postIds) {
-        if (postIds == null || postIds.isEmpty()) {
+    public Map<Long, CacheRecord.PostStatsCache> getPostStatsBatch(List<Post> posts) {
+        if (posts == null || posts.isEmpty()) {
             return new HashMap<>();
         }
 
         // 1. Redis MultiGet으로 캐시된 PostStatus 값을 List<Object>로 조회
-        List<String> keys = postIds.stream()
-                .map(postId -> POST_STATS_PREFIX + postId)
-                .collect(Collectors.toList());
+        List<String> keys = posts.stream()
+                .map(post -> POST_STATS_PREFIX + post.getId())
+                .toList();
 
         List<Object> rawValues = redisTemplate.opsForValue().multiGet(keys);
 
@@ -187,8 +170,12 @@ public class PostCacheService {
         Map<Long, CacheRecord.PostStatsCache> result = new HashMap<>();
         List<Long> cacheMissPostIds = new ArrayList<>();
 
-        for (int i = 0; i < postIds.size(); i++) {
-            Long postId = postIds.get(i);
+        // Post 객체를 ID로 빠르게 찾기 위한 맵 생성
+        Map<Long, Post> postMap = posts.stream()
+                .collect(Collectors.toMap(Post::getId, Function.identity()));
+
+        for (int i = 0; i < posts.size(); i++) {
+            Long postId = posts.get(i).getId();
             Object rawValue = rawValues != null && i < rawValues.size() ? rawValues.get(i) : null;
 
             if (rawValue != null) {
@@ -209,21 +196,25 @@ public class PostCacheService {
                     cacheMissPostIds.add(postId);
                 }
             } else {
-                // 3. 해당 postId에 해당하는 값이 비어있다면 cacheMissPosts에 저장
+                // 3. 해당 postId에 해당하는 값이 비어있다면 cacheMissPostIds에 저장
                 log.debug("캐시 미스: postId={}", postId);
                 cacheMissPostIds.add(postId);
             }
         }
 
-        // 4. PostRepo를 이용해 해당 postId의 해당하는 post를 불러들이고,
-        //    이를 기반으로 PostStatsCache를 생성, result에 반영하고 createPostStatCache를 통해 캐싱
+        // 4. cacheMissPostIds에 해당하는 Post 객체들만 처리하여 PostStatsCache 생성
         if (!cacheMissPostIds.isEmpty()) {
-            log.info("캐시 미스 {} 개 게시글을 DB에서 조회 후 캐싱", cacheMissPostIds.size());
+            log.info("캐시 미스 {} 개 게시글을 매개변수 Post 객체 기반으로 캐싱", cacheMissPostIds.size());
 
-            List<Post> posts = postRepository.findAllByIdIn(cacheMissPostIds);
+            // cacheMissPostIds에 해당하는 Post 객체들만 필터링
+            List<Post> cacheMissPosts = cacheMissPostIds.stream()
+                    .map(postMap::get)
+                    .filter(Objects::nonNull)
+                    .toList();
 
-            for (Post post : posts) {
-                CacheRecord.PostStatsCache statsCache = CacheRecord.PostStatsCache.builder()
+            // 캐시 미스된 게시글들만 처리
+            for (Post post : cacheMissPosts) {
+                var statsCache = CacheRecord.PostStatsCache.builder()
                         .postId(post.getId())
                         .likeCount(post.getLikeCount())
                         .commentCount(post.getCommentCount())
@@ -235,13 +226,13 @@ public class PostCacheService {
                 // createPostStatCache를 통해 캐싱 (내부적으로 PostCacheUtil 사용)
                 createPostStatCache(post.getId(), statsCache);
 
-                log.debug("DB에서 조회 후 캐싱: postId={}, like={}, comment={}",
+                log.debug("매개변수 Post 기반으로 캐싱: postId={}, like={}, comment={}",
                         post.getId(), post.getLikeCount(), post.getCommentCount());
             }
         }
 
         log.debug("게시글 통계 배치 조회 완료: {} 개 (캐시 히트: {}, 미스: {})",
-                postIds.size(), postIds.size() - cacheMissPostIds.size(), cacheMissPostIds.size());
+                posts.size(), posts.size() - cacheMissPostIds.size(), cacheMissPostIds.size());
 
         // 5. 최종 결과인 result 반환
         return result;
