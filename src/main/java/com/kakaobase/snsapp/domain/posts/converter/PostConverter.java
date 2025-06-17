@@ -11,8 +11,11 @@ import com.kakaobase.snsapp.domain.posts.entity.PostImage;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
+import com.kakaobase.snsapp.domain.posts.service.PostCacheService;
+import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 /**
  * Post 도메인의 Entity와 DTO 간 변환을 담당하는 Converter 클래스
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PostConverter {
@@ -29,6 +33,7 @@ public class PostConverter {
     private final PostImageRepository postImageRepository;
     private final FollowRepository followRepository;
     private final PostLikeRepository postLikeRepository;
+    private final PostCacheService postCacheService;
 
     /**
      * 게시글 생성 요청 DTO를 Post 엔티티로 변환합니다.
@@ -79,38 +84,74 @@ public class PostConverter {
                 .distinct()
                 .toList();
 
-        // 2. 배치로 추가 데이터 조회 (기존 Repository 메서드 활용)
+        // 2. 배치로 추가 데이터 조회
         Map<Long, String> postImageMap = getFirstImagesByPostIds(postIds);
+        Map<Long, CacheRecord.PostStatsCache> postStatsCache = postCacheService.getPostStatsBatch(posts);
         Set<Long> likedPostIds = memberId != null ?
                 getLikedPostIds(memberId, postIds) : Collections.emptySet();
         Set<Long> followedMemberIds = memberId != null ?
                 getFollowedMemberIds(memberId, memberIds) : Collections.emptySet();
 
-        // 3. 각 Post를 PostListItem으로 변환
+        // 3. 각 Post를 PostDetails로 변환
         return posts.stream()
-                .map(post -> convertToPostDetail(post, memberId, postImageMap, likedPostIds, followedMemberIds))
+                .map(post -> {
+                    // 각 게시글별 데이터 추출
+                    String imageUrl = postImageMap.get(post.getId());
+
+                    // 캐시에서 통계 정보 가져오기 (없으면 Post 엔티티 값 사용)
+                    CacheRecord.PostStatsCache statsCache = postStatsCache.get(post.getId());
+                    Long likeCount;
+                    Long commentCount;
+
+                    if (statsCache != null) {
+                        likeCount = statsCache.likeCount();
+                        commentCount = statsCache.commentCount();
+                        log.debug("캐시에서 통계 사용: postId={}, like={}, comment={}",
+                                post.getId(), likeCount, commentCount);
+                    } else {
+                        // 캐시에 없으면 Post 엔티티의 값을 fallback으로 사용
+                        likeCount = post.getLikeCount();
+                        commentCount = post.getCommentCount();
+                        log.debug("Post 엔티티 값을 fallback으로 사용: postId={}, like={}, comment={}",
+                                post.getId(), likeCount, commentCount);
+                    }
+
+                    // 새로운 시그니처로 convertToPostDetail 호출
+                    return convertToPostDetail(
+                            post,
+                            memberId,
+                            imageUrl,
+                            likeCount,
+                            commentCount,
+                            likedPostIds,
+                            followedMemberIds
+                    );
+                })
                 .toList();
     }
 
+
     private PostResponseDto.PostDetails convertToPostDetail(Post post, Long currentMemberId,
-                                                            Map<Long, String> imageMap,
+                                                            String imageUrl,
+                                                            Long likeCount,
+                                                            Long commentCount,
                                                             Set<Long> likedPostIds,
                                                             Set<Long> followedMemberIds) {
         Member member = post.getMember();
 
-        return new PostResponseDto.PostDetails(
-                post.getId(),
-                convertToUserInfo(member, currentMemberId, followedMemberIds),
-                post.getContent(),
-                imageMap.get(post.getId()), // 첫 번째 이미지 URL
-                post.getYoutubeUrl(),
-                post.getYoutubeSummary(),
-                post.getCreatedAt(),
-                post.getLikeCount(),
-                post.getCommentCount(),
-                currentMemberId != null && currentMemberId.equals(member.getId()), // isMine
-                likedPostIds.contains(post.getId()) // isLiked
-        );
+        return PostResponseDto.PostDetails.builder()
+                .id(post.getId())
+                .user(convertToUserInfo(member, currentMemberId, followedMemberIds))
+                .content(post.getContent())
+                .imageUrl(imageUrl) // 첫 번째 이미지 URL
+                .youtubeUrl(post.getYoutubeUrl())
+                .youtubeSummary(post.getYoutubeSummary())
+                .createdAt(post.getCreatedAt())
+                .likeCount(likeCount)      // 캐시에서 가져온 좋아요 수
+                .commentCount(commentCount)   // 캐시에서 가져온 댓글 수
+                .isMine(currentMemberId != null && currentMemberId.equals(member.getId())) // isMine
+                .isLiked(likedPostIds.contains(post.getId())) // isLiked
+                .build();
     }
 
     public PostResponseDto.PostDetails convertToPostDetail(Post post, Long currentMemberId,
@@ -121,7 +162,7 @@ public class PostConverter {
 
         return new PostResponseDto.PostDetails(
                 post.getId(),
-                convertToUserInfo(member, currentMemberId, isFollowed),
+                convertToUserInfo(member, isFollowed),
                 post.getContent(),
                 imageUrl, // 첫 번째 이미지 URL
                 post.getYoutubeUrl(),
@@ -146,7 +187,7 @@ public class PostConverter {
                 .build();
     }
 
-    private MemberResponseDto.UserInfoWithFollowing convertToUserInfo(Member member, Long currentMemberId, boolean isFollowed) {
+    private MemberResponseDto.UserInfoWithFollowing convertToUserInfo(Member member, boolean isFollowed) {
         return MemberResponseDto.UserInfoWithFollowing.builder()
                 .id(member.getId())
                 .nickname(member.getNickname())
