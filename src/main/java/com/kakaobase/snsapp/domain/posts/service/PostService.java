@@ -32,7 +32,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 게시글 관련 비즈니스 로직을 처리하는 서비스
@@ -186,7 +185,7 @@ public class PostService {
         Post.BoardType boardType = PostConverter.toBoardType(postType);
         Pageable pageable = PageRequest.of(0, limit);
 
-        // 3. 게시글 조회
+        // 2. 게시글 조회
         List<Post> posts = postRepository.findByBoardTypeWithCursor(boardType, cursor, pageable);
 
         // 3. PostListItem으로 변환
