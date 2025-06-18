@@ -23,4 +23,11 @@ public class CacheRecord {
             Long likeCount,
             Long commentCount
     ) {}
+
+    @Builder
+    public record CommentStatsCache(
+            Long commentId,
+            Long likeCount,
+            Long recommentCount
+    ) {}
 }
