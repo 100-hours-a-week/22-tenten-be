@@ -3,7 +3,7 @@ package com.kakaobase.snsapp.domain.posts.service;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
-import com.kakaobase.snsapp.domain.posts.util.RedisHashUtilImpl;
+import com.kakaobase.snsapp.domain.posts.util.PostRedisHashUtil;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.redis.service.ContentItemCacheService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
@@ -21,7 +21,7 @@ import java.util.*;
 @Service
 public class PostCacheService extends ContentItemCacheService<CacheRecord.PostStatsCache, Long> {
 
-    private final RedisHashUtilImpl redisHashUtilImpl;
+    private final PostRedisHashUtil postRedisHashUtil;
     private final PostRepository postRepository;
 
     private static final String POST_STATS_PREFIX = "post:stats:";
@@ -32,10 +32,10 @@ public class PostCacheService extends ContentItemCacheService<CacheRecord.PostSt
     public PostCacheService(RedisTemplate<String, Object> redisTemplate,
                             StringRedisTemplate stringRedisTemplate,
                             RedissonClient redissonClient,
-                            RedisHashUtilImpl redisHashUtilImpl,
+                            PostRedisHashUtil postRedisHashUtil,
                             PostRepository postRepository) {
         super(redisTemplate, stringRedisTemplate, redissonClient);
-        this.redisHashUtilImpl = redisHashUtilImpl;
+        this.postRedisHashUtil = postRedisHashUtil;
         this.postRepository = postRepository;
     }
 
@@ -86,32 +86,31 @@ public class PostCacheService extends ContentItemCacheService<CacheRecord.PostSt
             return null;
         });
 
-        // 2. 파이프라인 결과 처리 & 캐시 미스 목록 수집
+        // 2. Pipeline 결과를 직접 파싱 (Redis 재조회 없이)
         List<Long> cacheMissPostIds = new ArrayList<>();
         for (int i = 0; i < posts.size(); i++) {
-            Long postId = posts.get(i).getId();
+            Post post = posts.get(i);
+            Long postId = post.getId();
             Object rawValue = i < rawValues.size() ? rawValues.get(i) : null;
 
-            if (rawValue != null) {
+            if (postRedisHashUtil.isValidHashData(rawValue)) {
                 try {
-                    // PostCacheUtil을 사용해서 캐시 로드
-                    String key = generateCacheKey(postId);
-                    CacheRecord.PostStatsCache statsCache = redisHashUtilImpl.load(key);
-
+                    // ✅ Pipeline 결과를 직접 파싱 (Redis 재조회 X)
+                    CacheRecord.PostStatsCache statsCache = postRedisHashUtil.parseHashData(rawValue, postId);
                     if (statsCache != null) {
                         result.put(postId, statsCache);
-                        log.debug("캐시 히트: postId={}", postId);
-                    } else {
-                        log.debug("캐시 값 파싱 실패: postId={}", postId);
+                        log.debug("캐시 히트 (Pipeline): postId={}", postId);
+                    }
+                    else{
                         cacheMissPostIds.add(postId);
                     }
                 } catch (Exception e) {
-                    log.warn("캐시 데이터 로드 실패: postId={}", postId, e);
+                    log.warn("캐시 데이터 파싱 실패: postId={}", postId, e);
                     cacheMissPostIds.add(postId);
                 }
             } else {
                 // 캐시 미스
-                log.debug("캐시 미스: postId={}", postId);
+                log.debug("캐시 미스 (Pipeline): postId={}", postId);
                 cacheMissPostIds.add(postId);
             }
         }
@@ -177,7 +176,7 @@ public class PostCacheService extends ContentItemCacheService<CacheRecord.PostSt
 
             // 4. Redis에 저장
             String key = generateCacheKey(postId);
-            redisHashUtilImpl.save(key, cacheData);
+            postRedisHashUtil.save(key, cacheData);
             redisTemplate.expire(key, CACHE_TTL);
 
             log.debug("DB 기반 캐시 생성 완료: postId={}, like={}, comment={}",
@@ -199,7 +198,7 @@ public class PostCacheService extends ContentItemCacheService<CacheRecord.PostSt
     protected void saveCacheToRedis(Long postId, CacheRecord.PostStatsCache cacheData) {
         try {
             String key = generateCacheKey(postId);
-            redisHashUtilImpl.save(key, cacheData);
+            postRedisHashUtil.save(key, cacheData);
             redisTemplate.expire(key, CACHE_TTL);
 
             log.debug("캐시 데이터 저장 완료: postId={}, like={}, comment={}",
@@ -218,7 +217,7 @@ public class PostCacheService extends ContentItemCacheService<CacheRecord.PostSt
     protected CacheRecord.PostStatsCache loadCacheFromRedis(Long postId) {
         try {
             String key = generateCacheKey(postId);
-            CacheRecord.PostStatsCache cache = redisHashUtilImpl.load(key);
+            CacheRecord.PostStatsCache cache = postRedisHashUtil.load(key);
 
             // 데이터 검증 (필요 시)
             if (cache != null) {
