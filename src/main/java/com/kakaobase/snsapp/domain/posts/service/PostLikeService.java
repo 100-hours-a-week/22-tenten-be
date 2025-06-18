@@ -60,10 +60,6 @@ public class PostLikeService {
         PostLike postLike = new PostLike(proxyMember, proxyPost);
         postLikeRepository.save(postLike);
 
-
-        if(!postCacheService.existsPostCache(postId)){
-            postCacheService.createPostStatCache(postId);
-        }
         postCacheService.incrementLikeCount(postId);
 
         log.info("게시글 좋아요 추가 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
@@ -90,10 +86,6 @@ public class PostLikeService {
         // 좋아요 삭제
         postLikeRepository.delete(postLike);
 
-
-        if(!postCacheService.existsPostCache(postId)){
-            postCacheService.createPostStatCache(postId);
-        }
         postCacheService.decrementLikeCount(postId);
 
         log.info("게시글 좋아요 취소 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
@@ -130,7 +122,7 @@ public class PostLikeService {
 
         List<Long> postIds = posts.stream()
                 .map(Post::getId)
-                .collect(Collectors.toList());
+                .toList();
 
         return postLikeRepository.findPostIdsByMemberIdAndPostIdIn(memberId, postIds);
     }

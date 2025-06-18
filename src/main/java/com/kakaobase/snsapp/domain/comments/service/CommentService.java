@@ -16,6 +16,7 @@ import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.domain.posts.service.PostCacheService;
 import com.kakaobase.snsapp.domain.posts.service.PostService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
@@ -44,6 +45,7 @@ public class CommentService {
     private final CommentConverter commentConverter;
     private final PostService postService;
     private final CommentLikeService commentLikeService;
+    private final PostCacheService postCacheService;
 
     private static final int DEFAULT_PAGE_SIZE = 12;
     private final CommentLikeRepository commentLikeRepository;
@@ -95,8 +97,8 @@ public class CommentService {
         Comment comment = commentConverter.toCommentEntity(post, proxyMember, request);
         Comment savedComment = commentRepository.save(comment);
 
-        //게시글의 댓글 수 추가
-        postRepository.incrementCommentCount(postId);
+        //캐시에 게시글의 댓글 수 추가
+        postCacheService.incrementCommentCount(post.getId());
 
         log.info("댓글 생성 완료: 댓글 ID={}, 작성자 ID={}, 게시글 ID={}",
                 savedComment.getId(), memberId, postId);
@@ -130,8 +132,8 @@ public class CommentService {
         }
 
         // 게시글의 댓글 수 1감소
-        Post post = postService.findById(comment.getPost().getId());
-        post.decreaseCommentCount();
+        postCacheService.decrementCommentCount(comment.getPost().getId());
+
 
         // 댓글의 좋아요 삭제
         commentLikeService.deleteAllCommentLikesByCommentId(commentId);
