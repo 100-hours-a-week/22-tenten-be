@@ -77,7 +77,7 @@ public class PostCacheSyncScheduler {
      */
     private List<Long> getPostsToSync() {
         try {
-            return postCacheService.getPostsCacheNeedingSync();
+            return postCacheService.getItemsNeedingSync();
         } catch (Exception e) {
             log.error("동기화 대상 조회 실패", e);
             return Collections.emptyList();

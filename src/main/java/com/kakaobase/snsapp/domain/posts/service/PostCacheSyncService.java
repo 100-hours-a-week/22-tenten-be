@@ -92,7 +92,7 @@ public class PostCacheSyncService {
 
         for (Long postId : postIds) {
             try {
-                CacheRecord.PostStatsCache cache = postCacheService.getPostCache(postId);
+                CacheRecord.PostStatsCache cache = postCacheService.getStatsCache(postId);
                 if (cache != null) {
                     result.put(postId, cache);
                 } else {
@@ -156,7 +156,7 @@ public class PostCacheSyncService {
     private void removePostCacheSyncList(List<Long> synchronizedPostIds) {
         for (Long postId : synchronizedPostIds) {
             try {
-                postCacheService.removeFromSyncNeeded(postId);
+                postCacheService.removeFromSyncQueue(postId);
             } catch (Exception e) {
                 log.warn("동기화 완료 처리 실패 - postId: {}, error: {}", postId, e.getMessage());
             }
