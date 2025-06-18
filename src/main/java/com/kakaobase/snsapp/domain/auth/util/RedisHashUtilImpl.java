@@ -7,9 +7,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
-public class RedisUtilImpl extends RedisHashUtil<CacheRecord.UserAuthCache> {
+public class RedisHashUtilImpl extends RedisHashUtil<CacheRecord.UserAuthCache> {
 
-    public RedisUtilImpl(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
+    public RedisHashUtilImpl(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
         super(redisTemplate, objectMapper);
     }
 

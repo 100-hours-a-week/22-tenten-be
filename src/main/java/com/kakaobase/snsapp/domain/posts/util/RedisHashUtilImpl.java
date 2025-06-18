@@ -7,9 +7,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
-public class PostCacheUtil extends RedisHashUtil<CacheRecord.PostStatsCache> {
+public class RedisHashUtilImpl extends RedisHashUtil<CacheRecord.PostStatsCache> {
 
-    public PostCacheUtil(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
+    public RedisHashUtilImpl(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
         super(redisTemplate, objectMapper);
     }
 
