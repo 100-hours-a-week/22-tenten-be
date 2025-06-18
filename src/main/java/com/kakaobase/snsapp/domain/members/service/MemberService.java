@@ -4,7 +4,6 @@ import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
 import com.kakaobase.snsapp.domain.auth.service.AuthCacheService;
-import com.kakaobase.snsapp.domain.auth.service.SecurityTokenManager;
 import com.kakaobase.snsapp.domain.follow.dto.FollowCount;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
@@ -17,7 +16,6 @@ import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.common.email.service.EmailVerificationService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
-import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -200,7 +198,7 @@ public class MemberService {
             try {
                 String refreshTokenHash = authToken.getRefreshTokenHash();
 
-                boolean updateResult = authCacheService.updateRefershCacheImage(refreshTokenHash, newImageUrl);
+                boolean updateResult = authCacheService.updateRefreshCacheImage(refreshTokenHash, newImageUrl);
 
                 if (updateResult) {
                     log.debug("캐시 이미지 업데이트 성공: memberId={}, tokenHash={}", memberId, refreshTokenHash);
