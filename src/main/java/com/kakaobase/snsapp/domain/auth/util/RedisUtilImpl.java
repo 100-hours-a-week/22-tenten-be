@@ -2,7 +2,7 @@ package com.kakaobase.snsapp.domain.auth.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
-import com.kakaobase.snsapp.global.common.redis.RedisHashUtil;
+import com.kakaobase.snsapp.global.common.redis.util.RedisHashUtil;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
