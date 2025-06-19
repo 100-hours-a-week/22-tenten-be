@@ -157,7 +157,7 @@ public class PostService {
         // 소프트 삭제 처리
         postRepository.delete(post);
         //캐시에서 제거
-        postCacheService.deleteCache(post.getId());
+        postCacheService.delete(post.getId());
         log.info("게시글 삭제 완료: 게시글 ID={}, 삭제자 ID={}", postId, memberId);
     }
 
