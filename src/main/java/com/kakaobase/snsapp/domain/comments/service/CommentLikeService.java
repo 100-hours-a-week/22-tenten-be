@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -39,6 +38,7 @@ public class CommentLikeService {
     private final RecommentLikeRepository recommentLikeRepository;
     private final MemberConverter memberConverter;
     private final CommentConverter commentConverter;
+    private final CommentCacheService commentCacheService;
 
     /**
      * 댓글에 좋아요를 추가합니다.
@@ -63,7 +63,7 @@ public class CommentLikeService {
         commentLikeRepository.save(commentLike);
 
         // 댓글 좋아요 수 증가
-        comment.increaseLikeCount();
+        commentCacheService.decrementLikeCount(commentId);
         commentRepository.save(comment);
 
         log.info("댓글 좋아요 추가 완료: 댓글 ID={}, 회원 ID={}", commentId, memberId);
@@ -91,7 +91,7 @@ public class CommentLikeService {
         commentLikeRepository.delete(commentLike);
 
         // 댓글 좋아요 수 감소
-        comment.decreaseLikeCount();
+        commentCacheService.decrementLikeCount(commentId);
         commentRepository.save(comment);
 
         log.info("댓글 좋아요 취소 완료: 댓글 ID={}, 회원 ID={}", commentId, memberId);
@@ -155,35 +155,6 @@ public class CommentLikeService {
     }
 
 
-    /**
-     * 회원이 특정 댓글 목록 중 좋아요한 댓글 ID 목록을 조회합니다.
-     *
-     * @param memberId 회원 ID
-     * @param commentIds 댓글 ID 목록
-     * @return 좋아요한 댓글 ID 목록
-     */
-    public List<Long> getLikedCommentIdsByMember(Long memberId, List<Long> commentIds) {
-        if (commentIds == null || commentIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return commentLikeRepository.findCommentIdsByMemberIdAndCommentIdIn(memberId, commentIds);
-    }
-
-    /**
-     * 회원이 특정 대댓글 목록 중 좋아요한 대댓글 ID 목록을 조회합니다.
-     *
-     * @param memberId 회원 ID
-     * @param recommentIds 대댓글 ID 목록
-     * @return 좋아요한 대댓글 ID 목록
-     */
-    public List<Long> getLikedRecommentIdsByMember(Long memberId, List<Long> recommentIds) {
-        if (recommentIds == null || recommentIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return recommentLikeRepository.findRecommentIdsByMemberIdAndRecommentIdIn(memberId, recommentIds);
-    }
 
     /**
      * 댓글 삭제 시 연관된 좋아요를 일괄 삭제합니다.
@@ -235,9 +206,7 @@ public class CommentLikeService {
 
         List<Member> members = commentLikeRepository.findMembersByCommentIdWithCursor(commentId, cursor, limit);
 
-        List<MemberResponseDto.UserInfo> result = memberConverter.convertToUserInfoList(members);
-
-        return result;
+        return memberConverter.convertToUserInfoList(members);
     }
 
     @Transactional(readOnly = true)
@@ -248,8 +217,6 @@ public class CommentLikeService {
 
         List<Member> members = recommentLikeRepository.findMembersByRecommentIdWithCursor(recommentId, cursor, limit);
 
-        List<MemberResponseDto.UserInfo> result = memberConverter.convertToUserInfoList(members);
-
-        return result;
+        return memberConverter.convertToUserInfoList(members);
     }
 }
