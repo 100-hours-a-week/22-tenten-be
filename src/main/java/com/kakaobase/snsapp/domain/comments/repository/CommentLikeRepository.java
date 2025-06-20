@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 댓글 좋아요 엔티티에 대한 데이터 액세스 객체
@@ -81,6 +82,21 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, Commen
      */
     @Query("SELECT cl FROM CommentLike cl WHERE cl.member.id = :memberId")
     Page<CommentLike> findByMemberId(@Param("memberId") Long memberId, Pageable pageable);
+
+    /**
+     * 특정 사용자가 좋아요를 누른 댓글 ID 목록을 일괄 조회
+     *
+     * @param memberId 사용자 ID
+     * @param commentIds 확인할 댓글 ID 목록
+     * @return 좋아요를 누른 댓글 ID Set
+     */
+    @Query("SELECT cl.id.commentId FROM CommentLike cl " +
+            "WHERE cl.id.memberId = :memberId " +
+            "AND cl.id.commentId IN :commentIds")
+    Set<Long> findLikedCommentIdsByMemberAndComments(
+            @Param("memberId") Long memberId,
+            @Param("commentIds") List<Long> commentIds
+    );
 
 
     @Modifying
