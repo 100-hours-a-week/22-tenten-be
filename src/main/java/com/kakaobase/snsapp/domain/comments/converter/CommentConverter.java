@@ -8,7 +8,6 @@ import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.entity.RecommentLike;
 import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
-import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 댓글과 대댓글 관련 엔티티와 DTO 간 변환을 담당하는 컨버터 클래스
@@ -77,14 +75,13 @@ public class CommentConverter {
      */
     public CommentResponseDto.CreateCommentResponse toCreateCommentResponse(Comment comment) {
 
-        Member CommentOwner = comment.getMember();
+        Member commentOwner = comment.getMember();
 
-        MemberResponseDto.UserInfo userInfo =
-                MemberResponseDto.UserInfo.builder()
-                        .id(CommentOwner.getId())
-                        .name(CommentOwner.getName())
-                        .nickname(CommentOwner.getNickname())
-                        .imageUrl(CommentOwner.getProfileImgUrl())
+        var userInfo = MemberResponseDto.UserInfo.builder()
+                        .id(commentOwner.getId())
+                        .name(commentOwner.getName())
+                        .nickname(commentOwner.getNickname())
+                        .imageUrl(commentOwner.getProfileImgUrl())
                         .build();
 
         return new CommentResponseDto.CreateCommentResponse(
@@ -103,14 +100,14 @@ public class CommentConverter {
      */
     public CommentResponseDto.CreateCommentResponse toCreateRecommentResponse(Recomment recomment) {
 
-        Member RecommentOwner = recomment.getMember();
+        Member recommentOwner = recomment.getMember();
 
         MemberResponseDto.UserInfo userInfo =
                 MemberResponseDto.UserInfo.builder()
-                        .id(RecommentOwner.getId())
-                        .name(RecommentOwner.getName())
-                        .nickname(RecommentOwner.getNickname())
-                        .imageUrl(RecommentOwner.getProfileImgUrl())
+                        .id(recommentOwner.getId())
+                        .name(recommentOwner.getName())
+                        .nickname(recommentOwner.getNickname())
+                        .imageUrl(recommentOwner.getProfileImgUrl())
                         .build();
 
         return new CommentResponseDto.CreateCommentResponse(
@@ -134,13 +131,13 @@ public class CommentConverter {
             Boolean isFollowing
     ) {
 
-        Member CommentOwner = comment.getMember();
+        Member commentOwner = comment.getMember();
 
         MemberResponseDto.UserInfoWithFollowing userInfo =
                 MemberResponseDto.UserInfoWithFollowing.builder()
-                        .id(CommentOwner.getId())
-                        .nickname(CommentOwner.getNickname())
-                        .imageUrl(CommentOwner.getProfileImgUrl())
+                        .id(commentOwner.getId())
+                        .nickname(commentOwner.getNickname())
+                        .imageUrl(commentOwner.getProfileImgUrl())
                         .isFollowed(isFollowing)
                         .build();
 
@@ -182,7 +179,7 @@ public class CommentConverter {
                         likedRecommentIds,
                         followingMemberIds
                 ))
-                .collect(Collectors.toList());
+                .toList();
 
         return new CommentResponseDto.RecommentListResponse(
                 recommentInfos,
@@ -206,14 +203,13 @@ public class CommentConverter {
             Set<Long> followingMemberIds
     ) {
 
-        Member CommentOwner = recomment.getMember();
+        Member commentOwner = recomment.getMember();
 
-        MemberResponseDto.UserInfoWithFollowing userInfo =
-                MemberResponseDto.UserInfoWithFollowing.builder()
-                        .id(CommentOwner.getId())
-                        .imageUrl(CommentOwner.getProfileImgUrl())
-                        .nickname(CommentOwner.getNickname())
-                        .isFollowed(followingMemberIds != null && followingMemberIds.contains(CommentOwner.getId()))
+        var userInfo = MemberResponseDto.UserInfoWithFollowing.builder()
+                        .id(commentOwner.getId())
+                        .imageUrl(commentOwner.getProfileImgUrl())
+                        .nickname(commentOwner.getNickname())
+                        .isFollowed(followingMemberIds != null && followingMemberIds.contains(commentOwner.getId()))
                         .build();
 
         return new CommentResponseDto.RecommentInfo(
@@ -281,8 +277,7 @@ public class CommentConverter {
      * @return 대댓글 응답 DTO
      */
     public CommentResponseDto.RecommentInfo toRecommentInfoForBot(Recomment recomment, Member bot) {
-        MemberResponseDto.UserInfoWithFollowing userInfo =
-                MemberResponseDto.UserInfoWithFollowing.builder()
+        var userInfo = MemberResponseDto.UserInfoWithFollowing.builder()
                         .id(bot.getId())
                         .nickname(bot.getNickname())
                         .imageUrl(bot.getProfileImgUrl())
