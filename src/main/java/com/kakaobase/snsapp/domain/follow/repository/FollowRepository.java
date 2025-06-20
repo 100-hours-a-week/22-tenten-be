@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.follow.repository;
 
 
+import com.kakaobase.snsapp.domain.follow.dto.FollowCount;
 import com.kakaobase.snsapp.domain.follow.entity.Follow;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -53,4 +54,27 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
     @Query("SELECT f.followingUser.id FROM Follow f WHERE f.followerUser = :followerUser")
     Set<Long> findFollowingUserIdsByFollowerUser(@Param("followerUser") Member followerUser);
 
+
+    /**
+     * 모든 사용자의 팔로잉 수를 조회합니다.
+     * @return 사용자별 팔로잉 수 목록
+     */
+    @Query("""
+        SELECT new com.kakaobase.snsapp.domain.follow.dto.FollowCount(f.followerUser.id, COUNT(f)) 
+        FROM Follow f 
+        GROUP BY f.followerUser.id
+        """)
+    List<FollowCount> findFollowingCounts();
+
+    /**
+     * 모든 사용자의 팔로워 수를 조회합니다.
+     * @return 사용자별 팔로워 수 목록
+     */
+    @Query("""
+        SELECT new com.kakaobase.snsapp.domain.follow.dto.FollowCount(f.followingUser.id, COUNT(f)) 
+        FROM Follow f 
+        GROUP BY f.followingUser.id
+        """)
+    List<FollowCount> findFollowerCounts();
 }
+

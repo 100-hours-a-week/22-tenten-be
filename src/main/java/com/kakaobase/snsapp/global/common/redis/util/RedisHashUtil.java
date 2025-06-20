@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.global.common.redis;
+package com.kakaobase.snsapp.global.common.redis.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

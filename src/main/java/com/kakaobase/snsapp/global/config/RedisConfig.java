@@ -1,5 +1,11 @@
 package com.kakaobase.snsapp.global.config;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.json.JsonWriteFeature;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
 import lombok.extern.slf4j.Slf4j;
@@ -139,8 +145,33 @@ public class RedisConfig {
         template.setConnectionFactory(factory);
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+
+        // 커스텀 ObjectMapper로 GenericJackson2JsonRedisSerializer 생성
+        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(createRedisObjectMapper()));
         return template;
+    }
+
+    /**
+     * Redis용 ObjectMapper - 모든 정수를 Long으로 처리
+     */
+    private ObjectMapper createRedisObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+
+        // 🔑 핵심 설정: 모든 정수를 Long으로 역직렬화
+        mapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
+
+        // ✅ 새로운 방식: JsonWriteFeature 사용
+        mapper.configure(JsonWriteFeature.WRITE_NUMBERS_AS_STRINGS.mappedFeature(), false);
+
+        // 날짜를 LocalDateTime으로 자동 직렬, 역직렬화
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+
+        // 알 수 없는 속성 무시 (호환성을 위해)
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        return mapper;
     }
 
     /**

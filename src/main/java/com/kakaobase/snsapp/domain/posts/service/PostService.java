@@ -32,7 +32,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 게시글 관련 비즈니스 로직을 처리하는 서비스
@@ -54,6 +53,7 @@ public class PostService {
     private final EntityManager em;
     private final PostConverter postConverter;
     private final MemberRepository memberRepository;
+    private final PostCacheService postCacheService;
 
     /**
      * 게시글을 생성합니다.
@@ -156,7 +156,8 @@ public class PostService {
 
         // 소프트 삭제 처리
         postRepository.delete(post);
-
+        //캐시에서 제거
+        postCacheService.deleteCache(post.getId());
         log.info("게시글 삭제 완료: 게시글 ID={}, 삭제자 ID={}", postId, memberId);
     }
 
@@ -181,7 +182,7 @@ public class PostService {
         Post.BoardType boardType = PostConverter.toBoardType(postType);
         Pageable pageable = PageRequest.of(0, limit);
 
-        // 3. 게시글 조회
+        // 2. 게시글 조회
         List<Post> posts = postRepository.findByBoardTypeWithCursor(boardType, cursor, pageable);
 
         // 3. PostListItem으로 변환

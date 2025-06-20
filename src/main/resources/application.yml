@@ -13,6 +13,13 @@ spring:
       password:
       fallback: true
       timeout: 2000
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          address: "redis://localhost:6379"
+          password: null
+          timeout: 3000
   jpa:
     database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:

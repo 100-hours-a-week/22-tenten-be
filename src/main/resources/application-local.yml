@@ -15,6 +15,7 @@ server:
 
 logging:
   level:
+    com.kakaobase.snsapp.domain.posts.scheduler: DEBUG
     com.amazonaws.util.EC2MetadataUtils: ERROR
     com.amazonaws.services.s3: INFO
     com.kakaobase.snsapp.global.security: DEBUG

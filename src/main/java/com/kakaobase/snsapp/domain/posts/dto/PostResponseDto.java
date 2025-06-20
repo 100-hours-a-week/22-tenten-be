@@ -42,11 +42,11 @@ public class PostResponseDto {
 
             @Schema(description = "좋아요 수", example = "5")
             @JsonProperty("like_count")
-            Integer likeCount,
+            Long likeCount,
 
             @Schema(description = "댓글 수", example = "2")
             @JsonProperty("comment_count")
-            Integer commentCount,
+            Long commentCount,
 
             @Schema(description = "본인 게시글 여부", example = "true")
             @JsonProperty("is_mine")
