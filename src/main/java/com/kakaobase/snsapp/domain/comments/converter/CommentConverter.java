@@ -11,12 +11,14 @@ import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -57,7 +59,10 @@ public class CommentConverter {
      * @param request 대댓글 작성 요청 DTO
      * @return 생성된 대댓글 엔티티
      */
-    public Recomment toRecommentEntity(Comment parentComment, Member member, CommentRequestDto.CreateCommentRequest request) {
+    public Recomment toRecommentEntity(Comment parentComment,
+                                       Member member,
+                                       CommentRequestDto.CreateCommentRequest request) {
+
         validateContent(request.content());
 
         return Recomment.builder()
@@ -118,14 +123,10 @@ public class CommentConverter {
         );
     }
 
-    /**
-     * 댓글 엔티티를 댓글 상세 정보 DTO로 변환
-     *
-     * @param comment 댓글 엔티티
-     * @return 댓글 상세 정보 DTO
-     */
     public CommentResponseDto.CommentInfo toCommentInfo(
             Comment comment,
+            Long likeCount,
+            Long recommentCount,
             Boolean isMine,
             Boolean isLiked,
             Boolean isFollowing
@@ -148,13 +149,54 @@ public class CommentConverter {
                 .user(userInfo)
                 .content(comment.getContent())
                 .created_at(comment.getCreatedAt())
-                .like_count(comment.getLikeCount())
-                .recomment_count(comment.getRecommentCount())
+                .like_count(likeCount)
+                .recomment_count(recommentCount)
                 .is_mine(isMine)
                 .is_liked(isLiked)
                 .build();
     }
 
+    /**
+     * 댓글 목록을 CommentInfo DTO 목록으로 변환
+     *
+     * @param comments 변환할 댓글 목록
+     * @param memberId 현재 사용자 ID (비로그인 시 null)
+     * @param cacheMap 댓글 통계 캐시 데이터
+     * @param likedCommentIds 현재 사용자가 좋아요한 댓글 ID 집합
+     * @param followingMemberIds 현재 사용자가 팔로우하는 회원 ID 집합
+     * @return CommentInfo DTO 목록
+     */
+    public List<CommentResponseDto.CommentInfo> toCommentInfoList(
+            List<Comment> comments,
+            Long memberId,
+            Map<Long, CacheRecord.CommentStatsCache> cacheMap,
+            Set<Long> likedCommentIds,
+            Set<Long> followingMemberIds) {
+
+        return comments.stream()
+                .map(comment -> {
+                    // 캐시에서 댓글 통계 정보 가져오기
+                    CacheRecord.CommentStatsCache cacheData = cacheMap.getOrDefault(
+                            comment.getId(),
+                            CacheRecord.CommentStatsCache.createDefault(comment.getId())
+                    );
+
+                    // Set에서 즉시 확인 (DB 조회 없음)
+                    boolean isMine = comment.getMember().getId().equals(memberId);
+                    boolean isLiked = likedCommentIds.contains(comment.getId());
+                    boolean isFollowing = !isMine && followingMemberIds.contains(comment.getMember().getId());
+
+                    return toCommentInfo(
+                            comment,
+                            cacheData.likeCount(),
+                            cacheData.recommentCount(),
+                            isMine,
+                            isLiked,
+                            isFollowing
+                    );
+                })
+                .toList();
+    }
 
     /**
      * 대댓글 목록을 대댓글 목록 응답 DTO로 변환
@@ -289,7 +331,7 @@ public class CommentConverter {
                 userInfo,
                 recomment.getContent(),
                 recomment.getCreatedAt(),
-                0,       // like_count
+                0L,       // like_count
                 false,   // is_mine
                 false    // is_liked
         );
