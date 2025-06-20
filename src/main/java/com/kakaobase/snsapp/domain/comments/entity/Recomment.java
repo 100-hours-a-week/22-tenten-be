@@ -43,7 +43,7 @@ public class Recomment extends BaseSoftDeletableEntity {
     private String content;
 
     @Column(name = "like_count", nullable = false)
-    private int likeCount = 0;
+    private Long likeCount = 0L;
 
     /**
      * 대댓글 생성을 위한 생성자
