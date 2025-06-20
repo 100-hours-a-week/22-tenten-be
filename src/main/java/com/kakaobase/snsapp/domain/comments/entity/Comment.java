@@ -49,10 +49,10 @@ public class Comment extends BaseSoftDeletableEntity {
     private String content;
 
     @Column(name = "like_count", nullable = false)
-    private int likeCount = 0;
+    private Long likeCount = 0L;
 
     @Column(name = "recomment_count", nullable = false)
-    private int recommentCount = 0;
+    private Long recommentCount = 0L;
 
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
     private List<Recomment> recomments = new ArrayList<>();
@@ -68,15 +68,6 @@ public class Comment extends BaseSoftDeletableEntity {
     public Comment(Post post, Member member, String content) {
         this.post = post;
         this.member = member;
-        this.content = content;
-    }
-
-    /**
-     * 댓글 내용 수정
-     *
-     * @param content 수정할 댓글 내용
-     */
-    public void updateContent(String content) {
         this.content = content;
     }
 
@@ -110,15 +101,5 @@ public class Comment extends BaseSoftDeletableEntity {
         if (this.recommentCount > 0) {
             this.recommentCount--;
         }
-    }
-
-    /**
-     * 작성자 확인
-     *
-     * @param member 확인할 회원
-     * @return 입력받은 회원이 작성자면 true, 아니면 false
-     */
-    public boolean isWrittenBy(Member member) {
-        return this.member.getId().equals(member.getId());
     }
 }
