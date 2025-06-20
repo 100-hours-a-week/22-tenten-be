@@ -35,7 +35,7 @@ public class CommentResponseDto {
             LocalDateTime created_at,
 
             @Schema(description = "좋아요 수", example = "1")
-            int like_count,
+            Long like_count,
 
             @Schema(description = "본인 작성 여부", example = "false")
             boolean is_mine,
@@ -67,10 +67,10 @@ public class CommentResponseDto {
             LocalDateTime created_at,
 
             @Schema(description = "좋아요 수", example = "3")
-            int like_count,
+            Long like_count,
 
             @Schema(description = "대댓글 수", example = "3")
-            int recomment_count,
+            Long recomment_count,
 
             @Schema(description = "본인 작성 여부", example = "true")
             boolean is_mine,
