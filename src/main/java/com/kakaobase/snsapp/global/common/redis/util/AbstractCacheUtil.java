@@ -92,7 +92,7 @@ public abstract class AbstractCacheUtil<V> implements CacheUtil<String, V> {
 
     @Override
     public boolean runWithLock(String cacheKey, Runnable action) {
-        RLock lock = redissonClient.getLock(cacheKey);
+        RLock lock = redissonClient.getLock("lock"+cacheKey);
         boolean acquired = false;
 
         try {
