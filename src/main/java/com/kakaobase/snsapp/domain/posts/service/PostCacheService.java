@@ -17,7 +17,7 @@ import java.time.Duration;
 @Service
 public class PostCacheService extends AbstractCacheService<CacheRecord.PostStatsCache, Post> {
 
-    private static final String POST_STATS_PREFIX = "post:stats:";
+    private static final String POST_CACHE_PREFIX = "post:stats:";
     private static final Duration CACHE_TTL = Duration.ofHours(24);
     private final PostRepository postRepository;
 
@@ -49,7 +49,7 @@ public class PostCacheService extends AbstractCacheService<CacheRecord.PostStats
 
     @Override
     protected String generateCacheKey(Long id) {
-        return POST_STATS_PREFIX + id;
+        return POST_CACHE_PREFIX + id;
     }
 
     @Override
