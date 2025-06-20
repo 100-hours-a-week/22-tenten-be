@@ -5,27 +5,24 @@ import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.redis.service.AbstractCacheSyncService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.*;
 
-/**
- * 게시글 통계 캐시-DB 동기화 서비스
- * - 실제 동기화 로직 처리
- * - 벌크 업데이트로 성능 최적화
- * - 트랜잭션 처리
- */
-@Slf4j
 @Service
+@Slf4j
 public class PostCacheSyncService extends AbstractCacheSyncService<CacheRecord.PostStatsCache> {
+
 
     private static final String SYNC_QUEUE_KEY = "posts:need_sync";
     private static final Duration CACHE_TTL = Duration.ofHours(24);
 
-    public PostCacheSyncService(
-            StringRedisTemplate stringRedisTemplate,
-            PostCacheUtil cacheUtil) {
-        super(stringRedisTemplate, cacheUtil);
+    public PostCacheSyncService(StringRedisTemplate stringRedisTemplate,
+                                PostCacheUtil cacheUtil,
+                                JdbcTemplate jdbcTemplate) {
+        super(stringRedisTemplate, cacheUtil, jdbcTemplate);
     }
 
     @Override
@@ -35,6 +32,33 @@ public class PostCacheSyncService extends AbstractCacheSyncService<CacheRecord.P
 
     @Override
     protected Duration getTTL() {
-        return getTTL();
+        return CACHE_TTL;
+    }
+
+    @Override
+    protected Object[] extractSqlParameters(CacheRecord.PostStatsCache cache) {
+        return new Object[]{
+                cache.likeCount(),
+                cache.commentCount(),
+                cache.postId()
+        };
+    }
+
+    @Override
+    protected Object extractEntityId(CacheRecord.PostStatsCache cache) {
+        return cache.postId();
+    }
+
+    @Override
+    protected int[] executeJdbcBatchUpdate(List<Object[]> batchArgs) {
+        String sql = """
+            UPDATE posts 
+            SET like_count = ?, 
+                comment_count = ?,
+                updated_at = NOW()
+            WHERE id = ? AND deleted_at IS NULL
+            """;
+
+        return jdbcTemplate.batchUpdate(sql, batchArgs);
     }
 }
