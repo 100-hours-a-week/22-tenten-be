@@ -86,7 +86,7 @@ public class PostConverter {
 
         // 2. 배치로 추가 데이터 조회
         Map<Long, String> postImageMap = getFirstImagesByPostIds(postIds);
-        Map<Long, CacheRecord.PostStatsCache> postStatsCache = postCacheService.getPostStatsBatch(posts);
+        Map<Long, CacheRecord.PostStatsCache> postStatsCache = postCacheService.findAllByItems(posts);
         Set<Long> likedPostIds = memberId != null ?
                 getLikedPostIds(memberId, postIds) : Collections.emptySet();
         Set<Long> followedMemberIds = memberId != null ?

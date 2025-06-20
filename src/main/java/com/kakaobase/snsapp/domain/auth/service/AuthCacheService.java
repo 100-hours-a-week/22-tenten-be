@@ -2,7 +2,7 @@ package com.kakaobase.snsapp.domain.auth.service;
 
 import com.kakaobase.snsapp.domain.auth.exception.AuthException;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
-import com.kakaobase.snsapp.domain.auth.util.AuthRedisHashUtil;
+import com.kakaobase.snsapp.domain.auth.util.AuthCacheUtil;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AuthCacheService {
 
-    private final AuthRedisHashUtil redisUtil;
+    private final AuthCacheUtil redisUtil;
     private final RedisTemplate<String, Object> redisTemplate;
 
     private static final String AUTH_INFO_PREFIX = "refresh_token:";
