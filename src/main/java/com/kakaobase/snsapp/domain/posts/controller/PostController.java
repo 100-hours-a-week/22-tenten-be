@@ -85,7 +85,7 @@ public class PostController {
     @PostMapping("/{postType}")
     @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
     @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
-    public CustomResponse<PostResponseDto.PostDetails> createPost(
+    public CustomResponse<PostResponseDto.PostDetails> postPost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Valid @RequestBody PostRequestDto.PostCreateRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -124,7 +124,7 @@ public class PostController {
      */
     @PostMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 추가", description = "게시글에 좋아요를 추가합니다.")
-    public CustomResponse<?> addLike(
+    public CustomResponse<?> postPostLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
@@ -142,7 +142,7 @@ public class PostController {
      */
     @DeleteMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 취소", description = "게시글 좋아요를 취소합니다.")
-    public CustomResponse<?> removeLike(
+    public CustomResponse<?> deletePostLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
