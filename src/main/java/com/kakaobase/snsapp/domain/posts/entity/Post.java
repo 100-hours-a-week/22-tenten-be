@@ -4,8 +4,10 @@ import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.global.common.entity.BaseSoftDeletableEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 게시글 정보를 담는 엔티티
@@ -26,7 +28,6 @@ import org.hibernate.annotations.Where;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@SQLDelete(sql = "UPDATE posts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")
 public class Post extends BaseSoftDeletableEntity {
 
@@ -121,4 +122,8 @@ public class Post extends BaseSoftDeletableEntity {
             this.commentCount--;
         }
     }
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @OrderBy("sortIndex ASC")
+    private final List<PostImage> postImages = new ArrayList<>();
 }
