@@ -96,7 +96,7 @@ public abstract class AbstractCacheUtil<V> implements CacheUtil<String, V> {
         boolean acquired = false;
 
         try {
-            acquired = lock.tryLock(3, 10, TimeUnit.MILLISECONDS);
+            acquired = lock.tryLock(1000, 3000, TimeUnit.MILLISECONDS);
 
             // 락 획득 실패시 early return
             if (!acquired) {
@@ -118,7 +118,12 @@ public abstract class AbstractCacheUtil<V> implements CacheUtil<String, V> {
             return false;
         } finally {
             if (acquired && lock.isHeldByCurrentThread()) {
-                lock.unlock();
+                try {
+                    lock.unlock();
+                } catch (IllegalMonitorStateException e) {
+                    // ✅ 이미 해제된 락이면 무시 (정상적인 상황)
+                    log.debug("락이 이미 해제됨 (leaseTime 만료): {}", cacheKey);
+                }
             }
         }
     }
