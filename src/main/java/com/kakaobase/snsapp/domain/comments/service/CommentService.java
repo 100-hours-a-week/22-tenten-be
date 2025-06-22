@@ -271,8 +271,7 @@ public class CommentService {
         Set<Long> likedRecommentIdsSet = new HashSet<>(likedRecommentIds);
 
 
-        Member currentUser = em.getReference(Member.class, memberId);
-        Set<Long> followingIdSet = followRepository.findFollowingUserIdsByFollowerUser(currentUser);
+        Set<Long> followingIdSet = followRepository.findFollowingUserIdsByFollowerUserId(memberId);
 
         // 응답 DTO 생성
         return commentConverter.toRecommentListResponse(

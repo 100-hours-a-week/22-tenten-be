@@ -236,16 +236,8 @@ public class PostConverter {
             return Collections.emptySet();
         }
 
-        // 현재 회원 Entity 조회
-        Member currentMember = memberRepository.findById(currentMemberId)
-                .orElse(null);
-
-        if (currentMember == null) {
-            return Collections.emptySet();
-        }
-
         // 기존 FollowRepository.findFollowingUserIdsByFollowerUser() 사용
-        Set<Long> allFollowedIds = followRepository.findFollowingUserIdsByFollowerUser(currentMember);
+        Set<Long> allFollowedIds = followRepository.findFollowingUserIdsByFollowerUserId(currentMemberId);
 
         // memberIds와 교집합만 반환 (성능 최적화)
         return allFollowedIds.stream()
