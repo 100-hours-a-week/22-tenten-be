@@ -113,4 +113,40 @@ public class PostConverter {
             throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "postType");
         }
     }
+
+    /**
+     * PostDetails 리스트의 likeCount, commentCount를 캐시 데이터로 업데이트
+     *
+     * @param postDetails 업데이트할 PostDetails 리스트
+     * @return 캐시 데이터가 적용된 PostDetails 리스트
+     */
+    public List<PostResponseDto.PostDetails> updateWithCachedStats(
+            List<PostResponseDto.PostDetails> postDetails) {
+
+        Map<Long, CacheRecord.PostStatsCache> postStatsCache = postCacheService.findAllByItems(postDetails);
+
+
+        if (postDetails == null || postDetails.isEmpty() || postStatsCache == null || postStatsCache.isEmpty()) {
+            return postDetails;
+        }
+
+        return postDetails.stream()
+                .map(postDetail -> updateSinglePostStats(postDetail, postStatsCache.get(postDetail.id())))
+                .toList();
+    }
+
+    /**
+     * 단일 PostDetails의 통계 정보를 캐시 데이터로 업데이트
+     */
+    public PostResponseDto.PostDetails updateSinglePostStats(
+            PostResponseDto.PostDetails original,
+            CacheRecord.PostStatsCache cacheStats) {
+
+        // 캐시 데이터가 없으면 원본 그대로 반환
+        if (cacheStats == null) {
+            return original;
+        }
+
+        return original.withStats(cacheStats.likeCount(), cacheStats.commentCount());
+    }
 }
