@@ -201,15 +201,9 @@ public class BotPostService {
         );
 
         // AI 응답 데이터를 사용하여 게시글 생성
-        Post.BoardType boardType;
-        try {
-            boardType = Post.BoardType.valueOf(data.boardType());
-        } catch (IllegalArgumentException e) {
-            log.error("잘못된 게시판 타입: {}", data.boardType());
-            throw new RuntimeException("잘못된 게시판 타입", e);
-        }
+        String postType = data.boardType();
 
         // PostService를 통해 게시글 생성 (PostResponseDto.PostDetails 반환)
-        postService.createPost(boardType, requestDto, BotConstants.BOT_MEMBER_ID);
+        postService.createPost(postType, requestDto, BotConstants.BOT_MEMBER_ID);
     }
 }
