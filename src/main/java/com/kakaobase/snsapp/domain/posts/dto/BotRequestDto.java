@@ -2,6 +2,7 @@ package com.kakaobase.snsapp.domain.posts.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 
 import java.util.List;
 
@@ -35,6 +36,7 @@ public class BotRequestDto {
      * @param createdAt 게시글 작성 시각 (ISO 8601 형식)
      * @param content 게시글 내용
      */
+    @Builder
     @Schema(description = "게시글 정보")
     public record PostDto(
             @Schema(description = "게시글 작성자 정보", required = true)
