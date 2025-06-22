@@ -213,38 +213,4 @@ public class PostService {
         // 4. 캐싱데이터로 최신화후 반환
         return postConverter.updateWithCachedStats(postDetails);
     }
-
-
-    /**
-     * YouTube 영상 요약
-     *
-     * <p>게시글에 포함된 YouTube URL의 영상을 요약하고 결과를 저장합니다.</p>
-     *
-     * @param postId 요약할 게시글의 ID
-     * @param memberId 요청한 사용자의 ID
-     * @return YouTube 요약 응답 DTO
-     * @throws PostException 게시글을 찾을 수 없거나, 권한이 없거나, YouTube URL이 없는 경우
-     */
-    @Transactional
-    public PostResponseDto.YouTubeSummaryResponse summarizeYoutube(Long postId, Long memberId) {
-        log.info("YouTube 요약 요청 - postId: {}, memberId: {}", postId, memberId);
-
-        // 1. 게시글 조회
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> {
-                    log.error("게시글을 찾을 수 없음 - postId: {}", postId);
-                    return new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId");
-                });
-
-
-        String summary = post.getYoutubeSummary();
-
-        //summary의 상태값이 YoutubeSummaryStatus과 같다면 에러응답 반환
-        for (YoutubeSummaryStatus status : YoutubeSummaryStatus.values()) {
-            if (status.name().equals(summary)) {
-                throw new PostException(status.getPostErrorCode());
-            }
-        }
-        return PostResponseDto.YouTubeSummaryResponse.of(summary);
-    }
 }
