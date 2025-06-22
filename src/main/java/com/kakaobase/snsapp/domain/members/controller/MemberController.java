@@ -82,9 +82,12 @@ public class MemberController {
     public CustomResponse<List<PostResponseDto.PostDetails>> getUserPosts(
             @Parameter(description = "조회할 유저id") @PathVariable Long userId,
             @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
-            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor
+            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<PostResponseDto.PostDetails> response = postService.getUserPostList(limit, cursor, userId);
+        Long currentUserId = Long.valueOf(userDetails.getId());
+
+        List<PostResponseDto.PostDetails> response = postService.getUserPostList(limit, cursor, userId, currentUserId);
 
         return CustomResponse.success("유저 게시글 조회에 성공하였습니다",response);
     }
@@ -109,10 +112,12 @@ public class MemberController {
     public CustomResponse<List<PostResponseDto.PostDetails>> getLikedPosts(
             @Parameter(description = "조회할 유저id") @PathVariable Long userId,
             @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
-            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor
+            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        Long currentUserId = Long.valueOf(userDetails.getId());
 
-        List<PostResponseDto.PostDetails> response = postService.getLikedPostList(limit, cursor, userId);
+        List<PostResponseDto.PostDetails> response = postService.getLikedPostList(limit, cursor, userId, currentUserId);
 
         return CustomResponse.success("좋아요한 게시글 목록이 정상적으로 조회되었습니다",response);
     }

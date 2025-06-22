@@ -1,20 +1,17 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
-import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.BotRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -38,8 +35,6 @@ public class BotPostService {
     private final PostRepository postRepository;
     private final WebClient webClient;
     private final MemberRepository memberRepository;
-    private final EntityManager em;
-    private final PostConverter postConverter;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -57,7 +52,7 @@ public class BotPostService {
             log.info("봇 게시글 생성 시작 - boardType: {}", boardType);
 
             // 1. 최근 게시글 조회 (봇 게시글 필터링을 위해 여유있게 10개 조회)
-            List<Post> recentPosts = findRecentPosts(boardType, 10);
+            List<Post> recentPosts = postRepository.findTop10ByBoardTypeOrderByCreatedAtDescIdDesc(boardType);
             log.info("조회된 최근 게시글 수: {}", recentPosts.size());
 
             // 2. 봇이 작성하지 않은 게시글만 필터링하여 5개 선택
@@ -86,18 +81,6 @@ public class BotPostService {
         } catch (Exception e) {
             log.error("봇 게시글 생성 실패 - boardType: {}", boardType, e);
         }
-    }
-
-    /**
-     * 최근 게시글을 조회합니다.
-     *
-     * @param boardType 게시판 타입
-     * @param limit 조회할 게시글 수
-     * @return 최근 게시글 목록
-     */
-    private List<Post> findRecentPosts(Post.BoardType boardType, int limit) {
-        Pageable pageable = PageRequest.of(0, limit);
-        return postRepository.findByBoardTypeWithCursor(boardType, null, pageable);
     }
 
     /**
@@ -156,49 +139,32 @@ public class BotPostService {
      */
     private BotRequestDto.CreatePostRequest createBotRequest(Post.BoardType boardType, List<Post> posts) {
         // 게시글 작성자들의 정보를 한 번에 조회
-        Map<Long, Map<String, String>> memberInfoMap = getMemberInfoByPosts(posts);
+        List<PostResponseDto.PostDetails> postDetails = postRepository.findByBoardTypeWithCursor(
+                boardType, null, 10, null);
 
-        List<BotRequestDto.PostDto> botPosts = posts.stream()
-                .map(post -> {
-                    Map<String, String> memberInfo = memberInfoMap.get(post.getMember().getId());
-                    if (memberInfo == null) {
-                        throw new IllegalStateException("회원 정보를 찾을 수 없습니다. memberId: " + post.getMember().getId());
-                    }
+        // 2. PostDetails → BotRequestDto.PostDto 직접 변환
+        List<BotRequestDto.PostDto> botPosts = postDetails.stream()
+                .map(postDetail -> {
+                    MemberResponseDto.UserInfoWithFollowing user = postDetail.user();
 
-                    String className = post.getMember().getClassName();
-                    log.debug("게시글 작성자 정보: {}, {}", memberInfo.get("nickname"), className);
+                    // ⚠N+1문제 발생
+                    String className = memberRepository.findById(user.id())
+                            .map(Member::getClassName)
+                            .orElse("미정");
 
-                    return new BotRequestDto.PostDto(
-                            new BotRequestDto.UserDto(
-                                    memberInfo.get("nickname"),
-                                    className
-                            ),
-                            post.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toString(),
-                            post.getContent()
-                    );
+                    // ✅ 바로 DTO 생성
+                    return BotRequestDto.PostDto.builder()
+                            .user(new BotRequestDto.UserDto(user.nickname(), className))
+                            .createdAt(postDetail.createdAt().atZone(ZoneId.systemDefault()).toInstant().toString())
+                            .content(postDetail.content())
+                            .build();
                 })
                 .collect(Collectors.toList());
 
         return new BotRequestDto.CreatePostRequest(boardType.name(), botPosts);
     }
 
-    /**
-     * 게시글 목록으로부터 작성자들의 정보를 조회합니다.
-     *
-     * @param posts 게시글 목록
-     * @return 회원 ID를 키로 하는 회원 정보 맵
-     */
-    private Map<Long, Map<String, String>> getMemberInfoByPosts(List<Post> posts) {
-        Set<Long> memberIds = posts.stream()
-                .map(post -> post.getMember().getId())
-                .collect(Collectors.toSet());
 
-        return memberIds.stream()
-                .collect(Collectors.toMap(
-                        memberId -> memberId,
-                        postService::getMemberInfo
-                ));
-    }
 
     /**
      * AI 서버 호출

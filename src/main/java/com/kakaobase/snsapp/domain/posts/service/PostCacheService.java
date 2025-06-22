@@ -1,5 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
@@ -15,7 +16,7 @@ import java.time.Duration;
 
 @Slf4j
 @Service
-public class PostCacheService extends AbstractCacheService<CacheRecord.PostStatsCache, Post> {
+public class PostCacheService extends AbstractCacheService<CacheRecord.PostStatsCache, PostResponseDto.PostDetails> {
 
     private static final String POST_CACHE_PREFIX = "post:stats:";
     private static final Duration CACHE_TTL = Duration.ofHours(24);
@@ -53,8 +54,8 @@ public class PostCacheService extends AbstractCacheService<CacheRecord.PostStats
     }
 
     @Override
-    protected Long extractId(Post post) {
-        return post.getId();
+    protected Long extractId(PostResponseDto.PostDetails postDetails) {
+        return postDetails.id();
     }
 
     @Override
@@ -72,11 +73,11 @@ public class PostCacheService extends AbstractCacheService<CacheRecord.PostStats
     }
 
     @Override
-    protected void saveByEntity(Long id, Post post) {
+    protected void saveByEntity(Long id, PostResponseDto.PostDetails postDetails) {
         var cacheData = CacheRecord.PostStatsCache.builder()
-                .postId(post.getId())
-                .likeCount(post.getLikeCount())
-                .commentCount(post.getCommentCount())
+                .postId(postDetails.id())
+                .likeCount(postDetails.likeCount())
+                .commentCount(postDetails.commentCount())
                 .build();
 
         cacheUtil.save(generateCacheKey(id), cacheData);

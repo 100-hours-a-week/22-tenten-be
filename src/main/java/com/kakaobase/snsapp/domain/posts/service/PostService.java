@@ -1,10 +1,8 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
-import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
-import com.kakaobase.snsapp.domain.members.service.MemberService;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
@@ -16,14 +14,13 @@ import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.exception.YoutubeSummaryStatus;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.s3.service.S3Service;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -31,7 +28,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 게시글 관련 비즈니스 로직을 처리하는 서비스
@@ -45,11 +41,8 @@ public class PostService {
     private final PostRepository postRepository;
     private final PostImageRepository postImageRepository;
     private final S3Service s3Service;
-    private final MemberService memberService;
     private final YouTubeSummaryService youtubeSummaryService;
     private final ApplicationEventPublisher applicationEventPublisher;
-    private final PostLikeService postLikeService;
-    private final FollowRepository followRepository;
     private final EntityManager em;
     private final PostConverter postConverter;
     private final MemberRepository memberRepository;
@@ -110,26 +103,13 @@ public class PostService {
      * @return 게시글 상세 정보
      */
     public PostResponseDto.PostDetails getPostDetail(Long postId, Long memberId) {
-        // 게시글 조회
-        Post post = findById(postId);
 
-        // 좋아요 여부 확인
-        boolean isLiked = memberId != null && postLikeService.isLikedByMember(postId, memberId);
+        PostResponseDto.PostDetails postDetails = postRepository.findPostDetailById(postId, memberId)
+                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
 
-        Member follower = em.getReference(Member.class, memberId);
-        Member following = em.getReference(Member.class, post.getMember().getId());
+        CacheRecord.PostStatsCache cache = postCacheService.findBy(postId);
 
-        boolean isFollowing = followRepository.existsByFollowerUserAndFollowingUser(follower, following);
-
-        // 이미지 조회
-        String postImage = null;
-        List<PostImage> postImages = postImageRepository.findByPostIdOrderBySortIndexAsc(post.getId());
-        if(!postImages.isEmpty()){
-            postImage = postImages.get(0).getImgUrl();
-        }
-
-        // 응답 DTO 생성 및 반환
-        return postConverter.convertToPostDetail(post, memberId, postImage, isLiked, isFollowing);
+        return postConverter.updateSinglePostStats(postDetails, cache);
     }
 
     /**
@@ -161,15 +141,7 @@ public class PostService {
         log.info("게시글 삭제 완료: 게시글 ID={}, 삭제자 ID={}", postId, memberId);
     }
 
-    /**
-     * 게시글 목록을 조회합니다.
-     *
-     * @param postType 게시판 유형
-     * @param limit 페이지 크기
-     * @param cursor 커서
-     * @param memberId 현재 사용자 ID (nullable)
-     * @return 게시글 목록 응답
-     */
+
     /**
      * 게시글 목록을 조회합니다.
      */
@@ -180,35 +152,32 @@ public class PostService {
         }
 
         Post.BoardType boardType = PostConverter.toBoardType(postType);
-        Pageable pageable = PageRequest.of(0, limit);
 
         // 2. 게시글 조회
-        List<Post> posts = postRepository.findByBoardTypeWithCursor(boardType, cursor, pageable);
+        List<PostResponseDto.PostDetails> postDetails = postRepository.findByBoardTypeWithCursor(boardType, cursor, limit, currentMemberId);
 
         // 3. PostListItem으로 변환
-        return postConverter.convertToPostListItems(posts, currentMemberId);
+        return postConverter.updateWithCachedStats(postDetails);
     }
 
     /**
      * 유저가 작성한 게시글 조회
      */
-    public List<PostResponseDto.PostDetails> getUserPostList(int limit, Long cursor, Long memberId) {
+    public List<PostResponseDto.PostDetails> getUserPostList(int limit, Long cursor, Long memberId, Long currentMemberId) {
         // 1. 유효성 검증
         if (limit < 1) {
             throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit", "limit는 1 이상이어야 합니다.");
         }
 
-        Pageable pageable = PageRequest.of(0, limit);
-
-        // 3. 게시글 조회
-        List<Post> posts = postRepository.findByMemberIdWithCursor(memberId, cursor, pageable);
+        // 2. 게시글 조회
+        List<PostResponseDto.PostDetails> postDetails = postRepository.findByMemberWithCursor(memberId, cursor, limit, currentMemberId);
 
         // 3. PostListItem으로 변환
-        return postConverter.convertToPostListItems(posts, memberId);
+        return postConverter.updateWithCachedStats(postDetails);
 
     }
 
-    public List<PostResponseDto.PostDetails> getLikedPostList(int limit, Long cursor, Long memberId) {
+    public List<PostResponseDto.PostDetails> getLikedPostList(int limit, Long cursor, Long memberId, Long currentMemberId) {
 
         if(!memberRepository.existsById(memberId)){
             throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId");
@@ -218,23 +187,11 @@ public class PostService {
             throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit");
         }
 
-        Pageable pageable = PageRequest.of(0, limit);
-
         // 3. 게시글 조회
-        List<Post> posts = postRepository.findLikedPostsByMemberIdWithCursor(memberId, cursor, pageable);
+        List<PostResponseDto.PostDetails> postDetails = postRepository.findLikedPostsWithCursor(memberId, cursor, limit, currentMemberId);
 
-        // 3. PostListItem으로 변환
-        return postConverter.convertToPostListItems(posts, memberId);
-    }
-
-    /**
-     * 회원 ID로 회원 정보를 조회합니다.
-     *
-     * @param memberId 회원 ID
-     * @return 회원 정보 (닉네임, 프로필 이미지)
-     */
-    public Map<String, String> getMemberInfo(Long memberId) {
-        return memberService.getMemberInfo(memberId);
+        // 4. 캐싱데이터로 최신화후 반환
+        return postConverter.updateWithCachedStats(postDetails);
     }
 
 
