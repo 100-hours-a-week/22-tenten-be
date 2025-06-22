@@ -22,3 +22,4 @@ logging:
     com.kakaobase.snsapp.domain.auth: DEBUG
     com.kakaobase.snsapp.domain.posts: DEBUG
     org.springframework.security: DEBUG
+    org.hibernate.SQL: debug
