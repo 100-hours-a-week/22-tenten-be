@@ -55,7 +55,23 @@ public class PostResponseDto {
             @Schema(description = "좋아요 여부", example = "false")
             @JsonProperty("is_liked")
             Boolean isLiked
-    ) {}
+    ) {
+        public PostDetails withStats(Long newLikeCount, Long newCommentCount) {
+            return PostDetails.builder()
+                    .id(this.id)
+                    .user(this.user)
+                    .content(this.content)
+                    .imageUrl(this.imageUrl)
+                    .youtubeUrl(this.youtubeUrl)
+                    .youtubeSummary(this.youtubeSummary)
+                    .createdAt(this.createdAt)
+                    .likeCount(newLikeCount)
+                    .commentCount(newCommentCount)
+                    .isMine(this.isMine)
+                    .isLiked(this.isLiked)
+                    .build();
+        }
+    }
 
 
 
