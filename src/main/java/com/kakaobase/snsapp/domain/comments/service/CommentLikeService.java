@@ -50,7 +50,7 @@ public class CommentLikeService {
     @Transactional
     public void addCommentLike(Long memberId, Long commentId) {
         // 댓글 존재 여부 확인
-        Comment comment = commentRepository.findByIdAndDeletedAtIsNull(commentId)
+        Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
 
         // 이미 좋아요한 경우 확인
@@ -80,7 +80,7 @@ public class CommentLikeService {
     @Transactional
     public void removeCommentLike(Long memberId, Long commentId) {
         // 댓글 존재 여부 확인
-        Comment comment = commentRepository.findByIdAndDeletedAtIsNull(commentId)
+        Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
 
         // 좋아요 존재 여부 확인
@@ -107,7 +107,7 @@ public class CommentLikeService {
     @Transactional
     public void addRecommentLike(Long memberId, Long recommentId) {
         // 대댓글 존재 여부 확인
-        Recomment recomment = recommentRepository.findByIdAndDeletedAtIsNull(recommentId)
+        Recomment recomment = recommentRepository.findById(recommentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId"));
 
         // 이미 좋아요한 경우 확인
@@ -136,7 +136,7 @@ public class CommentLikeService {
     @Transactional
     public void removeRecommentLike(Long memberId, Long recommentId) {
         // 대댓글 존재 여부 확인
-        Recomment recomment = recommentRepository.findByIdAndDeletedAtIsNull(recommentId)
+        Recomment recomment = recommentRepository.findById(recommentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId"));
 
         // 좋아요 존재 여부 확인
@@ -153,50 +153,6 @@ public class CommentLikeService {
         log.info("대댓글 좋아요 취소 완료: 대댓글 ID={}, 회원 ID={}", recommentId, memberId);
 
     }
-
-
-
-    /**
-     * 댓글 삭제 시 연관된 좋아요를 일괄 삭제합니다.
-     *
-     * @param commentId 댓글 ID
-     */
-    @Transactional
-    public void deleteAllCommentLikesByCommentId(Long commentId) {
-        int deletedCount = commentLikeRepository.deleteByCommentId(commentId);
-        log.info("댓글 관련 좋아요 일괄 삭제 완료: 댓글 ID={}, 삭제된 좋아요 수={}", commentId, deletedCount);
-    }
-
-    /**
-     * 대댓글 삭제 시 연관된 좋아요를 일괄 삭제합니다.
-     *
-     * @param recommentId 대댓글 ID
-     */
-    @Transactional
-    public void deleteAllRecommentLikesByRecommentId(Long recommentId) {
-        int deletedCount = recommentLikeRepository.deleteByRecommentId(recommentId);
-        log.info("대댓글 관련 좋아요 일괄 삭제 완료: 대댓글 ID={}, 삭제된 좋아요 수={}", recommentId, deletedCount);
-    }
-
-    /**
-     * 댓글이 삭제될 때 해당 댓글에 달린 모든 대댓글의 좋아요를 일괄 삭제합니다.
-     *
-     * @param commentId 댓글 ID
-     */
-    @Transactional
-    public void deleteAllRecommentLikesByParentCommentId(Long commentId) {
-        // 대댓글 ID 목록 조회
-        List<Long> recommentIds = recommentRepository.findByCommentId(commentId)
-                .stream()
-                .map(Recomment::getId)
-                .toList();
-
-        if (!recommentIds.isEmpty()) {
-            int deletedCount = recommentLikeRepository.deleteByRecommentIdIn(recommentIds);
-            log.info("댓글 관련 대댓글 좋아요 일괄 삭제 완료: 댓글 ID={}, 삭제된 좋아요 수={}", commentId, deletedCount);
-        }
-    }
-
 
     @Transactional(readOnly = true)
     public List<MemberResponseDto.UserInfo> getCommentLikedMembers(Long commentId, int limit, Long cursor) {
