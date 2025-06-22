@@ -51,20 +51,40 @@ public class PostService {
     /**
      * 게시글을 생성합니다.
      *
-     * @param boardType 게시판 유형
+     * @param postType 게시판 유형
      * @param requestDto 게시글 생성 요청 DTO
      * @param memberId 작성자 ID
      * @return 생성된 게시글 엔티티
      */
     @Transactional
-    public PostResponseDto.PostDetails createPost(Post.BoardType boardType, PostRequestDto.PostCreateRequestDto requestDto, Long memberId) {
+    public PostResponseDto.PostDetails createPost(String postType, PostRequestDto.PostCreateRequestDto requestDto, Long memberId) {
+        // 게시글 내용 유효성 검증
+        if (requestDto.isEmpty()) {
+            throw new PostException(PostErrorCode.EMPTY_POST_CONTENT);
+        }
+
+        // 유튜브 URL 유효성 검증
+        if (!requestDto.isValidYoutubeUrl()) {
+            throw new PostException(PostErrorCode.INVALID_YOUTUBE_URL);
+        }
+
         // 이미지 URL 유효성 검증
         if (StringUtils.hasText(requestDto.image_url()) && !s3Service.isValidImageUrl(requestDto.image_url())) {
             throw new PostException(PostErrorCode.INVALID_IMAGE_URL);
         }
 
+        Post.BoardType boardType;
+
+        try {
+            boardType = Post.BoardType.valueOf(postType);
+        } catch (IllegalArgumentException e) {
+            log.error("잘못된 게시판 타입: {}", postType);
+            throw new PostException(GeneralErrorCode.INVALID_FORMAT, "postType");
+        }
+
         String youtubeUrl = requestDto.youtube_url();
 
+        // 게시판 타입 변환
         Member proxyMember = em.find(Member.class, memberId);
         // 게시글 엔티티 생성
         Post post = PostConverter.toPost(requestDto, proxyMember, boardType);
