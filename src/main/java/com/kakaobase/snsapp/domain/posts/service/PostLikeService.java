@@ -35,7 +35,6 @@ public class PostLikeService {
     private final PostLikeRepository postLikeRepository;
     private final PostRepository postRepository;
     private final EntityManager em;
-    private final MemberConverter memberConverter;
     private final PostCacheService postCacheService;
 
     /**
@@ -102,30 +101,6 @@ public class PostLikeService {
         return postLikeRepository.existsByMemberIdAndPostId(memberId, postId);
     }
 
-    /**
-     * 회원이 좋아요한 게시글 ID 목록을 조회합니다.
-     *
-     * @param memberId 회원 ID
-     * @return 좋아요한 게시글 ID 목록
-     */
-    public List<Long> findLikedPostIdsByMember(Long memberId) {
-        return postLikeRepository.findPostIdsByMemberId(memberId);
-    }
-
-    /**
-     * 게시글 목록 중 회원이 좋아요한 게시글 ID 목록을 조회합니다.
-     */
-    public List<Long> findLikedPostIdsByMember(Long memberId, List<Post> posts) {
-        if (posts.isEmpty()) {
-            return List.of();
-        }
-
-        List<Long> postIds = posts.stream()
-                .map(Post::getId)
-                .toList();
-
-        return postLikeRepository.findPostIdsByMemberIdAndPostIdIn(memberId, postIds);
-    }
 
     //특정 게시물에 좋아요를 누른 유저 정보 조회
     @Transactional(readOnly = true)
@@ -135,9 +110,7 @@ public class PostLikeService {
             throw new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        List<Member> members = postLikeRepository.findMembersByPostIdWithCursor(postId, cursor, limit);
-
-        return memberConverter.convertToUserInfoList(members);
+        return postLikeRepository.findMembersByPostIdWithCursor(postId, cursor, limit);
     }
 
     /**
