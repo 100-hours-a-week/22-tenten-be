@@ -74,31 +74,4 @@ public class PostResponseDto {
                     .build();
         }
     }
-
-
-
-    /**
-     * YouTube 영상 요약 응답 DTO
-     *
-     * <p>클라이언트에게 YouTube 영상 요약 결과를 반환할 때 사용하는 DTO입니다.</p>
-     * API 명세에 따라 message는 CustomResponse에서 처리하고,
-     * data 부분만 이 DTO에서 담당합니다.
-     *
-     * @param summary 요약 내용
-     */
-    @Schema(description = "YouTube 영상 요약 데이터")
-    public record YouTubeSummaryResponse(
-            @Schema(description = "요약 내용", example = "• 서울대 교수회가 중고교 통합과 수능 중복 응시를 포함한 교육 개혁안을 발표했습니다.")
-            String summary
-    ) {
-        /**
-         * YouTube 요약 응답 생성
-         *
-         * @param summary 요약 내용
-         * @return YouTube 요약 응답 DTO
-         */
-        public static YouTubeSummaryResponse of(String summary) {
-            return new YouTubeSummaryResponse(summary);
-        }
-    }
 }
