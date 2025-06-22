@@ -3,11 +3,11 @@ package com.kakaobase.snsapp.domain.follow.service;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.follow.converter.FollowConverter;
-import com.kakaobase.snsapp.domain.follow.dto.FollowResponse;
 import com.kakaobase.snsapp.domain.follow.entity.Follow;
 import com.kakaobase.snsapp.domain.follow.exception.FollowErrorCode;
 import com.kakaobase.snsapp.domain.follow.exception.FollowException;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
@@ -76,19 +76,19 @@ public class FollowService {
     }
 
 
-    public List<FollowResponse.UserInfo> getFollowers(Long userId, Integer limit, Long cursor) {
+    public List<MemberResponseDto.UserInfo> getFollowers(Long userId, Integer limit, Long cursor) {
         if(!memberRepository.existsById(userId)){
             throw new FollowException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId");
         }
 
-        return followConverter.toUserInfoList(followRepository.findFollowersByFollowingUserWithCursor(userId, limit, cursor));
+        return followRepository.findFollowersByFollowingUserWithCursor(userId, limit, cursor);
     }
 
-    public List<FollowResponse.UserInfo> getFollowings(Long userId, Integer limit, Long cursor) {
+    public List<MemberResponseDto.UserInfo> getFollowings(Long userId, Integer limit, Long cursor) {
         if(!memberRepository.existsById(userId)){
             throw new FollowException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId");
         }
 
-        return followConverter.toUserInfoList(followRepository.findFollowingsByFollowerUserWithCursor(userId, limit, cursor));
+        return followRepository.findFollowingsByFollowerUserWithCursor(userId, limit, cursor);
     }
 }

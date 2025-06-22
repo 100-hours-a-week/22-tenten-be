@@ -3,8 +3,8 @@ package com.kakaobase.snsapp.domain.follow.controller;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
-import com.kakaobase.snsapp.domain.follow.dto.FollowResponse;
 import com.kakaobase.snsapp.domain.follow.service.FollowService;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -85,12 +85,12 @@ public class FollowController {
             @ApiResponse(responseCode = "401", description = "로그인이 필요한 요청"),
             @ApiResponse(responseCode = "404", description = "해당 유저를 찾을 수 없음")
     })
-    public CustomResponse<List<FollowResponse.UserInfo>> getFollowerList(
+    public CustomResponse<List<MemberResponseDto.UserInfo>> getFollowerList(
             @PathVariable Long userId,
             @Parameter(description = "한 번에 불러올 팔로워 수 (기본값: 22)") @RequestParam(required = false, defaultValue = "22") Integer limit,
             @Parameter(description = "페이지네이션 커서 (이전 응답의 next_cursor)") @RequestParam(required = false) Long cursor
     ) {
-            List<FollowResponse.UserInfo> response =followService.getFollowers(userId, limit, cursor);
+            List<MemberResponseDto.UserInfo> response =followService.getFollowers(userId, limit, cursor);
 
             return CustomResponse.success("팔로워 목록이 정상적으로 조회되었습니다" , response);
     }
@@ -107,12 +107,12 @@ public class FollowController {
             @ApiResponse(responseCode = "401", description = "로그인이 필요한 요청"),
             @ApiResponse(responseCode = "404", description = "해당 유저를 찾을 수 없음")
     })
-    public CustomResponse<List<FollowResponse.UserInfo>> getFollowingList(
+    public CustomResponse<List<MemberResponseDto.UserInfo>> getFollowingList(
             @PathVariable Long userId,
             @Parameter(description = "한 번에 불러올 팔로워 수 (기본값: 22)") @RequestParam(required = false, defaultValue = "22") Integer limit,
             @Parameter(description = "페이지네이션 커서 (이전 응답의 next_cursor)") @RequestParam(required = false) Long cursor
     ) {
-        List<FollowResponse.UserInfo> response =followService.getFollowings(userId, limit, cursor);
+        List<MemberResponseDto.UserInfo> response =followService.getFollowings(userId, limit, cursor);
 
         return CustomResponse.success("팔로잉 목록이 정상적으로 조회되었습니다" , response);
     }
