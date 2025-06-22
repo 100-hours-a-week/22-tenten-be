@@ -51,20 +51,40 @@ public class PostService {
     /**
      * 게시글을 생성합니다.
      *
-     * @param boardType 게시판 유형
+     * @param postType 게시판 유형
      * @param requestDto 게시글 생성 요청 DTO
      * @param memberId 작성자 ID
      * @return 생성된 게시글 엔티티
      */
     @Transactional
-    public PostResponseDto.PostDetails createPost(Post.BoardType boardType, PostRequestDto.PostCreateRequestDto requestDto, Long memberId) {
+    public PostResponseDto.PostDetails createPost(String postType, PostRequestDto.PostCreateRequestDto requestDto, Long memberId) {
+        // 게시글 내용 유효성 검증
+        if (requestDto.isEmpty()) {
+            throw new PostException(PostErrorCode.EMPTY_POST_CONTENT);
+        }
+
+        // 유튜브 URL 유효성 검증
+        if (!requestDto.isValidYoutubeUrl()) {
+            throw new PostException(PostErrorCode.INVALID_YOUTUBE_URL);
+        }
+
         // 이미지 URL 유효성 검증
         if (StringUtils.hasText(requestDto.image_url()) && !s3Service.isValidImageUrl(requestDto.image_url())) {
             throw new PostException(PostErrorCode.INVALID_IMAGE_URL);
         }
 
+        Post.BoardType boardType;
+
+        try {
+            boardType = Post.BoardType.valueOf(postType);
+        } catch (IllegalArgumentException e) {
+            log.error("잘못된 게시판 타입: {}", postType);
+            throw new PostException(GeneralErrorCode.INVALID_FORMAT, "postType");
+        }
+
         String youtubeUrl = requestDto.youtube_url();
 
+        // 게시판 타입 변환
         Member proxyMember = em.find(Member.class, memberId);
         // 게시글 엔티티 생성
         Post post = PostConverter.toPost(requestDto, proxyMember, boardType);
@@ -192,39 +212,5 @@ public class PostService {
 
         // 4. 캐싱데이터로 최신화후 반환
         return postConverter.updateWithCachedStats(postDetails);
-    }
-
-
-    /**
-     * YouTube 영상 요약
-     *
-     * <p>게시글에 포함된 YouTube URL의 영상을 요약하고 결과를 저장합니다.</p>
-     *
-     * @param postId 요약할 게시글의 ID
-     * @param memberId 요청한 사용자의 ID
-     * @return YouTube 요약 응답 DTO
-     * @throws PostException 게시글을 찾을 수 없거나, 권한이 없거나, YouTube URL이 없는 경우
-     */
-    @Transactional
-    public PostResponseDto.YouTubeSummaryResponse summarizeYoutube(Long postId, Long memberId) {
-        log.info("YouTube 요약 요청 - postId: {}, memberId: {}", postId, memberId);
-
-        // 1. 게시글 조회
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> {
-                    log.error("게시글을 찾을 수 없음 - postId: {}", postId);
-                    return new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId");
-                });
-
-
-        String summary = post.getYoutubeSummary();
-
-        //summary의 상태값이 YoutubeSummaryStatus과 같다면 에러응답 반환
-        for (YoutubeSummaryStatus status : YoutubeSummaryStatus.values()) {
-            if (status.name().equals(summary)) {
-                throw new PostException(status.getPostErrorCode());
-            }
-        }
-        return PostResponseDto.YouTubeSummaryResponse.of(summary);
     }
 }

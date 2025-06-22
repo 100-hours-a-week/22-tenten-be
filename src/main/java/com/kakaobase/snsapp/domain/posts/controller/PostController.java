@@ -85,7 +85,7 @@ public class PostController {
     @PostMapping("/{postType}")
     @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
     @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
-    public CustomResponse<PostResponseDto.PostDetails> createPost(
+    public CustomResponse<PostResponseDto.PostDetails> postPost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Valid @RequestBody PostRequestDto.PostCreateRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -93,21 +93,8 @@ public class PostController {
 
         Long memberId = Long.valueOf(userDetails.getId());
 
-        // 게시글 내용 유효성 검증
-        if (requestDto.isEmpty()) {
-            throw new PostException(PostErrorCode.EMPTY_POST_CONTENT);
-        }
-
-        // 유튜브 URL 유효성 검증
-        if (!requestDto.isValidYoutubeUrl()) {
-            throw new PostException(PostErrorCode.INVALID_YOUTUBE_URL);
-        }
-
-        // 게시판 타입 변환
-        Post.BoardType boardType = PostConverter.toBoardType(postType);
-
         // 게시글 생성
-        PostResponseDto.PostDetails response = postService.createPost(boardType, requestDto, memberId);;
+        PostResponseDto.PostDetails response = postService.createPost(postType, requestDto, memberId);;
 
         return CustomResponse.success("게시글이 작성되었습니다.", response);
     }
@@ -137,7 +124,7 @@ public class PostController {
      */
     @PostMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 추가", description = "게시글에 좋아요를 추가합니다.")
-    public CustomResponse<?> addLike(
+    public CustomResponse<?> postPostLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
@@ -155,7 +142,7 @@ public class PostController {
      */
     @DeleteMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 취소", description = "게시글 좋아요를 취소합니다.")
-    public CustomResponse<?> removeLike(
+    public CustomResponse<?> deletePostLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
@@ -182,43 +169,5 @@ public class PostController {
         List<MemberResponseDto.UserInfo> response= postLikeService.getLikedMembers(postId, limit, cursor);
 
         return CustomResponse.success("좋아요 유저 목록을 성공적으로 불러왔습니다", response);
-    }
-
-
-
-    /**
-     * YouTube 영상 요약 요청 API
-     *
-     * <p>사용자가 작성한 게시글에 포함된 YouTube URL의 영상을 요약합니다.
-     * AI 서버를 통해 영상의 자막을 분석하여 요약본을 생성하고,
-     * 생성된 요약을 게시글에 저장한 후 응답합니다.</p>
-     *
-     * @param postId 요약을 요청할 게시글의 ID
-     * @param userDetails 인증된 사용자 정보
-     * @return YouTube 영상 요약 결과
-     * @throws PostException 게시글을 찾을 수 없거나, 권한이 없거나, YouTube URL이 없는 경우
-     */
-    @GetMapping("/{postId}/summary")
-    @Operation(summary = "YouTube 영상 요약", description = "게시글의 YouTube 영상을 요약합니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "YouTube 영상이 요약되었습니다."),
-            @ApiResponse(responseCode = "401", description = "로그인이 필요한 요청입니다."),
-            @ApiResponse(responseCode = "403", description = "본인의 글만 요약 가능합니다."),
-            @ApiResponse(responseCode = "404", description = "해당 게시글을 찾을 수 없습니다."),
-            @ApiResponse(responseCode = "500", description = "서버에 문제가 발생하였습니다.")
-    })
-    @PreAuthorize("isAuthenticated() && @accessChecker.isPostOwner(#postId, authentication.principal)")
-    public ResponseEntity<CustomResponse<PostResponseDto.YouTubeSummaryResponse>> summarizeYoutube(
-            @PathVariable Long postId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        // 사용자 인증 정보에서 memberId 추출
-        Long memberId = Long.valueOf(userDetails.getId());
-
-        // 게시글의 YouTube 영상 요약 실행
-        PostResponseDto.YouTubeSummaryResponse response = postService.summarizeYoutube(postId, memberId);
-
-        // 성공 응답 반환
-        return ResponseEntity.ok(CustomResponse.success("유튜브 요약에 성공하였습니다.", response));
     }
 }

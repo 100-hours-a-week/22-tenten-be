@@ -16,12 +16,14 @@ public class PostResponseDto {
     @Builder
     public record PostDetails(
             @Schema(description = "게시글 ID", example = "123")
+            @JsonProperty("id")
             Long id,
 
             @Schema(description = "작성자 정보")
             MemberResponseDto.UserInfoWithFollowing user,
 
             @Schema(description = "게시글 내용", example = "이벤트 버블링 헷갈릴 때는...")
+            @JsonProperty("content")
             String content,
 
             @Schema(description = "이미지 URL", example = "https://s3.../event-tip.png")
@@ -70,33 +72,6 @@ public class PostResponseDto {
                     .isMine(this.isMine)
                     .isLiked(this.isLiked)
                     .build();
-        }
-    }
-
-
-
-    /**
-     * YouTube 영상 요약 응답 DTO
-     *
-     * <p>클라이언트에게 YouTube 영상 요약 결과를 반환할 때 사용하는 DTO입니다.</p>
-     * API 명세에 따라 message는 CustomResponse에서 처리하고,
-     * data 부분만 이 DTO에서 담당합니다.
-     *
-     * @param summary 요약 내용
-     */
-    @Schema(description = "YouTube 영상 요약 데이터")
-    public record YouTubeSummaryResponse(
-            @Schema(description = "요약 내용", example = "• 서울대 교수회가 중고교 통합과 수능 중복 응시를 포함한 교육 개혁안을 발표했습니다.")
-            String summary
-    ) {
-        /**
-         * YouTube 요약 응답 생성
-         *
-         * @param summary 요약 내용
-         * @return YouTube 요약 응답 DTO
-         */
-        public static YouTubeSummaryResponse of(String summary) {
-            return new YouTubeSummaryResponse(summary);
         }
     }
 }
