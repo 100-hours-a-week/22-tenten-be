@@ -31,7 +31,6 @@ import java.util.Set;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @DynamicInsert
-@SQLDelete(sql = "UPDATE members SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @BatchSize(size = 50)
 @Where(clause = "deleted_at IS NULL")
 public class Member extends BaseSoftDeletableEntity {
