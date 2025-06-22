@@ -93,21 +93,8 @@ public class PostController {
 
         Long memberId = Long.valueOf(userDetails.getId());
 
-        // 게시글 내용 유효성 검증
-        if (requestDto.isEmpty()) {
-            throw new PostException(PostErrorCode.EMPTY_POST_CONTENT);
-        }
-
-        // 유튜브 URL 유효성 검증
-        if (!requestDto.isValidYoutubeUrl()) {
-            throw new PostException(PostErrorCode.INVALID_YOUTUBE_URL);
-        }
-
-        // 게시판 타입 변환
-        Post.BoardType boardType = PostConverter.toBoardType(postType);
-
         // 게시글 생성
-        PostResponseDto.PostDetails response = postService.createPost(boardType, requestDto, memberId);;
+        PostResponseDto.PostDetails response = postService.createPost(postType, requestDto, memberId);;
 
         return CustomResponse.success("게시글이 작성되었습니다.", response);
     }
