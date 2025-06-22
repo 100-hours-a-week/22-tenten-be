@@ -90,17 +90,6 @@ public class PostLikeService {
         log.info("게시글 좋아요 취소 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
     }
 
-    /**
-     * 회원이 게시글에 좋아요했는지 확인합니다.
-     *
-     * @param postId 게시글 ID
-     * @param memberId 회원 ID
-     * @return 좋아요 여부
-     */
-    public boolean isLikedByMember(Long postId, Long memberId) {
-        return postLikeRepository.existsByMemberIdAndPostId(memberId, postId);
-    }
-
 
     //특정 게시물에 좋아요를 누른 유저 정보 조회
     @Transactional(readOnly = true)
@@ -111,16 +100,5 @@ public class PostLikeService {
         }
 
         return postLikeRepository.findMembersByPostIdWithCursor(postId, cursor, limit);
-    }
-
-    /**
-     * 게시글 삭제 시 연관된 좋아요를 일괄 삭제합니다.
-     *
-     * @param postId 게시글 ID
-     */
-    @Transactional
-    public void deleteAllByPostId(Long postId) {
-        postLikeRepository.deleteByPostId(postId);
-        log.info("게시글 관련 좋아요 일괄 삭제 완료: 게시글 ID={}", postId);
     }
 }
