@@ -21,6 +21,7 @@ public class CommentResponseDto {
      * 대댓글 정보 DTO
      */
     @Schema(description = "대댓글 정보")
+    @Builder
     public record RecommentInfo(
             @Schema(description = "대댓글 ID", example = "201")
             Long id,
@@ -96,55 +97,4 @@ public class CommentResponseDto {
             @Schema(description = "부모 댓글 ID (대댓글인 경우)", example = "101", nullable = true)
             Long parent_id
     ) {}
-
-    /**
-     * 댓글 목록 응답 DTO
-     */
-    @Schema(description = "댓글 목록 응답")
-    public record CommentListResponse(
-            @Schema(description = "댓글 목록")
-            List<CommentInfo> comments,
-
-            @Schema(description = "다음 페이지 존재 여부", example = "true")
-            boolean has_next,
-
-            @Schema(description = "다음 페이지 커서", example = "102", nullable = true)
-            Long next_cursor
-    ) {}
-
-    /**
-     * 대댓글 목록 응답 DTO
-     */
-    @Schema(description = "대댓글 목록 응답")
-    public record RecommentListResponse(
-            @Schema(description = "대댓글 목록")
-            List<RecommentInfo> recomments,
-
-            @Schema(description = "다음 페이지 존재 여부", example = "true")
-            boolean has_next,
-
-            @Schema(description = "다음 페이지 커서", example = "202", nullable = true)
-            Long next_cursor
-    ) {}
-
-
-    /**
-     * 댓글 상세 조회 응답 DTO
-     */
-    @Schema(description = "댓글 상세 조회 응답")
-    public record CommentDetailResponse(
-            @Schema(description = "댓글 상세 정보")
-            CommentInfo data
-    ) {
-    }
-
-    /**
-     * 기본 응답 메시지 DTO
-     */
-    @Schema(description = "기본 응답 메시지")
-    public record MessageResponse(
-            @Schema(description = "응답 메시지", example = "댓글이 삭제되었습니다.")
-            String message
-    ) {}
-
 }
