@@ -16,12 +16,14 @@ public class PostResponseDto {
     @Builder
     public record PostDetails(
             @Schema(description = "게시글 ID", example = "123")
+            @JsonProperty("id")
             Long id,
 
             @Schema(description = "작성자 정보")
             MemberResponseDto.UserInfoWithFollowing user,
 
             @Schema(description = "게시글 내용", example = "이벤트 버블링 헷갈릴 때는...")
+            @JsonProperty("content")
             String content,
 
             @Schema(description = "이미지 URL", example = "https://s3.../event-tip.png")
