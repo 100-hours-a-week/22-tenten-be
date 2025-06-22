@@ -206,7 +206,7 @@ public class CommentLikeService {
 
         List<Member> members = commentLikeRepository.findMembersByCommentIdWithCursor(commentId, cursor, limit);
 
-        return memberConverter.convertToUserInfoList(members);
+        return memberConverter.toUserInfoList(members);
     }
 
     @Transactional(readOnly = true)
@@ -217,6 +217,6 @@ public class CommentLikeService {
 
         List<Member> members = recommentLikeRepository.findMembersByRecommentIdWithCursor(recommentId, cursor, limit);
 
-        return memberConverter.convertToUserInfoList(members);
+        return memberConverter.toUserInfoList(members);
     }
 }

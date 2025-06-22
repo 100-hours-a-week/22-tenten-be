@@ -49,24 +49,23 @@ public class MemberConverter {
 
     }
 
-
     /**
      * Member Entity 리스트를 UserInfo DTO 리스트로 변환합니다.
      *
      * @param members Member Entity 리스트
      * @return UserInfo DTO 리스트
      */
-    public List<MemberResponseDto.UserInfo> convertToUserInfoList(List<Member> members) {
+    public List<MemberResponseDto.UserInfo> toUserInfoList(List<Member> members) {
         if (members == null) {
             return List.of();
         }
 
         return members.stream()
-                .map(this::convertToUserInfo)
+                .map(this::toUserInfo)
                 .collect(Collectors.toList());
     }
 
-    public MemberResponseDto.UserInfo convertToUserInfo(Member member) {
+    public MemberResponseDto.UserInfo toUserInfo(Member member) {
         if (member == null) {
             return null;
         }
