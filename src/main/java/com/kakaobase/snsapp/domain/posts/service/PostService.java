@@ -1,10 +1,8 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
-import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
-import com.kakaobase.snsapp.domain.members.service.MemberService;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
@@ -16,6 +14,7 @@ import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.exception.YoutubeSummaryStatus;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.s3.service.S3Service;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
@@ -29,7 +28,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 게시글 관련 비즈니스 로직을 처리하는 서비스
@@ -45,8 +43,6 @@ public class PostService {
     private final S3Service s3Service;
     private final YouTubeSummaryService youtubeSummaryService;
     private final ApplicationEventPublisher applicationEventPublisher;
-    private final PostLikeService postLikeService;
-    private final FollowRepository followRepository;
     private final EntityManager em;
     private final PostConverter postConverter;
     private final MemberRepository memberRepository;
@@ -107,26 +103,13 @@ public class PostService {
      * @return 게시글 상세 정보
      */
     public PostResponseDto.PostDetails getPostDetail(Long postId, Long memberId) {
-        // 게시글 조회
-        Post post = findById(postId);
 
-        // 좋아요 여부 확인
-        boolean isLiked = memberId != null && postLikeService.isLikedByMember(postId, memberId);
+        PostResponseDto.PostDetails postDetails = postRepository.findPostDetailById(postId, memberId)
+                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
 
-        Member follower = em.getReference(Member.class, memberId);
-        Member following = em.getReference(Member.class, post.getMember().getId());
+        CacheRecord.PostStatsCache cache = postCacheService.findBy(postId);
 
-        boolean isFollowing = followRepository.existsByFollowerUserAndFollowingUser(follower, following);
-
-        // 이미지 조회
-        String postImage = null;
-        List<PostImage> postImages = postImageRepository.findByPostIdOrderBySortIndexAsc(post.getId());
-        if(!postImages.isEmpty()){
-            postImage = postImages.get(0).getImgUrl();
-        }
-
-        // 응답 DTO 생성 및 반환
-        return postConverter.convertToPostDetail(post, memberId, postImage, isLiked, isFollowing);
+        return postConverter.updateSinglePostStats(postDetails, cache);
     }
 
     /**
