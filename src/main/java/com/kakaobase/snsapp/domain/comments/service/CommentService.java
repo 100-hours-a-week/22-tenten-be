@@ -9,6 +9,7 @@ import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
+import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
@@ -45,7 +46,6 @@ public class CommentService {
     private final CommentLikeService commentLikeService;
     private final PostCacheService postCacheService;
 
-    private static final int DEFAULT_PAGE_SIZE = 12;
     private final CommentLikeRepository commentLikeRepository;
     private final FollowRepository followRepository;
     private final EntityManager em;
@@ -53,6 +53,7 @@ public class CommentService {
     private final BotRecommentService botRecommentService;
     private final PostRepository postRepository;
     private final CommentCacheService commentCacheService;
+    private final RecommentLikeRepository recommentLikeRepository;
 
     /**
      * 댓글을 생성합니다.
@@ -122,7 +123,7 @@ public class CommentService {
     @Transactional
     public void deleteComment(Long memberId, Long commentId) {
         // 댓글 조회
-        Comment comment = commentRepository.findByIdAndDeletedAtIsNull(commentId)
+        Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId", "삭제할 댓글을 찾을 수 없습니다."));
 
         // 댓글 작성자 확인
@@ -130,18 +131,15 @@ public class CommentService {
             throw new CommentException(CommentErrorCode.POST_NOT_AUTHORIZED, "commentId", "본인이 작성한 댓글만 삭제할 수 있습니다.");
         }
 
+        recommentLikeRepository.deleteByCommentId(commentId);
+        recommentRepository.deleteByCommentId(commentId);
+        commentLikeRepository.deleteByCommentId(commentId);
+
         // 게시글의 댓글 수 1감소
         postCacheService.decrementCommentCount(comment.getPost().getId());
 
-
-        // 댓글의 좋아요 삭제
-        commentLikeService.deleteAllCommentLikesByCommentId(commentId);
-
-        // 댓글에 달린 모든 대댓글 삭제 (삭제된 것 포함)
-        recommentRepository.softDeleteRecommentsByCommentId(commentId);
-
         // 댓글 삭제 (Soft Delete)
-        comment.softDelete();
+        commentRepository.delete(comment);
 
         log.info("댓글 삭제 완료: 댓글 ID={}, 삭제자 ID={}", commentId, memberId);
     }
@@ -155,7 +153,7 @@ public class CommentService {
     @Transactional
     public void deleteRecomment(Long memberId, Long recommentId) {
         // 대댓글 조회
-        Recomment recomment = recommentRepository.findByIdAndDeletedAtIsNull(recommentId)
+        Recomment recomment = recommentRepository.findById(recommentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId", "해당 대댓글을 찾을 수 없습니다."));
 
         // 대댓글의 좋아요 삭제
@@ -171,19 +169,11 @@ public class CommentService {
 
     /**
      * 게시글의 댓글 목록을 조회합니다.
-     *
-     * @param memberId 현재 로그인한 회원 ID
-     * @param postId 게시글 ID
-     * @param pageRequest 페이지 요청 DTO
-     * @return 댓글 목록 응답 DTO
      */
-    public CommentResponseDto.CommentListResponse getCommentsByPostId(Long memberId, Long postId, CommentRequestDto.CommentPageRequest pageRequest) {
-
-        // 페이지 설정
-        int limit = pageRequest.limit() != null ? pageRequest.limit() : DEFAULT_PAGE_SIZE;
+    public CommentResponseDto.CommentListResponse getCommentsByPostId(Long memberId, Long postId, Integer limit, Long cursor) {
 
         // 댓글 목록 조회
-        List<Comment> comments = commentRepository.findByPostIdWithCursor(postId, pageRequest.cursor(), limit + 1); // 다음 페이지 확인을 위해 limit + 1개 조회
+        List<Comment> comments = commentRepository.findByPostIdWithCursor(postId, cursor, limit + 1); // 다음 페이지 확인을 위해 limit + 1개 조회
 
         if (comments.isEmpty()) {
             return new CommentResponseDto.CommentListResponse(
@@ -236,18 +226,11 @@ public class CommentService {
     /**
      * 댓글의 대댓글 목록을 조회합니다.
      *
-     * @param memberId 현재 로그인한 회원 ID
-     * @param commentId 댓글 ID
-     * @param pageRequest 페이지 요청 DTO
-     * @return 대댓글 목록 응답 DTO
      */
-    public CommentResponseDto.RecommentListResponse getRecommentsByCommentId(Long memberId, Long commentId, CommentRequestDto.RecommentPageRequest pageRequest) {
-
-        // 페이지 설정
-        int limit = pageRequest.limit() != null ? pageRequest.limit() : DEFAULT_PAGE_SIZE;
+    public CommentResponseDto.RecommentListResponse getRecommentsByCommentId(Long memberId, Long commentId, Integer limit, Long cursor) {
 
         // 대댓글 목록 조회
-        List<Recomment> recomments = recommentRepository.findByRecommentIdWithCursor(commentId, pageRequest.cursor(), limit);
+        List<Recomment> recomments = recommentRepository.findByRecommentIdWithCursor(commentId, cursor, limit);
 
         if (recomments.isEmpty()) {
             return new CommentResponseDto.RecommentListResponse(
@@ -321,7 +304,7 @@ public class CommentService {
 
     public CommentResponseDto.CommentDetailResponse getCommentDetail(Long memberId, Long commentId) {
         // 댓글 조회
-        Comment comment = commentRepository.findByIdAndDeletedAtIsNull(commentId)
+        Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
 
         // 댓글 좋아요 여부 확인
@@ -358,7 +341,7 @@ public class CommentService {
      * @return 댓글 엔티티
      */
     public Comment findById(Long commentId) {
-        return commentRepository.findByIdAndDeletedAtIsNull(commentId)
+        return commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId", "댓글을 찾을 수 없습니다."));
     }
 }
