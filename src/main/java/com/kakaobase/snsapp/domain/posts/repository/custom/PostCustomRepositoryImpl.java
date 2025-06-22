@@ -15,12 +15,82 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
 public class PostCustomRepositoryImpl implements PostCustomRepository {
 
     private final JPAQueryFactory queryFactory;
+
+    @Override
+    public Optional<PostResponseDto.PostDetails> findPostDetailById(Long postId, Long memberId) {
+
+        QPost post = QPost.post;
+        QMember member = QMember.member;
+        QPostImage postImage = QPostImage.postImage;
+        QPostLike postLike = QPostLike.postLike;
+        QFollow follow = QFollow.follow;
+
+        PostResponseDto.PostDetails result = queryFactory
+                .select(Projections.constructor(PostResponseDto.PostDetails.class,
+                        // 기본 Post 필드들
+                        post.id,
+
+                        // 이중 DTO: UserInfoWithFollowing 생성
+                        Projections.constructor(MemberResponseDto.UserInfoWithFollowing.class,
+                                post.member.id,
+                                post.member.nickname,
+                                post.member.profileImgUrl,
+                                // ✅ 현재 사용자가 게시글 작성자를 팔로우하는지 확인
+                                follow.id.isNotNull()
+                        ),
+
+                        post.content,
+
+                        // ✅ 첫 번째 이미지 URL
+                        postImage.imgUrl,
+
+                        post.youtubeUrl,
+                        post.youtubeSummary,
+                        post.createdAt,
+                        post.likeCount,
+                        post.commentCount,
+
+                        // ✅ 본인 게시글 여부
+                        memberId != null ?
+                                post.member.id.eq(memberId) :
+                                Expressions.constant(false),
+
+                        // ✅ 현재 사용자가 이 게시글에 좋아요했는지 확인
+                        postLike.id.isNotNull()
+                ))
+                .from(post)
+                .join(post.member, member)
+
+                // ✅ 첫 번째 이미지만 LEFT JOIN
+                .leftJoin(postImage).on(
+                        postImage.post.eq(post)
+                                .and(postImage.sortIndex.eq(0))  // 첫 번째 이미지만
+                )
+
+                // ✅ 현재 사용자의 좋아요만 LEFT JOIN
+                .leftJoin(postLike).on(
+                        postLike.post.eq(post)
+                                .and(memberId != null ? postLike.id.memberId.eq(memberId) : null)
+                )
+
+                // ✅ 현재 사용자가 게시글 작성자를 팔로우하는지 LEFT JOIN
+                .leftJoin(follow).on(
+                        memberId != null ? follow.followerUser.id.eq(memberId) : null,  // 현재 사용자가
+                        follow.followingUser.eq(post.member)  // 게시글 작성자를 팔로우
+                )
+
+                .where(post.id.eq(postId))  // ✅ 단일 조회 조건
+                .fetchOne();  // ✅ 단일 결과 조회
+
+        return Optional.ofNullable(result);
+    }
 
     @Override
     public List<PostResponseDto.PostDetails> findByBoardTypeWithCursor(
