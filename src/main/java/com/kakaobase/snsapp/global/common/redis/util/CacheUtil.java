@@ -9,5 +9,5 @@ public interface CacheUtil<K, V> {
     boolean existsCache(K key);
     Map<K, V> loadBatch(List<K> keys);
     void delete(K key);
-    boolean runWithLock(K key, Runnable action);
+    void runWithLock(K key, Runnable action);
 }
