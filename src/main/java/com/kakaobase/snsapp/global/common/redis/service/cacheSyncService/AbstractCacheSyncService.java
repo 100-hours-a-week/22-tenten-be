@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.global.common.redis.service;
+package com.kakaobase.snsapp.global.common.redis.service.cacheSyncService;
 
 import com.kakaobase.snsapp.global.common.redis.util.CacheUtil;
 import lombok.RequiredArgsConstructor;
