@@ -85,22 +85,4 @@ public class Recomment extends BaseSoftDeletableEntity {
             this.likeCount--;
         }
     }
-
-    /**
-     * 작성자 확인
-     *
-     * @param member 확인할 회원
-     * @return 입력받은 회원이 작성자면 true, 아니면 false
-     */
-    public boolean isWrittenBy(Member member) {
-        return this.member.getId().equals(member.getId());
-    }
-
-    /**
-     * 대댓글 삭제 시 부모 댓글의 대댓글 수 감소
-     */
-    @PreRemove
-    public void onPreRemove() {
-        comment.decreaseRecommentCount();
-    }
 }
