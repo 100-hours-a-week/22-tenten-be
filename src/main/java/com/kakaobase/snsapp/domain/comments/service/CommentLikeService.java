@@ -42,16 +42,13 @@ public class CommentLikeService {
 
     /**
      * 댓글에 좋아요를 추가합니다.
-     *
-     * @param commentId 댓글 ID
-     * @param memberId 회원 ID
-     * @throws CommentException 댓글이 없거나 이미 좋아요한 경우
      */
     @Transactional
     public void addCommentLike(Long memberId, Long commentId) {
         // 댓글 존재 여부 확인
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
+        if(commentRepository.existsById(commentId)) {
+            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId");
+        }
 
         // 이미 좋아요한 경우 확인
         if (commentLikeRepository.existsByMemberIdAndCommentId(memberId, commentId)) {
@@ -64,18 +61,12 @@ public class CommentLikeService {
 
         // 댓글 좋아요 수 증가
         commentCacheService.decrementLikeCount(commentId);
-        commentRepository.save(comment);
 
         log.info("댓글 좋아요 추가 완료: 댓글 ID={}, 회원 ID={}", commentId, memberId);
     }
 
     /**
      * 댓글 좋아요를 취소합니다.
-     *
-     * @param commentId 댓글 ID
-     * @param memberId 회원 ID
-     * @return 좋아요 응답 DTO
-     * @throws CommentException 댓글이 없거나 좋아요하지 않은 경우
      */
     @Transactional
     public void removeCommentLike(Long memberId, Long commentId) {
@@ -121,7 +112,6 @@ public class CommentLikeService {
 
         // 대댓글 좋아요 수 증가
         recomment.increaseLikeCount();
-        recommentRepository.save(recomment);
 
         log.info("대댓글 좋아요 추가 완료: 대댓글 ID={}, 회원 ID={}", recommentId, memberId);
     }
@@ -129,9 +119,6 @@ public class CommentLikeService {
     /**
      * 대댓글 좋아요를 취소합니다.
      *
-     * @param recommentId 대댓글 ID
-     * @param memberId 회원 ID
-     * @throws CommentException 대댓글이 없거나 좋아요하지 않은 경우
      */
     @Transactional
     public void removeRecommentLike(Long memberId, Long recommentId) {
@@ -148,10 +135,8 @@ public class CommentLikeService {
 
         // 대댓글 좋아요 수 감소
         recomment.decreaseLikeCount();
-        recommentRepository.save(recomment);
 
         log.info("대댓글 좋아요 취소 완료: 대댓글 ID={}, 회원 ID={}", recommentId, memberId);
-
     }
 
     @Transactional(readOnly = true)
