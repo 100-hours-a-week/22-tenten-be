@@ -36,7 +36,6 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CommentService {
 
     private final CommentRepository commentRepository;
@@ -46,7 +45,6 @@ public class CommentService {
     private final PostCacheService postCacheService;
 
     private final CommentLikeRepository commentLikeRepository;
-    private final FollowRepository followRepository;
     private final EntityManager em;
 
     private final BotRecommentService botRecommentService;
@@ -115,9 +113,6 @@ public class CommentService {
 
     /**
      * 댓글을 삭제합니다.
-     *
-     * @param memberId 현재 로그인한 회원 ID
-     * @param commentId 삭제할 댓글 ID
      */
     @Transactional
     public void deleteComment(Long memberId, Long commentId) {
@@ -145,9 +140,6 @@ public class CommentService {
 
     /**
      * 대댓글을 삭제합니다.
-     *
-     * @param memberId 현재 로그인한 회원 ID
-     * @param recommentId 삭제할 대댓글 ID
      */
     @Transactional
     public void deleteRecomment(Long memberId, Long recommentId) {
@@ -161,14 +153,24 @@ public class CommentService {
         commentCacheService.decrementCommentCount(recomment.getComment().getId());
 
         // 대댓글 삭제 (Soft Delete)
-        recomment.softDelete();
+        recommentRepository.delete(recomment);
 
         log.info("대댓글 삭제 완료: 대댓글 ID={}, 삭제자 ID={}", recommentId, memberId);
     }
 
     /**
+     * 특정 댓글 상세 조회
+     */
+    @Transactional(readOnly = true)
+    public CommentResponseDto.CommentInfo getCommentInfo(Long memberId, Long commentId) {
+        return commentRepository.findCommentInfoById(commentId, memberId)
+                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
+    }
+
+    /**
      * 게시글의 댓글 목록을 조회합니다.
      */
+    @Transactional(readOnly = true)
     public List<CommentResponseDto.CommentInfo> getCommentsByPostId(Long memberId, Long postId, Integer limit, Long cursor) {
         // 1. 유효성 검증
         if (limit < 1) {
@@ -182,126 +184,35 @@ public class CommentService {
         return commentConverter.updateWithCachedStats(commentInfos);
     }
 
-
     /**
      * 댓글의 대댓글 목록을 조회합니다.
-     *
      */
-    public CommentResponseDto.RecommentListResponse getRecommentsByCommentId(Long memberId, Long commentId, Integer limit, Long cursor) {
+    @Transactional(readOnly = true)
+    public List<CommentResponseDto.RecommentInfo> getRecommentInfoList(Long memberId, Long commentId, Integer limit, Long cursor) {
+        if(limit < 1) {
+            throw new CommentException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit", "limit는 1 이상이어야 합니다.");
+        }
 
         // 대댓글 목록 조회
-        List<Recomment> recomments = recommentRepository.findByRecommentIdWithCursor(commentId, cursor, limit);
-
-        if (recomments.isEmpty()) {
-            return new CommentResponseDto.RecommentListResponse(
-                    Collections.emptyList(),
-                    false,
-                    null
-            );
-        }
-
-        // 다음 페이지 존재 여부 확인
-        boolean hasNext = recomments.size() >= limit;
-        Long nextCursor = hasNext ? recomments.get(recomments.size() - 1).getId() : null;
-
-        // 대댓글 ID 추출
-        List<Long> recommentIds = recomments.stream()
-                .map(Recomment::getId)
-                .toList();
-
-        // 대댓글 좋아요 정보 조회
-        List<Long> likedRecommentIds = recommentRepository.findLikedRecommentIds(recommentIds, memberId);
-        Set<Long> likedRecommentIdsSet = new HashSet<>(likedRecommentIds);
-
-
-        Set<Long> followingIdSet = followRepository.findFollowingUserIdsByFollowerUserId(memberId);
-
-        // 응답 DTO 생성
-        return commentConverter.toRecommentListResponse(
-                recomments,
-                memberId,
-                likedRecommentIdsSet,
-                followingIdSet,
-                nextCursor
-        );
+        return recommentRepository.findRecommentInfoListWithCursor(commentId, cursor, limit, memberId);
     }
 
-    //특정 유저의 댓글 조회
+    /**
+     * 특정 유저의 댓글 조회
+     */
     @Transactional(readOnly = true)
     public List<CommentResponseDto.CommentInfo> getUserCommentList(int limit, Long cursor, Long memberId, Long currentMemberId) {
-
-        if(!memberRepository.existsById(memberId)) {
-            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId");
-        }
 
         if (limit < 1) {
             throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit");
         }
 
-        Pageable pageable = PageRequest.of(0, limit);
+        if(!memberRepository.existsById(memberId)) {
+            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "userId");
+        }
 
-        // 댓글 목록 조회
-        List<Comment> comments = commentRepository.findByMemberIdWithCursor(memberId, cursor, pageable); // 다음 페이지 확인을 위해 limit + 1개 조회
+        List<CommentResponseDto.CommentInfo> commentInfos = commentRepository.findCommentInfoByMemberWithCursor(memberId, cursor, limit, currentMemberId);
 
-        Map<Long, CacheRecord.CommentStatsCache> cacheMap = commentCacheService.findAllByItems(comments);
-
-        // 1. 미리 필요한 ID 목록 수집
-        List<Long> commentIds = comments.stream().map(Comment::getId).toList();
-
-        // 2. 일괄 조회
-        Set<Long> likedCommentIds = commentLikeRepository.findLikedCommentIdsByMemberAndComments(currentMemberId, commentIds);
-        Set<Long> followingMemberIds = Set.of(memberId);
-
-
-        return commentConverter.toCommentInfoList(
-                comments,
-                currentMemberId,
-                cacheMap,
-                likedCommentIds,
-                followingMemberIds
-        );
-    }
-
-    public CommentResponseDto.CommentDetailResponse getCommentDetail(Long memberId, Long commentId) {
-        // 댓글 조회
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
-
-        // 댓글 좋아요 여부 확인
-        boolean isLiked = commentLikeRepository.existsByMemberIdAndCommentId(memberId, commentId);
-
-        // 댓글 작성자 확인 (본인 작성 여부)
-        boolean isMine = comment.getMember().getId().equals(memberId);
-
-        Member follower = em.getReference(Member.class, memberId);
-        Member following = em.getReference(Member.class, comment.getMember().getId());
-
-        //팔로우 여부 확인
-        boolean isFollowing = followRepository.existsByFollowerUserAndFollowingUser(follower, following);
-
-        CacheRecord.CommentStatsCache cache = commentCacheService.findBy(commentId);
-
-        // CommentInfo 생성
-        CommentResponseDto.CommentInfo commentInfo = commentConverter.toCommentInfo(
-                comment,
-                cache.likeCount(),
-                cache.recommentCount(),
-                isMine,
-                isLiked,
-                isFollowing
-        );
-        return new CommentResponseDto.CommentDetailResponse(commentInfo);
-    }
-
-
-    /**
-     * 댓글 ID로 댓글을 조회합니다.
-     *
-     * @param commentId 댓글 ID
-     * @return 댓글 엔티티
-     */
-    public Comment findById(Long commentId) {
-        return commentRepository.findById(commentId)
-                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId", "댓글을 찾을 수 없습니다."));
+        return commentConverter.updateWithCachedStats(commentInfos);
     }
 }
