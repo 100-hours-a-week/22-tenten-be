@@ -14,7 +14,6 @@ import com.kakaobase.snsapp.domain.posts.entity.PostImage;
 import com.kakaobase.snsapp.domain.posts.event.PostCreatedEvent;
 import com.kakaobase.snsapp.domain.posts.exception.PostErrorCode;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
-import com.kakaobase.snsapp.domain.posts.exception.YoutubeSummaryStatus;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
