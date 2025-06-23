@@ -49,6 +49,7 @@ public interface RecommentLikeRepository extends JpaRepository<RecommentLike, Re
      * 특정 회원의 모든 좋아요를 삭제합니다.
      * 회원 탈퇴 시 관련 좋아요도 함께 삭제하는 데 사용됩니다.
      */
+    @Modifying
     @Query("DELETE FROM RecommentLike rl WHERE rl.member.id = :memberId")
     void deleteByMemberId(@Param("memberId") Long memberId);
 
@@ -57,6 +58,7 @@ public interface RecommentLikeRepository extends JpaRepository<RecommentLike, Re
      * 특정 댓글의 모든 대댓글에 대한 좋아요를 삭제합니다.
      * 댓글 삭제 시 해당 댓글의 모든 대댓글 좋아요도 함께 삭제하는 데 사용됩니다.
      */
+    @Modifying
     @Query("DELETE FROM RecommentLike rl WHERE rl.recomment.comment.id = :commentId")
     void deleteByCommentId(@Param("commentId") Long commentId);
 }
