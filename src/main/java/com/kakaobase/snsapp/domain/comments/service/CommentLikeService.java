@@ -13,7 +13,9 @@ import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class CommentLikeService {
     private final RecommentLikeRepository recommentLikeRepository;
     private final CommentConverter commentConverter;
     private final CommentCacheService commentCacheService;
+    private final EntityManager em;
 
     /**
      * 댓글에 좋아요를 추가합니다.
@@ -56,7 +59,13 @@ public class CommentLikeService {
         commentLikeRepository.save(commentLike);
 
         // 댓글 좋아요 수 증가
-        commentCacheService.decrementLikeCount(commentId);
+        try{
+            commentCacheService.incrementLikeCount(commentId);
+        } catch (CacheException e){
+            log.error(e.getMessage());
+            Comment commnet = em.find(Comment.class, commentId);
+            commnet.increaseLikeCount();
+        }
 
         log.info("댓글 좋아요 추가 완료: 댓글 ID={}, 회원 ID={}", commentId, memberId);
     }
@@ -67,8 +76,9 @@ public class CommentLikeService {
     @Transactional
     public void removeCommentLike(Long memberId, Long commentId) {
         // 댓글 존재 여부 확인
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId"));
+        if(commentRepository.existsById(commentId)) {
+            throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId");
+        }
 
         // 좋아요 존재 여부 확인
         CommentLike commentLike = commentLikeRepository.findByMemberIdAndCommentId(memberId, commentId)
@@ -78,8 +88,13 @@ public class CommentLikeService {
         commentLikeRepository.delete(commentLike);
 
         // 댓글 좋아요 수 감소
-        commentCacheService.decrementLikeCount(commentId);
-        commentRepository.save(comment);
+        try{
+            commentCacheService.decrementLikeCount(commentId);
+        } catch (CacheException e){
+            log.error(e.getMessage());
+            Comment comment = em.find(Comment.class, commentId);
+            comment.decreaseLikeCount();
+        }
 
         log.info("댓글 좋아요 취소 완료: 댓글 ID={}, 회원 ID={}", commentId, memberId);
     }
