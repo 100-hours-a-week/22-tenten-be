@@ -29,14 +29,12 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CommentLikeService {
 
     private final CommentRepository commentRepository;
     private final RecommentRepository recommentRepository;
     private final CommentLikeRepository commentLikeRepository;
     private final RecommentLikeRepository recommentLikeRepository;
-    private final MemberConverter memberConverter;
     private final CommentConverter commentConverter;
     private final CommentCacheService commentCacheService;
 
@@ -139,25 +137,27 @@ public class CommentLikeService {
         log.info("대댓글 좋아요 취소 완료: 대댓글 ID={}, 회원 ID={}", recommentId, memberId);
     }
 
+    /**
+     * 특정 댓글에 좋아요를 누른 회원 정보 조회
+     */
     @Transactional(readOnly = true)
     public List<MemberResponseDto.UserInfo> getCommentLikedMembers(Long commentId, int limit, Long cursor) {
         if(!commentRepository.existsById(commentId)){
             throw new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        List<Member> members = commentLikeRepository.findMembersByCommentIdWithCursor(commentId, cursor, limit);
-
-        return memberConverter.toUserInfoList(members);
+        return commentLikeRepository.findMembersByCommentIdWithCursor(commentId, cursor, limit);
     }
 
+    /**
+     * 특정 대댓글에 좋아요를 누른 회원 정보 조회
+     */
     @Transactional(readOnly = true)
     public List<MemberResponseDto.UserInfo> getRecommentLikedMembers(Long recommentId, int limit, Long cursor) {
         if(!recommentRepository.existsById(recommentId)){
             throw new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        List<Member> members = recommentLikeRepository.findMembersByRecommentIdWithCursor(recommentId, cursor, limit);
-
-        return memberConverter.toUserInfoList(members);
+        return recommentLikeRepository.findMembersByRecommentIdWithCursor(recommentId, cursor, limit);
     }
 }
