@@ -1,8 +1,10 @@
 package com.kakaobase.snsapp.global.common.redis.error;
 import lombok.Getter;
 
+import java.io.IOException;
+
 @Getter
-public class CacheException extends RuntimeException {
+public class CacheException extends IOException {
 
     private final transient CacheErrorCode errorCode;
 
