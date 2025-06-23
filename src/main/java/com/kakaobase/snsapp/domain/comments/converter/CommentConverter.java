@@ -13,9 +13,11 @@ import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.Set;
 /**
  * 댓글과 대댓글 관련 엔티티와 DTO 간 변환을 담당하는 컨버터 클래스
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CommentConverter {
@@ -210,9 +213,7 @@ public class CommentConverter {
     }
 
     /**
-     * PostDetails 리스트의 likeCount, commentCount를 캐시 데이터로 업데이트
-     *
-     * @return 캐시 데이터가 적용된 PostDetails 리스트
+     * CommentInfo 리스트의 likeCount, recommentCount를 캐시 데이터로 업데이트
      */
     public List<CommentResponseDto.CommentInfo> updateWithCachedStats(
             List<CommentResponseDto.CommentInfo> commentInfos) {
@@ -221,15 +222,18 @@ public class CommentConverter {
             return commentInfos;
         }
 
-        Map<Long, CacheRecord.CommentStatsCache> commentStatsCache = commentCacheService.findAllByItems(commentInfos);
-
-        if (commentStatsCache == null || commentStatsCache.isEmpty()) {
+        try{
+            Map<Long, CacheRecord.CommentStatsCache> commentStatsCache = commentCacheService.findAllByItems(commentInfos);
+            if (commentStatsCache == null || commentStatsCache.isEmpty()) {
+                return commentInfos;
+            }
+            return commentInfos.stream()
+                    .map(commentInfo -> updateSingleCommentStats(commentInfo, commentStatsCache.get(commentInfo.id())))
+                    .toList();
+        } catch (CacheException e) {
+            log.error(e.getMessage());
             return commentInfos;
         }
-
-        return commentInfos.stream()
-                .map(commentInfo -> updateSingleCommentStats(commentInfo, commentStatsCache.get(commentInfo.id())))
-                .toList();
     }
 
     /**
@@ -243,7 +247,6 @@ public class CommentConverter {
         if (cacheStats == null) {
             return original;
         }
-
         return original.withStats(cacheStats.likeCount(), cacheStats.recommentCount());
     }
 
