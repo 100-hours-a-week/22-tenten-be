@@ -30,7 +30,6 @@ public class AccessChecker {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final RecommentRepository recommentRepository;
-    private final MemberRepository memberRepository;
 
     /**
      * 사용자가 특정 게시판에 접근할 권한이 있는지 검증합니다.
