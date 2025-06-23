@@ -57,6 +57,18 @@ public class CommentResponseDto {
             @JsonProperty("is_liked")
             boolean isLiked
     ) {
+        public CommentInfo withStats(Long newLikeCount, Long newRecommentCount) {
+            return CommentInfo.builder()
+                    .id(this.id)
+                    .user(this.user)
+                    .content(this.content)
+                    .createdAt(this.createdAt)
+                    .likeCount(newLikeCount)
+                    .recommentCount(newRecommentCount)
+                    .isMine(this.isMine)
+                    .isLiked(this.isLiked)
+                    .build();
+        }
     }
 
     /**
