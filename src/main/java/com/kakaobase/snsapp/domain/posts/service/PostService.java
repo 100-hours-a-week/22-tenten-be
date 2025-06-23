@@ -58,11 +58,6 @@ public class PostService {
 
     /**
      * 게시글을 생성합니다.
-     *
-     * @param postType 게시판 유형
-     * @param requestDto 게시글 생성 요청 DTO
-     * @param memberId 작성자 ID
-     * @return 생성된 게시글 엔티티
      */
     @Transactional
     public PostResponseDto.PostDetails createPost(String postType, PostRequestDto.PostCreateRequestDto requestDto, Long memberId) {
@@ -125,10 +120,6 @@ public class PostService {
 
     /**
      * 게시글 상세 정보를 조회합니다.
-     *
-     * @param postId 게시글 ID
-     * @param memberId 현재 사용자 ID
-     * @return 게시글 상세 정보
      */
     public PostResponseDto.PostDetails getPostDetail(Long postId, Long memberId) {
 
@@ -142,9 +133,6 @@ public class PostService {
 
     /**
      * 게시글 ID로 게시글을 조회합니다.
-     *
-     * @param postId 게시글 ID
-     * @return 조회된 게시글 엔티티
      */
     public Post findById(Long postId) {
         return postRepository.findById(postId)
@@ -153,9 +141,6 @@ public class PostService {
 
     /**
      * 게시글을 삭제합니다.
-     *
-     * @param postId 게시글 ID
-     * @param memberId 삭제자 ID
      */
     @Transactional
     public void deletePost(Long postId, Long memberId) {
