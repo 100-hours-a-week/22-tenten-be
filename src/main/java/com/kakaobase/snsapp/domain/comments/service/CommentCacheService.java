@@ -6,6 +6,7 @@ import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.util.CommentCacheUtil;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.common.redis.service.cacheService.AbstractCacheService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.extern.slf4j.Slf4j;
@@ -71,19 +72,19 @@ public class CommentCacheService extends AbstractCacheService<CacheRecord.Commen
         return CACHE_TTL;
     }
 
-    public void incrementLikeCount(Long commentId) {
+    public void incrementLikeCount(Long commentId) throws CacheException {
         incrementField(commentId, "likeCount");
     }
 
-    public void decrementLikeCount(Long commentId) {
+    public void decrementLikeCount(Long commentId) throws CacheException {
         decrementField(commentId, "likeCount");
     }
 
-    public void incrementCommentCount(Long commentId) {
+    public void incrementCommentCount(Long commentId) throws CacheException{
         incrementField(commentId, "recommentCount");
     }
 
-    public void decrementCommentCount(Long commentId) {
+    public void decrementCommentCount(Long commentId) throws CacheException {
         decrementField(commentId, "recommentCount");
     }
 }
