@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.comments.repository;
 
 import com.kakaobase.snsapp.domain.comments.entity.RecommentLike;
+import com.kakaobase.snsapp.domain.comments.repository.custom.RecommentLikeCustomRepository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,7 +16,7 @@ import java.util.Optional;
  * <p>대댓글 좋아요에 대한 CRUD 및 다양한 조회 작업을 처리합니다.</p>
  */
 @Repository
-public interface RecommentLikeRepository extends JpaRepository<RecommentLike, RecommentLike.RecommentLikeId> {
+public interface RecommentLikeRepository extends JpaRepository<RecommentLike, RecommentLike.RecommentLikeId>, RecommentLikeCustomRepository {
 
     /**
      * 특정 회원이 특정 대댓글에 좋아요를 눌렀는지 확인합니다.
