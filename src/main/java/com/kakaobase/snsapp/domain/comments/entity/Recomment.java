@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Where;
 
 /**
  * 대댓글 정보를 담는 엔티티
@@ -25,6 +26,7 @@ import lombok.NoArgsConstructor;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Where(clause = "deleted_at IS NULL")
 public class Recomment extends BaseSoftDeletableEntity {
 
     @Id
@@ -82,23 +84,5 @@ public class Recomment extends BaseSoftDeletableEntity {
         if (this.likeCount > 0) {
             this.likeCount--;
         }
-    }
-
-    /**
-     * 작성자 확인
-     *
-     * @param member 확인할 회원
-     * @return 입력받은 회원이 작성자면 true, 아니면 false
-     */
-    public boolean isWrittenBy(Member member) {
-        return this.member.getId().equals(member.getId());
-    }
-
-    /**
-     * 대댓글 삭제 시 부모 댓글의 대댓글 수 감소
-     */
-    @PreRemove
-    public void onPreRemove() {
-        comment.decreaseRecommentCount();
     }
 }

@@ -1,6 +1,9 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
+import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
+import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
+import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
@@ -11,10 +14,11 @@ import com.kakaobase.snsapp.domain.posts.entity.PostImage;
 import com.kakaobase.snsapp.domain.posts.event.PostCreatedEvent;
 import com.kakaobase.snsapp.domain.posts.exception.PostErrorCode;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
-import com.kakaobase.snsapp.domain.posts.exception.YoutubeSummaryStatus;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
+import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.common.s3.service.S3Service;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
@@ -35,7 +39,6 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class PostService {
 
     private final PostRepository postRepository;
@@ -47,14 +50,13 @@ public class PostService {
     private final PostConverter postConverter;
     private final MemberRepository memberRepository;
     private final PostCacheService postCacheService;
+    private final CommentRepository commentRepository;
+    private final RecommentRepository recommentRepository;
+    private final CommentLikeRepository commentLikeRepository;
+    private final PostLikeRepository postLikeRepository;
 
     /**
      * 게시글을 생성합니다.
-     *
-     * @param postType 게시판 유형
-     * @param requestDto 게시글 생성 요청 DTO
-     * @param memberId 작성자 ID
-     * @return 생성된 게시글 엔티티
      */
     @Transactional
     public PostResponseDto.PostDetails createPost(String postType, PostRequestDto.PostCreateRequestDto requestDto, Long memberId) {
@@ -117,47 +119,41 @@ public class PostService {
 
     /**
      * 게시글 상세 정보를 조회합니다.
-     *
-     * @param postId 게시글 ID
-     * @param memberId 현재 사용자 ID
-     * @return 게시글 상세 정보
      */
+    @Transactional(readOnly = true)
     public PostResponseDto.PostDetails getPostDetail(Long postId, Long memberId) {
 
         PostResponseDto.PostDetails postDetails = postRepository.findPostDetailById(postId, memberId)
                 .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
 
-        CacheRecord.PostStatsCache cache = postCacheService.findBy(postId);
-
-        return postConverter.updateSinglePostStats(postDetails, cache);
-    }
-
-    /**
-     * 게시글 ID로 게시글을 조회합니다.
-     *
-     * @param postId 게시글 ID
-     * @return 조회된 게시글 엔티티
-     */
-    public Post findById(Long postId) {
-        return postRepository.findById(postId)
-                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId", "해당 게시글을 찾을 수 없습니다"));
+        try{
+            CacheRecord.PostStatsCache cache = postCacheService.findBy(postId);
+            return postConverter.updateSinglePostStats(postDetails, cache);
+        } catch (CacheException e){
+            return postDetails;
+        }
     }
 
     /**
      * 게시글을 삭제합니다.
-     *
-     * @param postId 게시글 ID
-     * @param memberId 삭제자 ID
      */
     @Transactional
     public void deletePost(Long postId, Long memberId) {
-        // 게시글 조회 - AccessChecker에서 이미 권한 검증을 했으므로 간소화 가능
-        Post post = findById(postId);
+        
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND,"postId", "이미 존재하지 않는 게시물 입니다"));
 
+        //해당 게시글과 연관된 댓글, 대댓글과 좋아요 삭제
+        recommentRepository.deleteByPostId(postId);
+        recommentRepository.deleteByPostId(postId);
+        commentRepository.deleteByPostId(postId);
+        commentLikeRepository.deleteByPostId(postId);
+        postLikeRepository.deleteByPostId(postId);
         // 소프트 삭제 처리
         postRepository.delete(post);
         //캐시에서 제거
         postCacheService.delete(post.getId());
+
         log.info("게시글 삭제 완료: 게시글 ID={}, 삭제자 ID={}", postId, memberId);
     }
 
@@ -165,6 +161,7 @@ public class PostService {
     /**
      * 게시글 목록을 조회합니다.
      */
+    @Transactional(readOnly = true)
     public List<PostResponseDto.PostDetails> getPostList(String postType, int limit, Long cursor, Long currentMemberId) {
         // 1. 유효성 검증
         if (limit < 1) {
@@ -181,8 +178,9 @@ public class PostService {
     }
 
     /**
-     * 유저가 작성한 게시글 조회
+     * 게시글 목록 조회
      */
+    @Transactional(readOnly = true)
     public List<PostResponseDto.PostDetails> getUserPostList(int limit, Long cursor, Long memberId, Long currentMemberId) {
         // 1. 유효성 검증
         if (limit < 1) {
@@ -197,6 +195,10 @@ public class PostService {
 
     }
 
+    /**
+     * 유저가 좋아요한 게시글 목록 조회
+     */
+    @Transactional(readOnly = true)
     public List<PostResponseDto.PostDetails> getLikedPostList(int limit, Long cursor, Long memberId, Long currentMemberId) {
 
         if(!memberRepository.existsById(memberId)){

@@ -1,15 +1,20 @@
 package com.kakaobase.snsapp.global.common.redis.error;
+import lombok.Getter;
 
-import com.kakaobase.snsapp.global.error.code.BaseErrorCode;
-import com.kakaobase.snsapp.global.error.exception.CustomException;
+import java.io.IOException;
 
-public class CacheException extends CustomException {
+@Getter
+public class CacheException extends IOException {
 
-    public CacheException(BaseErrorCode errorCode) {
-        super(errorCode);
+    private final transient CacheErrorCode errorCode;
+
+    public CacheException(CacheErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.errorCode = errorCode;
     }
 
-    public CacheException(BaseErrorCode errorCode, String message) {
-        super(errorCode, null, message);
+    public CacheException(CacheErrorCode errorCode, String message) {
+        super(errorCode.getMessage()+message);
+        this.errorCode = errorCode;
     }
 }

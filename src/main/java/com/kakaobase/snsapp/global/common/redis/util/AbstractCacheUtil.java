@@ -2,6 +2,8 @@ package com.kakaobase.snsapp.global.common.redis.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kakaobase.snsapp.global.common.redis.error.CacheErrorCode;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -26,8 +28,12 @@ public abstract class AbstractCacheUtil<V> implements CacheUtil<String, V> {
 
     protected abstract Class<V> getType();
 
+    @Value("${lock.wait.millis:1000}")
+    private long lockWaitTimeMillis;
+
     @Value("${lock.timeout.millis:3000}")
     private long lockTimeoutMillis;
+
 
     @Override
     public void save(String key, V value) {
@@ -86,36 +92,34 @@ public abstract class AbstractCacheUtil<V> implements CacheUtil<String, V> {
                 result.put(key, null);
             }
         }
-
         return result;
     }
 
     @Override
-    public boolean runWithLock(String cacheKey, Runnable action) {
+    public void runWithLock(String cacheKey, Runnable action) throws CacheException{
         RLock lock = redissonClient.getLock("lock"+cacheKey);
         boolean acquired = false;
 
         try {
-            acquired = lock.tryLock(1000, 3000, TimeUnit.MILLISECONDS);
+            acquired = lock.tryLock(lockWaitTimeMillis, lockTimeoutMillis, TimeUnit.MILLISECONDS);
 
             // 락 획득 실패시 early return
             if (!acquired) {
-                return false;
+                throw new CacheException(CacheErrorCode.LOCK_ACQUISITION_FAIL);
             }
 
             // 캐시가 이미 존재하는 경우 early return
             if (existsCache(cacheKey)) {
                 log.info("해당 캐시는 이미 존재 {}", cacheKey);
-                return false;
+                throw new CacheException(CacheErrorCode.CACHE_ALREADY_EXISTS);
             }
 
             // 정상 처리
             action.run();
-            return true;
 
         } catch (Exception e) {
             log.error("락 수행 중 예외 발생", e);
-            return false;
+            throw new CacheException(CacheErrorCode.LOCK_ERROR);
         } finally {
             if (acquired && lock.isHeldByCurrentThread()) {
                 try {

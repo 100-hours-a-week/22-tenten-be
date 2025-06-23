@@ -33,7 +33,6 @@ public class CommentController {
     private final CommentService commentService;
     private final CommentLikeService commentLikeService;
 
-
     /**
      * 댓글 작성 API
      */
@@ -73,17 +72,17 @@ public class CommentController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "댓글 상세 조회 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.CommentDetailResponse.class))),
+                    content = @Content(schema = @Schema(implementation = CommentResponseDto.CommentInfo.class))),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
     })
-    public ResponseEntity<CustomResponse<CommentResponseDto.CommentDetailResponse>> getCommentDetail(
+    public CustomResponse<CommentResponseDto.CommentInfo> getCommentDetail(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
-        CommentResponseDto.CommentDetailResponse response = commentService.getCommentDetail(memberId, commentId);
-        return ResponseEntity.ok(CustomResponse.success("댓글을 성공적으로 불러왔습니다.", response));
+        CommentResponseDto.CommentInfo response = commentService.getCommentInfo(memberId, commentId);
+        return CustomResponse.success("댓글을 성공적으로 불러왔습니다.", response);
     }
 
     /**
@@ -118,22 +117,15 @@ public class CommentController {
             summary = "게시글의 댓글 목록 조회",
             description = "게시글에 작성된 댓글 목록을 조회합니다. 페이지네이션을 지원합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "댓글 목록 조회 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.CommentListResponse.class))),
-            @ApiResponse(responseCode = "403", description = "권한 없음"),
-            @ApiResponse(responseCode = "404", description = "게시글 없음")
-    })
-    public ResponseEntity<CustomResponse<CommentResponseDto.CommentListResponse>> getCommentsByPostId(
+    public CustomResponse<List<CommentResponseDto.CommentInfo>> getCommentsByPostId(
             @PathVariable Long postId,
-            @Parameter(description = "한 번에 불러올 댓글 수 (기본값: 12)") @RequestParam(required = false) Integer limit,
+            @Parameter(description = "한 번에 불러올 댓글 수 (기본값: 12)") @RequestParam(required = false, defaultValue = "12") Integer limit,
             @Parameter(description = "페이지네이션 커서 (이전 응답의 next_cursor)") @RequestParam(required = false) Long cursor,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
-        CommentRequestDto.CommentPageRequest pageRequest = new CommentRequestDto.CommentPageRequest(limit, cursor);
-        CommentResponseDto.CommentListResponse response = commentService.getCommentsByPostId(memberId, postId, pageRequest);
-        return ResponseEntity.ok(CustomResponse.success("댓글 목록을 조회했습니다.", response));
+        List<CommentResponseDto.CommentInfo> response = commentService.getCommentsByPostId(memberId, postId, limit, cursor);
+        return CustomResponse.success("댓글 목록을 조회했습니다.", response);
     }
 
     /**
@@ -145,24 +137,16 @@ public class CommentController {
             summary = "댓글의 대댓글 목록 조회",
             description = "특정 댓글에 작성된 대댓글 목록을 조회합니다. 페이지네이션을 지원합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "대댓글 목록 조회 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.RecommentListResponse.class))),
-            @ApiResponse(responseCode = "403", description = "권한 없음"),
-            @ApiResponse(responseCode = "404", description = "댓글 없음")
-    })
-    public ResponseEntity<CustomResponse<CommentResponseDto.RecommentListResponse>> getRecommentsByCommentId(
+    public CustomResponse<List<CommentResponseDto.RecommentInfo>> getRecommentsByCommentId(
             @PathVariable Long commentId,
-            @Parameter(description = "한 번에 불러올 대댓글 수 (기본값: 12)") @RequestParam(required = false) Integer limit,
+            @Parameter(description = "한 번에 불러올 대댓글 수 (기본값: 12)") @RequestParam(required = false, defaultValue = "12") Integer limit,
             @Parameter(description = "페이지네이션 커서 (이전 응답의 next_cursor)") @RequestParam(required = false) Long cursor,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long memberId = Long.valueOf(userDetails.getId());
-        CommentRequestDto.RecommentPageRequest pageRequest = new CommentRequestDto.RecommentPageRequest(limit, cursor);
-        CommentResponseDto.RecommentListResponse response = commentService.getRecommentsByCommentId(memberId, commentId, pageRequest);
-        return ResponseEntity.ok(CustomResponse.success("대댓글 목록을 조회했습니다.", response));
+        List<CommentResponseDto.RecommentInfo> response = commentService.getRecommentInfoList(memberId, commentId, limit, cursor);
+        return CustomResponse.success("대댓글 목록을 조회했습니다.", response);
     }
-
 
     /**
      * 댓글 좋아요 추가 API

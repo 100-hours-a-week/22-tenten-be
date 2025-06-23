@@ -9,6 +9,7 @@ import com.kakaobase.snsapp.domain.posts.entity.PostImage;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.service.PostCacheService;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -123,16 +124,19 @@ public class PostConverter {
     public List<PostResponseDto.PostDetails> updateWithCachedStats(
             List<PostResponseDto.PostDetails> postDetails) {
 
-        Map<Long, CacheRecord.PostStatsCache> postStatsCache = postCacheService.findAllByItems(postDetails);
 
-
-        if (postDetails == null || postDetails.isEmpty() || postStatsCache == null || postStatsCache.isEmpty()) {
+        try{
+            Map<Long, CacheRecord.PostStatsCache> postStatsCache = postCacheService.findAllByItems(postDetails);
+            if (postDetails == null || postDetails.isEmpty() || postStatsCache == null || postStatsCache.isEmpty()) {
+                return postDetails;
+            }
+            return postDetails.stream()
+                    .map(postDetail -> updateSinglePostStats(postDetail, postStatsCache.get(postDetail.id())))
+                    .toList();
+        }catch (CacheException e){
+            log.error(e.getMessage());
             return postDetails;
         }
-
-        return postDetails.stream()
-                .map(postDetail -> updateSinglePostStats(postDetail, postStatsCache.get(postDetail.id())))
-                .toList();
     }
 
     /**
