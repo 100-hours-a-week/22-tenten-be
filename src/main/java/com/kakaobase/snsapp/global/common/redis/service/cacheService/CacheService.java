@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.global.common.redis.service;
+package com.kakaobase.snsapp.global.common.redis.service.cacheService;
 
 import java.util.List;
 import java.util.Map;
