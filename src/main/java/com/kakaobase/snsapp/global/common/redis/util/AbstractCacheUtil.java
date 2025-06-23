@@ -28,8 +28,12 @@ public abstract class AbstractCacheUtil<V> implements CacheUtil<String, V> {
 
     protected abstract Class<V> getType();
 
+    @Value("${lock.wait.millis:1000}")
+    private long lockWaitTimeMillis;
+
     @Value("${lock.timeout.millis:3000}")
     private long lockTimeoutMillis;
+
 
     @Override
     public void save(String key, V value) {
@@ -92,12 +96,12 @@ public abstract class AbstractCacheUtil<V> implements CacheUtil<String, V> {
     }
 
     @Override
-    public void runWithLock(String cacheKey, Runnable action) {
+    public void runWithLock(String cacheKey, Runnable action) throws CacheException{
         RLock lock = redissonClient.getLock("lock"+cacheKey);
         boolean acquired = false;
 
         try {
-            acquired = lock.tryLock(1000, lockTimeoutMillis, TimeUnit.MILLISECONDS);
+            acquired = lock.tryLock(lockWaitTimeMillis, lockTimeoutMillis, TimeUnit.MILLISECONDS);
 
             // 락 획득 실패시 early return
             if (!acquired) {
