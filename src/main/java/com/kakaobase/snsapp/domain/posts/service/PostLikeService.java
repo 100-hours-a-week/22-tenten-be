@@ -1,16 +1,14 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
-import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
-import com.kakaobase.snsapp.domain.members.service.MemberService;
-import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.entity.PostLike;
 import com.kakaobase.snsapp.domain.posts.exception.PostErrorCode;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 게시글 좋아요 관련 비즈니스 로직을 처리하는 서비스
@@ -55,12 +50,17 @@ public class PostLikeService {
         Post proxyPost = em.getReference(Post.class, postId);
         Member proxyMember = em.getReference(Member.class, memberId);
 
+        //게시글 좋아요 수 캐싱 처리
+        try{
+            postCacheService.incrementLikeCount(postId);
+        } catch (CacheException e){
+            log.error(e.getMessage());
+            proxyPost.increaseLikeCount();
+        }
+
         // 좋아요 엔티티 생성 및 저장
         PostLike postLike = new PostLike(proxyMember, proxyPost);
         postLikeRepository.save(postLike);
-
-        postCacheService.incrementLikeCount(postId);
-
         log.info("게시글 좋아요 추가 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
     }
 
@@ -82,11 +82,16 @@ public class PostLikeService {
         PostLike postLike = postLikeRepository.findByMemberIdAndPostId(memberId, postId)
                 .orElseThrow(() -> new PostException(PostErrorCode.ALREADY_UNLIKED));
 
+        try{
+            postCacheService.decrementLikeCount(postId);
+        } catch (CacheException e){
+            log.error(e.getMessage());
+            Post proxyPost = em.getReference(Post.class, postId);
+            proxyPost.decreaseLikeCount();
+        }
+
         // 좋아요 삭제
         postLikeRepository.delete(postLike);
-
-        postCacheService.decrementLikeCount(postId);
-
         log.info("게시글 좋아요 취소 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
     }
 
