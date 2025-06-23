@@ -17,6 +17,7 @@ import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.service.PostCacheService;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -79,7 +80,13 @@ public class CommentService {
             Recomment savedRecomment = recommentRepository.save(recomment);
 
             //부모 댓글 대댓글 카운트 증가
-            commentCacheService.incrementCommentCount(request.parent_id());
+            try{
+                commentCacheService.incrementCommentCount(request.parent_id());
+            } catch (CacheException e){
+                log.error(e.getMessage());
+                Comment comment = em.getReference(Comment.class, request.parent_id());
+                comment.increaseRecommentCount();
+            }
 
             return commentConverter.toCreateRecommentResponse(savedRecomment);
         }
@@ -91,7 +98,14 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
 
         //캐시에 게시글의 댓글 수 추가
-        postCacheService.incrementCommentCount(post.getId());
+        try{
+            postCacheService.incrementCommentCount(post.getId());
+        }
+        catch (CacheException e){
+            log.error(e.getMessage());
+            post.increaseCommentCount();
+        }
+
 
         log.info("댓글 생성 완료: 댓글 ID={}, 작성자 ID={}, 게시글 ID={}",
                 savedComment.getId(), memberId, postId);
@@ -126,7 +140,13 @@ public class CommentService {
         commentLikeRepository.deleteByCommentId(commentId);
 
         // 게시글의 댓글 수 1감소
-        postCacheService.decrementCommentCount(comment.getPost().getId());
+        try{
+            postCacheService.decrementCommentCount(comment.getPost().getId());
+        } catch (CacheException e){
+            log.error(e.getMessage());
+            comment.getPost().decreaseCommentCount();
+        }
+
 
         // 댓글 삭제 (Soft Delete)
         commentRepository.delete(comment);
@@ -146,7 +166,12 @@ public class CommentService {
         // 대댓글의 좋아요 삭제
         recommentLikeRepository.deleteByRecommentId(recommentId);
 
-        commentCacheService.decrementCommentCount(recomment.getComment().getId());
+        try{
+            commentCacheService.decrementCommentCount(recomment.getComment().getId());
+        } catch (CacheException e){
+            log.error(e.getMessage());
+            recomment.getComment().decreaseRecommentCount();
+        }
 
         // 대댓글 삭제 (Soft Delete)
         recommentRepository.delete(recomment);
