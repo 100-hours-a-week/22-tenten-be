@@ -132,20 +132,13 @@ public class PostService {
     }
 
     /**
-     * 게시글 ID로 게시글을 조회합니다.
-     */
-    public Post findById(Long postId) {
-        return postRepository.findById(postId)
-                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId", "해당 게시글을 찾을 수 없습니다"));
-    }
-
-    /**
      * 게시글을 삭제합니다.
      */
     @Transactional
     public void deletePost(Long postId, Long memberId) {
-        // 게시글 조회 - AccessChecker에서 이미 권한 검증을 했으므로 간소화 가능
-        Post post = findById(postId);
+        
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND,"postId", "이미 존재하지 않는 게시물 입니다"));
 
         //해당 게시글과 연관된 댓글, 대댓글과 좋아요 삭제
         recommentRepository.deleteByPostId(postId);
@@ -181,7 +174,7 @@ public class PostService {
     }
 
     /**
-     * 유저가 작성한 게시글 조회
+     * 게시글 목록 조회
      */
     public List<PostResponseDto.PostDetails> getUserPostList(int limit, Long cursor, Long memberId, Long currentMemberId) {
         // 1. 유효성 검증
@@ -197,6 +190,9 @@ public class PostService {
 
     }
 
+    /**
+     * 유저가 좋아요한 게시글 목록 조회
+     */
     public List<PostResponseDto.PostDetails> getLikedPostList(int limit, Long cursor, Long memberId, Long currentMemberId) {
 
         if(!memberRepository.existsById(memberId)){
