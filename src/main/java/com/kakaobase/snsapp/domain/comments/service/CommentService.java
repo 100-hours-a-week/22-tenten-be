@@ -43,7 +43,6 @@ public class CommentService {
     private final RecommentRepository recommentRepository;
     private final MemberRepository memberRepository;
     private final CommentConverter commentConverter;
-    private final CommentLikeService commentLikeService;
     private final PostCacheService postCacheService;
 
     private final CommentLikeRepository commentLikeRepository;
@@ -157,7 +156,7 @@ public class CommentService {
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "recommentId", "해당 대댓글을 찾을 수 없습니다."));
 
         // 대댓글의 좋아요 삭제
-        commentLikeService.deleteAllRecommentLikesByRecommentId(recommentId);
+        recommentLikeRepository.deleteByRecommentId(recommentId);
 
         commentCacheService.decrementCommentCount(recomment.getComment().getId());
 
@@ -170,56 +169,17 @@ public class CommentService {
     /**
      * 게시글의 댓글 목록을 조회합니다.
      */
-    public CommentResponseDto.CommentListResponse getCommentsByPostId(Long memberId, Long postId, Integer limit, Long cursor) {
-
-        // 댓글 목록 조회
-        List<Comment> comments = commentRepository.findByPostIdWithCursor(postId, cursor, limit + 1); // 다음 페이지 확인을 위해 limit + 1개 조회
-
-        if (comments.isEmpty()) {
-            return new CommentResponseDto.CommentListResponse(
-                    Collections.emptyList(),
-                    false,
-                    null
-            );
+    public List<CommentResponseDto.CommentInfo> getCommentsByPostId(Long memberId, Long postId, Integer limit, Long cursor) {
+        // 1. 유효성 검증
+        if (limit < 1) {
+            throw new CommentException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit", "limit는 1 이상이어야 합니다.");
         }
 
-        // 다음 페이지 존재 여부 확인
-        boolean hasNext = comments.size() > limit;
+        // 2. 게시글 조회
+        List<CommentResponseDto.CommentInfo> commentInfos = commentRepository.findCommentInfoListWithCursor(postId, cursor, limit, memberId);
 
-        // 실제 반환할 댓글 목록 (limit개로 제한)
-        List<Comment> pageComments = hasNext ? comments.subList(0, limit) : comments;
-
-        Map<Long, CacheRecord.CommentStatsCache> cacheMap = commentCacheService.findAllByItems(pageComments);
-
-        // 다음 커서 설정
-        Long nextCursor = hasNext ? pageComments.get(pageComments.size() - 1).getId() : null;
-
-        // 1. 미리 필요한 ID 목록 수집
-        List<Long> commentIds = pageComments.stream().map(Comment::getId).toList();
-        List<Long> memberIds = pageComments.stream()
-                .map(c -> c.getMember().getId())
-                .distinct()
-                .toList();
-
-        // 2. 일괄 조회
-        Set<Long> likedCommentIds = commentLikeRepository.findLikedCommentIdsByMemberAndComments(memberId, commentIds);
-        Set<Long> followingMemberIds = followRepository.findFollowingMemberIdsByFollowerAndTargets(memberId, memberIds);
-
-        // 3. Stream에서 Set 조회 활용
-        List<CommentResponseDto.CommentInfo> commentInfoList = commentConverter.toCommentInfoList(
-                pageComments,
-                memberId,
-                cacheMap,
-                likedCommentIds,
-                followingMemberIds
-        );
-
-        // CommentListResponse 생성하여 반환
-        return new CommentResponseDto.CommentListResponse(
-                commentInfoList,
-                hasNext,
-                nextCursor
-        );
+        // 3. PostListItem으로 변환
+        return commentConverter.updateWithCachedStats(commentInfos);
     }
 
 
