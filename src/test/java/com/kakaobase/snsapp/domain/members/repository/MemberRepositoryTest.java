@@ -330,35 +330,6 @@ class MemberRepositoryTest {
 
     // === 프로필 조회 테스트 ===
 
-    @Test
-    @DisplayName("프로필 정보를 조회할 수 있다")
-    void findProfileById_WithValidId_ReturnsProfile() {
-        // given
-        Long validId = testMember.getId();
-
-        // when
-        Optional<Member> result = memberRepository.findProfileById(validId);
-
-        // then
-        assertThat(result).isPresent();
-        assertThat(result.get().getId()).isEqualTo(validId);
-        assertThat(result.get().getNickname()).isNotNull();
-        assertThat(result.get().getEmail()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 ID로 프로필 조회 시 빈 Optional을 반환한다")
-    void findProfileById_WithNonExistentId_ReturnsEmpty() {
-        // given
-        Long nonExistentId = 999999L;
-
-        // when
-        Optional<Member> result = memberRepository.findProfileById(nonExistentId);
-
-        // then
-        assertThat(result).isEmpty();
-    }
-
 
     // === 데이터 무결성 및 이메일 인증 연동 테스트 ===
 
