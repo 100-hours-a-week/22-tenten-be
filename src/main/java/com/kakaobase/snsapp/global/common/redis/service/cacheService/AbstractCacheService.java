@@ -34,7 +34,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
     }
 
     @Override
-    public void incrementField(Long id, String field) throws CacheException {
+    public void incrementField (Long id, String field) throws CacheException {
         checkCacheAndWriteBack(id);
         incrementFieldAndSync(id, field);
     }
@@ -164,7 +164,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
     /**
      * 필드 값 증가 및 동기화 큐 추가
      */
-    protected void incrementFieldAndSync(Long id, String fieldName) {
+    protected void incrementFieldAndSync(Long id, String fieldName) throws CacheException{
         try {
             String key = generateCacheKey(id);
             redisTemplate.opsForHash().increment(key, fieldName, 1);
@@ -182,7 +182,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
     /**
      * 필드 값 감소 및 동기화 큐 추가 (음수 방지)
      */
-    protected void decrementFieldAndSync(Long id, String fieldName) {
+    protected void decrementFieldAndSync(Long id, String fieldName) throws CacheException{
         try {
             String key = generateCacheKey(id);
             Long newValue = redisTemplate.opsForHash().increment(key, fieldName, -(long) -1);
