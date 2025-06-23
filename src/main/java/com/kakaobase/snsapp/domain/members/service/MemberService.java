@@ -135,8 +135,10 @@ public class MemberService {
             throw new MemberException(MemberErrorCode.EMAIL_VERIFICATION_FAILED);
         }
 
+        followRepository.cleanupAllFollowRelationships(member.getId());
+
         // Member 엔티티 삭제
-        member.softDelete();
+        memberRepository.delete(member);
 
     }
 
