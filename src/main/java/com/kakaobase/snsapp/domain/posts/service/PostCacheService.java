@@ -6,7 +6,7 @@ import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.util.PostCacheUtil;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
-import com.kakaobase.snsapp.global.common.redis.service.AbstractCacheService;
+import com.kakaobase.snsapp.global.common.redis.service.cacheService.AbstractCacheService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;

@@ -2,7 +2,7 @@ package com.kakaobase.snsapp.domain.comments.service;
 
 import com.kakaobase.snsapp.domain.comments.util.CommentCacheUtil;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
-import com.kakaobase.snsapp.global.common.redis.service.AbstractCacheSyncService;
+import com.kakaobase.snsapp.global.common.redis.service.cacheSyncService.AbstractCacheSyncService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

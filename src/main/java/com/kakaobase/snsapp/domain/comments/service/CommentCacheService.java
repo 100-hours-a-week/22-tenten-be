@@ -6,7 +6,7 @@ import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.util.CommentCacheUtil;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
-import com.kakaobase.snsapp.global.common.redis.service.AbstractCacheService;
+import com.kakaobase.snsapp.global.common.redis.service.cacheService.AbstractCacheService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
