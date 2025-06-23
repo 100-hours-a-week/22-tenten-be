@@ -8,6 +8,7 @@ import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.entity.RecommentLike;
 import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
+import com.kakaobase.snsapp.domain.comments.service.CommentCacheService;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
@@ -28,15 +29,11 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class CommentConverter {
 
+    private final CommentCacheService commentCacheService;
     private final EntityManager em;
 
     /**
      * 댓글 작성 요청 DTO를 댓글 엔티티로 변환
-     *
-     * @param post 댓글이 작성될 게시글
-     * @param member 댓글 작성자
-     * @param request 댓글 작성 요청 DTO
-     * @return 생성된 댓글 엔티티
      */
     public Comment toCommentEntity(
             Post post,
@@ -53,11 +50,6 @@ public class CommentConverter {
 
     /**
      * 대댓글 작성 요청 DTO를 대댓글 엔티티로 변환
-     *
-     * @param parentComment 대댓글이 작성될 부모 댓글
-     * @param member 대댓글 작성자
-     * @param request 대댓글 작성 요청 DTO
-     * @return 생성된 대댓글 엔티티
      */
     public Recomment toRecommentEntity(Comment parentComment,
                                        Member member,
@@ -123,120 +115,8 @@ public class CommentConverter {
         );
     }
 
-    public CommentResponseDto.CommentInfo toCommentInfo(
-            Comment comment,
-            Long likeCount,
-            Long recommentCount,
-            Boolean isMine,
-            Boolean isLiked,
-            Boolean isFollowing
-    ) {
-
-        Member commentOwner = comment.getMember();
-
-        MemberResponseDto.UserInfoWithFollowing userInfo =
-                MemberResponseDto.UserInfoWithFollowing.builder()
-                        .id(commentOwner.getId())
-                        .nickname(commentOwner.getNickname())
-                        .imageUrl(commentOwner.getProfileImgUrl())
-                        .isFollowed(isFollowing)
-                        .build();
-
-        return CommentResponseDto.CommentInfo
-                .builder()
-                .id(comment.getId())
-                .PostId(comment.getPost().getId())
-                .user(userInfo)
-                .content(comment.getContent())
-                .created_at(comment.getCreatedAt())
-                .like_count(likeCount)
-                .recomment_count(recommentCount)
-                .is_mine(isMine)
-                .is_liked(isLiked)
-                .build();
-    }
-
-    /**
-     * 댓글 목록을 CommentInfo DTO 목록으로 변환
-     *
-     * @param comments 변환할 댓글 목록
-     * @param memberId 현재 사용자 ID (비로그인 시 null)
-     * @param cacheMap 댓글 통계 캐시 데이터
-     * @param likedCommentIds 현재 사용자가 좋아요한 댓글 ID 집합
-     * @param followingMemberIds 현재 사용자가 팔로우하는 회원 ID 집합
-     * @return CommentInfo DTO 목록
-     */
-    public List<CommentResponseDto.CommentInfo> toCommentInfoList(
-            List<Comment> comments,
-            Long memberId,
-            Map<Long, CacheRecord.CommentStatsCache> cacheMap,
-            Set<Long> likedCommentIds,
-            Set<Long> followingMemberIds) {
-
-        return comments.stream()
-                .map(comment -> {
-                    // 캐시에서 댓글 통계 정보 가져오기
-                    CacheRecord.CommentStatsCache cacheData = cacheMap.getOrDefault(
-                            comment.getId(),
-                            CacheRecord.CommentStatsCache.createDefault(comment.getId())
-                    );
-
-                    // Set에서 즉시 확인 (DB 조회 없음)
-                    boolean isMine = comment.getMember().getId().equals(memberId);
-                    boolean isLiked = likedCommentIds.contains(comment.getId());
-                    boolean isFollowing = !isMine && followingMemberIds.contains(comment.getMember().getId());
-
-                    return toCommentInfo(
-                            comment,
-                            cacheData.likeCount(),
-                            cacheData.recommentCount(),
-                            isMine,
-                            isLiked,
-                            isFollowing
-                    );
-                })
-                .toList();
-    }
-
-    /**
-     * 대댓글 목록을 대댓글 목록 응답 DTO로 변환
-     *
-     * @param recomments 대댓글 목록
-     * @param currentMemberId 현재 로그인한 회원 ID
-     * @param likedRecommentIds 좋아요 누른 대댓글 ID 목록
-     * @param nextCursor 다음 페이지 커서
-     * @return 대댓글 목록 응답 DTO
-     */
-    public CommentResponseDto.RecommentListResponse toRecommentListResponse(
-            List<Recomment> recomments,
-            Long currentMemberId,
-            Set<Long> likedRecommentIds,
-            Set<Long> followingMemberIds,
-            Long nextCursor
-    ) {
-        List<CommentResponseDto.RecommentInfo> recommentInfos = recomments.stream()
-                .map(recomment -> toRecommentInfo(
-                        recomment,
-                        currentMemberId,
-                        likedRecommentIds,
-                        followingMemberIds
-                ))
-                .toList();
-
-        return new CommentResponseDto.RecommentListResponse(
-                recommentInfos,
-                nextCursor != null,
-                nextCursor
-        );
-    }
-
     /**
      * 대댓글 엔티티를 대댓글 상세 정보 DTO로 변환
-     *
-     * @param recomment 대댓글 엔티티
-     * @param currentMemberId 현재 로그인한 회원 ID
-     * @param likedRecommentIds 좋아요 누른 대댓글 ID 목록
-     * @return 대댓글 상세 정보 DTO
      */
     public CommentResponseDto.RecommentInfo toRecommentInfo(
             Recomment recomment,
@@ -267,10 +147,6 @@ public class CommentConverter {
 
     /**
      * 댓글 좋아요 엔티티 생성
-     *
-     * @param memberId 회원 ID
-     * @param commentId 댓글 ID
-     * @return 댓글 좋아요 엔티티
      */
     public CommentLike toCommentLikeEntity(Long memberId, Long commentId) {
 
@@ -282,10 +158,6 @@ public class CommentConverter {
 
     /**
      * 대댓글 좋아요 엔티티 생성
-     *
-     * @param memberId 회원 ID
-     * @param recommentId 대댓글 ID
-     * @return 대댓글 좋아요 엔티티
      */
     public RecommentLike toRecommentLikeEntity(Long memberId, Long recommentId) {
 
@@ -335,6 +207,44 @@ public class CommentConverter {
                 false,   // is_mine
                 false    // is_liked
         );
+    }
+
+    /**
+     * PostDetails 리스트의 likeCount, commentCount를 캐시 데이터로 업데이트
+     *
+     * @return 캐시 데이터가 적용된 PostDetails 리스트
+     */
+    public List<CommentResponseDto.CommentInfo> updateWithCachedStats(
+            List<CommentResponseDto.CommentInfo> commentInfos) {
+
+        if (commentInfos == null || commentInfos.isEmpty()) {
+            return commentInfos;
+        }
+
+        Map<Long, CacheRecord.CommentStatsCache> commentStatsCache = commentCacheService.findAllByItems(commentInfos);
+
+        if (commentStatsCache == null || commentStatsCache.isEmpty()) {
+            return commentInfos;
+        }
+
+        return commentInfos.stream()
+                .map(commentInfo -> updateSingleCommentStats(commentInfo, commentStatsCache.get(commentInfo.id())))
+                .toList();
+    }
+
+    /**
+     * 단일 PostDetails의 통계 정보를 캐시 데이터로 업데이트
+     */
+    public CommentResponseDto.CommentInfo updateSingleCommentStats(
+            CommentResponseDto.CommentInfo original,
+            CacheRecord.CommentStatsCache cacheStats) {
+
+        // 캐시 데이터가 없으면 원본 그대로 반환
+        if (cacheStats == null) {
+            return original;
+        }
+
+        return original.withStats(cacheStats.likeCount(), cacheStats.recommentCount());
     }
 
 }
