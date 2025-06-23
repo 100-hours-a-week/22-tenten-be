@@ -259,20 +259,18 @@ public class MemberService {
             Long id = member.getId();
 
             // 팔로잉 카운트 동기화
-            Integer newFollowingCount = followingCounts.getOrDefault(id, 0L).intValue();
+            Long newFollowingCount = followingCounts.getOrDefault(id, 0L);
             if (!member.getFollowingCount().equals(newFollowingCount)) {
                 member.updateFollowingCount(newFollowingCount);
             }
 
             // 팔로워 카운트 동기화
-            Integer newFollowerCount = followerCounts.getOrDefault(id, 0L).intValue();
+            Long newFollowerCount = followerCounts.getOrDefault(id, 0L);
             if (!member.getFollowerCount().equals(newFollowerCount)) {
                 member.updateFollowerCount(newFollowerCount);
             }
         });
     }
-
-
 
     private Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
