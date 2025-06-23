@@ -6,6 +6,7 @@ import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.util.PostCacheUtil;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.common.redis.service.cacheService.AbstractCacheService;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.extern.slf4j.Slf4j;
@@ -32,19 +33,19 @@ public class PostCacheService extends AbstractCacheService<CacheRecord.PostStats
 
 
 
-    public void incrementLikeCount(Long postId) {
+    public void incrementLikeCount(Long postId) throws CacheException {
         incrementField(postId, "likeCount");
     }
 
-    public void decrementLikeCount(Long postId) {
+    public void decrementLikeCount(Long postId) throws CacheException {
         decrementField(postId, "likeCount");
     }
 
-    public void incrementCommentCount(Long postId) {
+    public void incrementCommentCount(Long postId) throws CacheException {
         incrementField(postId, "commentCount");
     }
 
-    public void decrementCommentCount(Long postId) {
+    public void decrementCommentCount(Long postId) throws CacheException {
         decrementField(postId, "commentCount");
     }
 
