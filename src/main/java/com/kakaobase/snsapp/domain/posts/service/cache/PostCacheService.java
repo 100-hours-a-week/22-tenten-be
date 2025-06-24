@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.domain.posts.service;
+package com.kakaobase.snsapp.domain.posts.service.cache;
 
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
