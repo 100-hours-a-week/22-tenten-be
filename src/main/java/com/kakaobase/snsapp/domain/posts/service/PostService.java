@@ -17,6 +17,7 @@ import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.common.s3.service.S3Service;
@@ -75,14 +76,7 @@ public class PostService {
             throw new PostException(PostErrorCode.INVALID_IMAGE_URL);
         }
 
-        Post.BoardType boardType;
-
-        try {
-            boardType = Post.BoardType.valueOf(postType);
-        } catch (IllegalArgumentException e) {
-            log.error("잘못된 게시판 타입: {}", postType);
-            throw new PostException(GeneralErrorCode.INVALID_FORMAT, "postType");
-        }
+        BoardType boardType = postConverter.toBoardType(postType);
 
         String youtubeUrl = requestDto.youtube_url();
 
@@ -168,7 +162,7 @@ public class PostService {
             throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit", "limit는 1 이상이어야 합니다.");
         }
 
-        Post.BoardType boardType = PostConverter.toBoardType(postType);
+        BoardType boardType = postConverter.toBoardType(postType.toUpperCase());
 
         // 2. 게시글 조회
         List<PostResponseDto.PostDetails> postDetails = postRepository.findByBoardTypeWithCursor(boardType, cursor, limit, currentMemberId);
