@@ -100,3 +100,6 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /api/swagger-ui.html
+
+server:
+  forward-headers-strategy: framework
