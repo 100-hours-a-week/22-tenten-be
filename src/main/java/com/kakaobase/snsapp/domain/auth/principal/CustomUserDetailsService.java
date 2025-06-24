@@ -32,7 +32,7 @@ public class CustomUserDetailsService implements UserDetailsService {
      */
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public CustomUserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         log.debug("사용자 인증 정보 조회: {}", email);
 
         Member member = memberRepository.findByEmail(email)
@@ -64,7 +64,7 @@ public class CustomUserDetailsService implements UserDetailsService {
      * @throws CustomException 사용자를 찾을 수 없는 경우 발생
      */
     @Transactional(readOnly = true)
-    public UserDetails loadUserById(String id) {
+    public CustomUserDetails loadUserById(String id) {
         log.debug("ID로 사용자 인증 정보 조회: {}", id);
 
         Long memberId;
