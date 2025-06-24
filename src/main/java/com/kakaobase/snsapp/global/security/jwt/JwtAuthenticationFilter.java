@@ -35,10 +35,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // 필터를 적용하지 않을 경로 패턴 목록
     private final List<String> excludedPaths = List.of(
-            "/auth/tokens",
-            "/auth/tokens/refresh",
-            "/users/email/verification-requests",
-            "/users/email/verification",
+            "/api/auth/tokens",
+            "/api/auth/tokens/refresh",
+            "/api/users/email/verification-requests",
+            "/api/users/email/verification",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/actuator/health"
