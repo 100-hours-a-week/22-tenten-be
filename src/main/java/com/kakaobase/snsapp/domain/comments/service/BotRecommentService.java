@@ -31,7 +31,6 @@ public class BotRecommentService {
     private final MemberRepository memberRepository;
     private final WebClient webClient;
     private final CommentCacheService commentCacheService;
-    private final CommentRepository commentRepository;
     private final BotRecommentConverter botRecommentConverter;
 
     @Value("${ai.server.url}")

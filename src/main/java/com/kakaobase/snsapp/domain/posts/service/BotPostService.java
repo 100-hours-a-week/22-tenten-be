@@ -1,6 +1,5 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
-import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.dto.BotRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
@@ -30,7 +29,6 @@ public class BotPostService {
     private final PostService postService;
     private final PostRepository postRepository;
     private final WebClient webClient;
-    private final MemberRepository memberRepository;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
