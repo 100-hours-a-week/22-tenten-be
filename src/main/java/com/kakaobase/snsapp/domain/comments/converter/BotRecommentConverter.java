@@ -5,14 +5,16 @@ import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 
+@Component
 public class BotRecommentConverter {
 
-    public static BotRecommentRequestDto toRequestDto(
+    public BotRecommentRequestDto toRequestDto(
             Post post,
             Member postWriter,
             Comment comment,
@@ -22,7 +24,7 @@ public class BotRecommentConverter {
                 post.getId(),
                 new BotRecommentRequestDto.UserDto(
                         postWriter.getNickname(),
-                        postWriter.getClassName().toString()
+                        postWriter.getClassName()
                 ),
                 formatUtc(post.getCreatedAt().toInstant(ZoneOffset.UTC)),
                 post.getContent()
@@ -32,7 +34,7 @@ public class BotRecommentConverter {
                 .map(r -> new BotRecommentRequestDto.RecommentDto(
                         new BotRecommentRequestDto.UserDto(
                                 r.getMember().getNickname(),
-                                r.getMember().getClassName().toString()
+                                r.getMember().getClassName()
                         ),
                         formatUtc(r.getCreatedAt().toInstant(ZoneOffset.UTC)),
                         r.getContent()
@@ -43,7 +45,7 @@ public class BotRecommentConverter {
                 comment.getId(),
                 new BotRecommentRequestDto.UserDto(
                         comment.getMember().getNickname(),
-                        comment.getMember().getClassName().toString()
+                        comment.getMember().getClassName()
                 ),
                 formatUtc(comment.getCreatedAt().toInstant(ZoneOffset.UTC)),
                 comment.getContent(),
@@ -57,7 +59,7 @@ public class BotRecommentConverter {
         );
     }
 
-    private static String formatUtc(Instant instant) {
+    private String formatUtc(Instant instant) {
         // 마이크로초까지만 출력하고 Z 붙이기
         long seconds = instant.getEpochSecond();
         int micros = instant.getNano() / 1000;  // 나노초를 마이크로초로 변환
