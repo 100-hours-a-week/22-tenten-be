@@ -4,7 +4,6 @@ import com.kakaobase.snsapp.domain.comments.converter.BotRecommentConverter;
 import com.kakaobase.snsapp.domain.comments.converter.CommentConverter;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentRequestDto;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentResponseDto;
-import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
@@ -16,6 +15,7 @@ import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -39,8 +39,20 @@ public class BotRecommentService {
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
+    @Async
     @Transactional
-    public CommentResponseDto.RecommentInfo handle(Post post, Comment comment) {
+    public void triggerAsync(Post post, Comment comment) {
+        try {
+            log.info("🚀 [BotTrigger] 비동기 트리거 시작 - postId={}, commentId={}", post.getId(), comment.getId());
+            handle(post, comment);
+            log.info("✅ [BotTrigger] 성공적으로 처리됨");
+        } catch (Exception e) {
+            log.error("❌ [BotTrigger] 실패 - reason: {}", e.getMessage(), e);
+        }
+    }
+
+    @Transactional
+    public void handle(Post post, Comment comment) {
         log.info("👉 [BotHandle] 트리거 시작 - postId={}, commentId={}", post.getId(), comment.getId());
 
         Member bot = memberRepository.findFirstByRole(Member.Role.BOT)
@@ -68,7 +80,7 @@ public class BotRecommentService {
                 .member(bot)
                 .content(generatedContent)
                 .build();
-        recommentRepository.save(newRecomment);
+
         try {
             commentCacheService.incrementCommentCount(comment.getId());
         }catch (CacheException e){
@@ -76,18 +88,6 @@ public class BotRecommentService {
             commentRepository.incrementRecommentCount(comment.getId());
         }
 
-        return commentConverter.toRecommentInfoForBot(newRecomment, bot);
+        recommentRepository.save(newRecomment);
     }
-
-    @Async
-    public void triggerAsync(Post post, Comment comment) {
-        try {
-            log.info("🚀 [BotTrigger] 비동기 트리거 시작 - postId={}, commentId={}", post.getId(), comment.getId());
-            handle(post, comment);
-            log.info("✅ [BotTrigger] 성공적으로 처리됨");
-        } catch (Exception e) {
-            log.error("❌ [BotTrigger] 실패 - reason: {}", e.getMessage(), e);
-        }
-    }
-
 }
