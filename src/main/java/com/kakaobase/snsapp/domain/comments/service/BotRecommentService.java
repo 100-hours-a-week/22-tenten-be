@@ -7,14 +7,15 @@ import com.kakaobase.snsapp.domain.comments.dto.BotRecommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
+import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -31,6 +32,9 @@ public class BotRecommentService {
     private final MemberRepository memberRepository;
     private final CommentConverter commentConverter;
     private final WebClient webClient;
+    private final CommentCacheService commentCacheService;
+    private final CommentRepository commentRepository;
+    private final BotRecommentConverter botRecommentConverter;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -47,7 +51,7 @@ public class BotRecommentService {
 
         List<Recomment> recomments = recommentRepository.findByCommentId(comment.getId());
 
-        BotRecommentRequestDto requestDto = BotRecommentConverter.toRequestDto(post, writer, comment, recomments);
+        BotRecommentRequestDto requestDto = botRecommentConverter.toRequestDto(post, writer, comment, recomments);
 
         BotRecommentResponseDto response = webClient.post()
                 .uri(aiServerUrl + "/recomments/bot")
@@ -65,8 +69,12 @@ public class BotRecommentService {
                 .content(generatedContent)
                 .build();
         recommentRepository.save(newRecomment);
-
-        comment.increaseRecommentCount();
+        try {
+            commentCacheService.incrementCommentCount(comment.getId());
+        }catch (CacheException e){
+            log.error(e.getMessage());
+            commentRepository.incrementRecommentCount(comment.getId());
+        }
 
         return commentConverter.toRecommentInfoForBot(newRecomment, bot);
     }
