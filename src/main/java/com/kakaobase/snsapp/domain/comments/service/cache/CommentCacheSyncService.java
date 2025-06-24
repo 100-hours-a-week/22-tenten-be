@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.domain.comments.service;
+package com.kakaobase.snsapp.domain.comments.service.cache;
 
 import com.kakaobase.snsapp.domain.comments.util.CommentCacheUtil;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
