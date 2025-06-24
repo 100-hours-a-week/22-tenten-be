@@ -17,7 +17,6 @@ public class SwaggerConfig {
         final String jwtSchemeName = "JWT TOKEN";
 
         return new OpenAPI()
-                .addServersItem(new Server().url("/api"))
                 .info(new Info()
                         .title("KakaoBase API")
                         .description("KakaoBase의 API 명세서입니다.")
