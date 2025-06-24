@@ -2,7 +2,7 @@ package com.kakaobase.snsapp.domain.posts.service;
 
 import com.kakaobase.snsapp.domain.posts.util.PostCacheUtil;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
-import com.kakaobase.snsapp.global.common.redis.service.AbstractCacheSyncService;
+import com.kakaobase.snsapp.global.common.redis.service.cacheSyncService.AbstractCacheSyncService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;

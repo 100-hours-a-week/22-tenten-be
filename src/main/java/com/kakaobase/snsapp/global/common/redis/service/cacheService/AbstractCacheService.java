@@ -1,8 +1,9 @@
-package com.kakaobase.snsapp.global.common.redis.service;
+package com.kakaobase.snsapp.global.common.redis.service.cacheService;
 
+import com.kakaobase.snsapp.global.common.redis.error.CacheErrorCode;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
+import com.kakaobase.snsapp.global.common.redis.service.cacheSyncService.AbstractCacheSyncService;
 import com.kakaobase.snsapp.global.common.redis.util.CacheUtil;
-import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -33,7 +34,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
     }
 
     @Override
-    public void incrementField(Long id, String field) throws CacheException {
+    public void incrementField (Long id, String field) throws CacheException {
         checkCacheAndWriteBack(id);
         incrementFieldAndSync(id, field);
     }
@@ -57,7 +58,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
     }
 
     @Override
-    public Map<Long, V> findAllByItems(List<T> items) {
+    public Map<Long, V> findAllByItems(List<T> items) throws CacheException {
         if (items == null || items.isEmpty()){
             log.warn("캐시중: 불러올 Entity리스트가 비어있음");
             return Map.of();
@@ -83,9 +84,8 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
             T item = items.get(i);
 
             if (loaded.get(key) == null) {
-                if (cacheUtil.runWithLock(key, () -> saveByEntity(id, item))) {
-                    loaded.put(key, cacheUtil.load(key));
-                }
+                cacheUtil.runWithLock(key, () -> saveByEntity(id, item));
+                loaded.put(key, cacheUtil.load(key));
             }
         }
 
@@ -100,7 +100,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
 
 
     @Override
-    public Map<Long, V> findAllById(List<Long> ids) {
+    public Map<Long, V> findAllById(List<Long> ids) throws CacheException {
         if (ids == null || ids.isEmpty()){
             log.warn("캐시중: 불러올 id리스트가 비어있음");
             return Map.of();
@@ -120,9 +120,8 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
             Long id = ids.get(i);
 
             if (loaded.get(key) == null) {
-                if (cacheUtil.runWithLock(key, () -> saveFromDB(id))) {
-                    loaded.put(key, cacheUtil.load(key));
-                }
+                cacheUtil.runWithLock(key, () -> saveFromDB(id));
+                loaded.put(key, cacheUtil.load(key));
             }
         }
 
@@ -140,11 +139,9 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
      */
     protected abstract Long extractId(T item);
 
-    protected void checkCacheAndWriteBack(Long id){
+    protected void checkCacheAndWriteBack(Long id) throws CacheException {
         if(!cacheUtil.existsCache(generateCacheKey(id))){
-            if(!cacheUtil.runWithLock(generateCacheKey(id),()->saveFromDB(id))){
-                throw new CacheException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "락기반 캐시 생성 실패");
-            }
+            cacheUtil.runWithLock(generateCacheKey(id),()->saveFromDB(id));
         }
     }
 
@@ -167,7 +164,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
     /**
      * 필드 값 증가 및 동기화 큐 추가
      */
-    protected void incrementFieldAndSync(Long id, String fieldName) {
+    protected void incrementFieldAndSync(Long id, String fieldName) throws CacheException{
         try {
             String key = generateCacheKey(id);
             redisTemplate.opsForHash().increment(key, fieldName, 1);
@@ -178,14 +175,14 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
 
         } catch (Exception e) {
             log.error("{} 증가 실패: id={}", fieldName, id, e);
-            throw new CacheException(GeneralErrorCode.INTERNAL_SERVER_ERROR, fieldName + " 증가 실패");
+            throw new CacheException(CacheErrorCode.FIELD_UPDATE_ERROR, fieldName + " 증가 실패");
         }
     }
 
     /**
      * 필드 값 감소 및 동기화 큐 추가 (음수 방지)
      */
-    protected void decrementFieldAndSync(Long id, String fieldName) {
+    protected void decrementFieldAndSync(Long id, String fieldName) throws CacheException{
         try {
             String key = generateCacheKey(id);
             Long newValue = redisTemplate.opsForHash().increment(key, fieldName, -(long) -1);
@@ -203,7 +200,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
 
         } catch (Exception e) {
             log.error("{} 감소 실패: id={}", fieldName, id, e);
-            throw new CacheException(GeneralErrorCode.INTERNAL_SERVER_ERROR, fieldName + " 감소 실패");
+            throw new CacheException(CacheErrorCode.FIELD_UPDATE_ERROR, fieldName + " 감소 실패");
         }
     }
 }
