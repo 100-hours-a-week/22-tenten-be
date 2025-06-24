@@ -17,7 +17,7 @@ spring:
     redisson:
       config: |
         singleServerConfig:
-          address: "redis://localhost:6379"
+          address: "redis://${REDIS_URL}:6379"
           password: null
           timeout: 3000
   jpa:
