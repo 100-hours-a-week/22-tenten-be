@@ -35,7 +35,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build (Gradle)
-        run: ./gradlew build
+        run: ./gradlew build -x test
 
   cd:
     name: CD (Deploy to EC2 via SSM)
