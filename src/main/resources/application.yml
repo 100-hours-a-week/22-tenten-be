@@ -55,9 +55,6 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-server:
-  forward-headers-strategy: framework
-  
 app:
   jwt:
     secret: ${JWT_SECRET}
@@ -80,9 +77,12 @@ ai:
     url: ${AI_SERVER_URL}
 
 management:
+  server:
+    servlet:
   endpoints:
     web:
       exposure:
+        base-path: /actuator
         include:
           - health
           - info
