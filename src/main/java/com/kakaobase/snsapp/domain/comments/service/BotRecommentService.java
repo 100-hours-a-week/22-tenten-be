@@ -1,13 +1,13 @@
 package com.kakaobase.snsapp.domain.comments.service;
 
 import com.kakaobase.snsapp.domain.comments.converter.BotRecommentConverter;
-import com.kakaobase.snsapp.domain.comments.converter.CommentConverter;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentRequestDto;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
+import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
@@ -15,7 +15,6 @@ import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -30,7 +29,6 @@ public class BotRecommentService {
 
     private final RecommentRepository recommentRepository;
     private final MemberRepository memberRepository;
-    private final CommentConverter commentConverter;
     private final WebClient webClient;
     private final CommentCacheService commentCacheService;
     private final CommentRepository commentRepository;
@@ -38,18 +36,6 @@ public class BotRecommentService {
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
-
-    @Async
-    @Transactional
-    public void triggerAsync(Post post, Comment comment) {
-        try {
-            log.info("🚀 [BotTrigger] 비동기 트리거 시작 - postId={}, commentId={}", post.getId(), comment.getId());
-            handle(post, comment);
-            log.info("✅ [BotTrigger] 성공적으로 처리됨");
-        } catch (Exception e) {
-            log.error("❌ [BotTrigger] 실패 - reason: {}", e.getMessage(), e);
-        }
-    }
 
     @Transactional
     public void handle(Post post, Comment comment) {
@@ -85,7 +71,7 @@ public class BotRecommentService {
             commentCacheService.incrementCommentCount(comment.getId());
         }catch (CacheException e){
             log.error(e.getMessage());
-            commentRepository.incrementRecommentCount(comment.getId());
+            comment.increaseRecommentCount();
         }
 
         recommentRepository.save(newRecomment);
