@@ -56,15 +56,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
      */
     List<Member> findByIdIn(List<Long> ids);
 
-    /**
-     * 특정 회원의 프로필 정보와 팔로우 통계를 조회합니다.
-     * 필요한 컬럼만 선택하여 성능을 최적화합니다.
-     *
-     * @param id 회원 ID
-     * @return 회원 프로필 정보
-     */
-    @Query("SELECT m FROM Member m WHERE m.id = :id")
-    Optional<Member> findProfileById(@Param("id") Long id);
 
     /**
      * 여러 회원 ID로 회원 목록을 조회합니다.

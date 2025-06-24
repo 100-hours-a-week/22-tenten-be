@@ -29,9 +29,12 @@ public class CacheRecord {
             Long commentId,
             Long likeCount,
             Long recommentCount
-    ) {
-        public static CommentStatsCache createDefault(Long commentId) {
-            return new CommentStatsCache(commentId, 0L, 0L);
-        }
-    }
+    ) {}
+
+    @Builder
+    public record FollowStatsCache(
+            Long memberId,
+            Long followerCount,
+            Long followingCount
+    ) {}
 }

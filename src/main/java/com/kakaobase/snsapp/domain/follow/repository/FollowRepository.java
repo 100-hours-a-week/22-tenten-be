@@ -20,4 +20,14 @@ public interface FollowRepository extends JpaRepository<Follow, Long>, FollowCus
      * 특정 팔로우 관계 조회
      */
     Optional<Follow> findByFollowerUserAndFollowingUser(Member followerUser, Member followingUser);
+
+    /**
+     * 특정 Member가 다른 사람들을 팔로우한 관계들을 모두 삭제
+     */
+    Long deleteByFollowerUserId(Long followerUserId);
+
+    /**
+     * 특정 Member를 팔로우하는 관계들을 모두 삭제)
+     */
+    Long deleteByFollowingUserId(Long followingUserId);
 }

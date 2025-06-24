@@ -72,11 +72,11 @@ public class Member extends BaseSoftDeletableEntity {
 
     @Column(name = "following_count", nullable = false)
     @ColumnDefault("0")
-    private Integer followingCount = 0;
+    private Long followingCount = 0L;
 
     @Column(name = "follower_count", nullable = false)
     @ColumnDefault("0")
-    private Integer followerCount = 0;
+    private Long followerCount = 0L;
 
     @Builder
     public Member(String email, String name, String nickname, String password, ClassName className, String githubUrl) {
@@ -146,7 +146,7 @@ public class Member extends BaseSoftDeletableEntity {
     }
 
 
-    public void updateFollowingCount(Integer followingCount) {
+    public void updateFollowingCount(Long followingCount) {
         this.followingCount = followingCount;
     }
 
@@ -166,7 +166,7 @@ public class Member extends BaseSoftDeletableEntity {
         }
     }
 
-    public void updateFollowerCount(Integer followerCount) {
+    public void updateFollowerCount(Long followerCount) {
         this.followerCount = followerCount;
     }
 
