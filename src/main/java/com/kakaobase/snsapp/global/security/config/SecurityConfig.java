@@ -57,19 +57,19 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         //Swagger관련 경로들
                         .requestMatchers(
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/api/v3/api-docs/**",
+                                "/api/swagger-ui/**",
+                                "/api/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**")
                         .permitAll()
                         // 인증 없이 접근 가능한 경로들
-                        .requestMatchers("/auth/tokens", "/auth/tokens/refresh").permitAll()
-                        .requestMatchers("/users/email/verification-requests").permitAll()
-                        .requestMatchers("/users/email/verification").permitAll()
+                        .requestMatchers("/api/auth/tokens", "/api/auth/tokens/refresh").permitAll()
+                        .requestMatchers("/api/users/email/verification-requests").permitAll()
+                        .requestMatchers("/api/users/email/verification").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/users").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/users").authenticated()
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
