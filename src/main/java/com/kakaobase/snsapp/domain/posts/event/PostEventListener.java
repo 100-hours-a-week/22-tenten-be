@@ -1,7 +1,7 @@
 package com.kakaobase.snsapp.domain.posts.event;
 
-import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.service.BotPostService;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +37,7 @@ public class PostEventListener {
                 event.getPostId(), event.getBoardType(), event.getMemberId());
 
         try {
-            Post.BoardType boardType = event.getBoardType();
+            BoardType boardType = event.getBoardType();
 
             // 모든 게시글에 대해 카운터 증가
             int currentCount = postCounter.increment(boardType);

@@ -1,13 +1,11 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
-import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
-import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.dto.BotRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
-import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import java.time.ZoneId;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * AI 봇의 게시글 관련 서비스
@@ -47,7 +43,7 @@ public class BotPostService {
      * @param boardType 게시판 타입
      */
     @Transactional
-    public void createBotPost(Post.BoardType boardType) {
+    public void createBotPost(BoardType boardType) {
         try {
             log.info("봇 게시글 생성 시작 - boardType: {}", boardType);
 
@@ -136,7 +132,7 @@ public class BotPostService {
      * @param boardType 게시판 타입
      * @return AI 서버 요청 DTO
      */
-    private BotRequestDto.CreatePostRequest createBotRequest(Post.BoardType boardType, List<Post> filteredPosts) {
+    private BotRequestDto.CreatePostRequest createBotRequest(BoardType boardType, List<Post> filteredPosts) {
         // 게시글 리스트를 PostDto 리스트로 변환
         List<BotRequestDto.PostDto> botPosts = filteredPosts.stream()
                 .map(post -> BotRequestDto.PostDto.builder()
