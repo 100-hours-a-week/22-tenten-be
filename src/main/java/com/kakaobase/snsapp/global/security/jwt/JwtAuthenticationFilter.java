@@ -39,8 +39,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/tokens/refresh",
             "/api/users/email/verification-requests",
             "/api/users/email/verification",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
+            "/api/swagger-ui/**",
+            "/api/v3/api-docs/**",
             "/actuator/health"
     );
 
