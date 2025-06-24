@@ -17,6 +17,8 @@ import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.domain.posts.service.async.YouTubeSummaryService;
+import com.kakaobase.snsapp.domain.posts.service.cache.PostCacheService;
 import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
@@ -83,13 +85,13 @@ public class PostService {
         // 게시판 타입 변환
         Member proxyMember = em.find(Member.class, memberId);
         // 게시글 엔티티 생성
-        Post post = PostConverter.toPost(requestDto, proxyMember, boardType);
+        Post post = postConverter.toPost(requestDto, proxyMember, boardType);
 
         // 게시글 저장
         postRepository.save(post);
 
         if (StringUtils.hasText(requestDto.image_url())) {
-            PostImage postImage = PostConverter.toPostImage(post, 0, requestDto.image_url());
+            PostImage postImage = postConverter.toPostImage(post, 0, requestDto.image_url());
             postImageRepository.save(postImage);
         }
 

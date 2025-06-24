@@ -7,7 +7,7 @@ import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.entity.PostImage;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
-import com.kakaobase.snsapp.domain.posts.service.PostCacheService;
+import com.kakaobase.snsapp.domain.posts.service.cache.PostCacheService;
 import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;

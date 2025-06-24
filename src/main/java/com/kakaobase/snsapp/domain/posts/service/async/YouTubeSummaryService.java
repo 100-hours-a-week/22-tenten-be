@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.domain.posts.service;
+package com.kakaobase.snsapp.domain.posts.service.async;
 
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
@@ -61,7 +61,6 @@ public class YouTubeSummaryService {
      * @return 요약된 내용
      * @throws PostException AI 서버 통신 실패 또는 요약 실패 시
      */
-    @Async
     public String getSummary(String youtubeUrl) {
         log.info("YouTube 요약 요청 시작 - URL: {}", youtubeUrl);
 
@@ -90,7 +89,7 @@ public class YouTubeSummaryService {
             throw new AiServerException("internal_server_error", "Ai서버에서 응답이 없습니다", e);
 
         } catch (Exception e) {
-            log.error("WebClientResponseException안터짐 에러코드: {}", e);
+            log.error("WebClientResponseException안터짐 에러코드: {}", e.getMessage());
             throw new PostException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "요약도중 예기치못한 에러 발행");
         }
     }

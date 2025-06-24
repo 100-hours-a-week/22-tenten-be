@@ -8,7 +8,7 @@ import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.entity.RecommentLike;
 import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
-import com.kakaobase.snsapp.domain.comments.service.CommentCacheService;
+import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.posts.entity.Post;

@@ -11,18 +11,19 @@ import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
+import com.kakaobase.snsapp.domain.comments.service.async.CommentAsyncService;
+import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
-import com.kakaobase.snsapp.domain.posts.service.PostCacheService;
+import com.kakaobase.snsapp.domain.posts.service.cache.PostCacheService;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,10 +46,10 @@ public class CommentService {
     private final CommentLikeRepository commentLikeRepository;
     private final EntityManager em;
 
-    private final BotRecommentService botRecommentService;
     private final PostRepository postRepository;
     private final CommentCacheService commentCacheService;
     private final RecommentLikeRepository recommentLikeRepository;
+    private final CommentAsyncService commentAsyncService;
 
     /**
      * 댓글을 생성합니다.
@@ -114,7 +115,7 @@ public class CommentService {
         // 게시물 작성자가 소셜봇이면 소셜봇 대댓글 로직 구현하도록
         if (post.getMember().getRole().equals("BOT")) {
             log.info("🤖 [Trigger] 소셜봇 게시글이므로 트리거 실행!");
-            botRecommentService.triggerAsync(post, savedComment);
+            commentAsyncService.triggerAsync(post, savedComment);
         } else {
             log.info("🙅 [Skip] 게시글 작성자가 소셜봇이 아님 → 트리거 생략");
         }
