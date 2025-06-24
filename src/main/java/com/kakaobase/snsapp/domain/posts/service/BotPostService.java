@@ -1,13 +1,10 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
-import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
-import com.kakaobase.snsapp.domain.members.entity.Member;
-import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.dto.BotRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
-import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import java.time.ZoneId;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * AI 봇의 게시글 관련 서비스
@@ -34,7 +29,6 @@ public class BotPostService {
     private final PostService postService;
     private final PostRepository postRepository;
     private final WebClient webClient;
-    private final MemberRepository memberRepository;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -47,7 +41,7 @@ public class BotPostService {
      * @param boardType 게시판 타입
      */
     @Transactional
-    public void createBotPost(Post.BoardType boardType) {
+    public void createBotPost(BoardType boardType) {
         try {
             log.info("봇 게시글 생성 시작 - boardType: {}", boardType);
 
@@ -134,32 +128,20 @@ public class BotPostService {
      * AI 서버 요청 DTO 생성
      *
      * @param boardType 게시판 타입
-     * @param posts 최근 게시글 목록
      * @return AI 서버 요청 DTO
      */
-    private BotRequestDto.CreatePostRequest createBotRequest(Post.BoardType boardType, List<Post> posts) {
-        // 게시글 작성자들의 정보를 한 번에 조회
-        List<PostResponseDto.PostDetails> postDetails = postRepository.findByBoardTypeWithCursor(
-                boardType, null, 10, null);
-
-        // 2. PostDetails → BotRequestDto.PostDto 직접 변환
-        List<BotRequestDto.PostDto> botPosts = postDetails.stream()
-                .map(postDetail -> {
-                    MemberResponseDto.UserInfoWithFollowing user = postDetail.user();
-
-                    // ⚠N+1문제 발생
-                    String className = memberRepository.findById(user.id())
-                            .map(Member::getClassName)
-                            .orElse("미정");
-
-                    // ✅ 바로 DTO 생성
-                    return BotRequestDto.PostDto.builder()
-                            .user(new BotRequestDto.UserDto(user.nickname(), className))
-                            .createdAt(postDetail.createdAt().atZone(ZoneId.systemDefault()).toInstant().toString())
-                            .content(postDetail.content())
-                            .build();
-                })
-                .collect(Collectors.toList());
+    private BotRequestDto.CreatePostRequest createBotRequest(BoardType boardType, List<Post> filteredPosts) {
+        // 게시글 리스트를 PostDto 리스트로 변환
+        List<BotRequestDto.PostDto> botPosts = filteredPosts.stream()
+                .map(post -> BotRequestDto.PostDto.builder()
+                        .user(BotRequestDto.UserDto.builder()
+                                .nickname(post.getMember().getNickname())
+                                .className(post.getMember().getClassName()) // enum을 문자열로 변환
+                                .build())
+                        .createdAt(post.getCreatedAt().toString()) // LocalDateTime을 ISO 8601 문자열로 변환
+                        .content(post.getContent())
+                        .build())
+                .toList();
 
         return new BotRequestDto.CreatePostRequest(boardType.name(), botPosts);
     }

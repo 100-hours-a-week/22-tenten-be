@@ -1,6 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.event;
 
-import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +22,7 @@ public class PostCounter {
      *
      * <p>스레드 안전성을 위해 ConcurrentHashMap과 AtomicInteger를 사용합니다.</p>
      */
-    private final Map<Post.BoardType, AtomicInteger> counters = new ConcurrentHashMap<>();
+    private final Map<BoardType, AtomicInteger> counters = new ConcurrentHashMap<>();
 
     /**
      * 게시글 카운터 증가
@@ -32,7 +32,7 @@ public class PostCounter {
      * @param boardType 게시판 타입
      * @return 증가 후 카운터 값
      */
-    public int increment(Post.BoardType boardType) {
+    public int increment(BoardType boardType) {
         AtomicInteger counter = counters.computeIfAbsent(boardType, k -> new AtomicInteger(0));
         int newValue = counter.incrementAndGet();
         log.debug("카운터 증가 - boardType: {}, count: {}", boardType, newValue);
@@ -46,7 +46,7 @@ public class PostCounter {
      *
      * @param boardType 게시판 타입
      */
-    public void reset(Post.BoardType boardType) {
+    public void reset(BoardType boardType) {
         counters.computeIfAbsent(boardType, k -> new AtomicInteger(0)).set(0);
         log.debug("카운터 리셋 - boardType: {}", boardType);
     }
@@ -59,7 +59,7 @@ public class PostCounter {
      * @param boardType 게시판 타입
      * @return 현재 카운터 값
      */
-    public int getCount(Post.BoardType boardType) {
+    public int getCount(BoardType boardType) {
         AtomicInteger counter = counters.get(boardType);
         int count = (counter != null) ? counter.get() : 0;
         log.debug("카운터 조회 - boardType: {}, count: {}", boardType, count);

@@ -4,7 +4,7 @@ import com.kakaobase.snsapp.domain.follow.entity.QFollow;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.QMember;
 import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
-import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.domain.posts.entity.QPost;
 import com.kakaobase.snsapp.domain.posts.entity.QPostImage;
 import com.kakaobase.snsapp.domain.posts.entity.QPostLike;
@@ -94,7 +94,7 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
 
     @Override
     public List<PostResponseDto.PostDetails> findByBoardTypeWithCursor(
-            Post.BoardType boardType,
+            BoardType boardType,
             Long cursor,
             int limit,
             Long memberId) {

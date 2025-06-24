@@ -2,6 +2,7 @@ package com.kakaobase.snsapp.domain.posts.repository;
 
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.repository.custom.PostCustomRepository;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -27,6 +28,6 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostCustomRep
      */
     long countByMemberId(Long memberId);
 
-    List<Post> findTop10ByBoardTypeOrderByCreatedAtDescIdDesc(Post.BoardType boardType);
+    List<Post> findTop10ByBoardTypeOrderByCreatedAtDescIdDesc(BoardType boardType);
 
 }

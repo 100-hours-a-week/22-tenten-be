@@ -9,10 +9,6 @@ app:
       domain: ${COOKIE_DOMAIN}
       same-site: Lax
 
-server:
-  servlet:
-    context-path: /api
-
 logging:
   level:
     com.kakaobase.snsapp.domain.posts.scheduler: DEBUG

@@ -1,20 +1,20 @@
 package com.kakaobase.snsapp.domain.comments.service;
 
 import com.kakaobase.snsapp.domain.comments.converter.BotRecommentConverter;
-import com.kakaobase.snsapp.domain.comments.converter.CommentConverter;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentRequestDto;
 import com.kakaobase.snsapp.domain.comments.dto.BotRecommentResponseDto;
-import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
+import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
+import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -29,14 +29,15 @@ public class BotRecommentService {
 
     private final RecommentRepository recommentRepository;
     private final MemberRepository memberRepository;
-    private final CommentConverter commentConverter;
     private final WebClient webClient;
+    private final CommentCacheService commentCacheService;
+    private final BotRecommentConverter botRecommentConverter;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
     @Transactional
-    public CommentResponseDto.RecommentInfo handle(Post post, Comment comment) {
+    public void handle(Post post, Comment comment) {
         log.info("👉 [BotHandle] 트리거 시작 - postId={}, commentId={}", post.getId(), comment.getId());
 
         Member bot = memberRepository.findFirstByRole(Member.Role.BOT)
@@ -47,7 +48,7 @@ public class BotRecommentService {
 
         List<Recomment> recomments = recommentRepository.findByCommentId(comment.getId());
 
-        BotRecommentRequestDto requestDto = BotRecommentConverter.toRequestDto(post, writer, comment, recomments);
+        BotRecommentRequestDto requestDto = botRecommentConverter.toRequestDto(post, writer, comment, recomments);
 
         BotRecommentResponseDto response = webClient.post()
                 .uri(aiServerUrl + "/recomments/bot")
@@ -64,22 +65,14 @@ public class BotRecommentService {
                 .member(bot)
                 .content(generatedContent)
                 .build();
-        recommentRepository.save(newRecomment);
 
-        comment.increaseRecommentCount();
-
-        return commentConverter.toRecommentInfoForBot(newRecomment, bot);
-    }
-
-    @Async
-    public void triggerAsync(Post post, Comment comment) {
         try {
-            log.info("🚀 [BotTrigger] 비동기 트리거 시작 - postId={}, commentId={}", post.getId(), comment.getId());
-            handle(post, comment);
-            log.info("✅ [BotTrigger] 성공적으로 처리됨");
-        } catch (Exception e) {
-            log.error("❌ [BotTrigger] 실패 - reason: {}", e.getMessage(), e);
+            commentCacheService.incrementCommentCount(comment.getId());
+        }catch (CacheException e){
+            log.error(e.getMessage());
+            comment.increaseRecommentCount();
         }
-    }
 
+        recommentRepository.save(newRecomment);
+    }
 }

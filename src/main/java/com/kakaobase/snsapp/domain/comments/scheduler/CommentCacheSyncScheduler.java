@@ -1,7 +1,7 @@
 package com.kakaobase.snsapp.domain.comments.scheduler;
 
 
-import com.kakaobase.snsapp.domain.comments.service.CommentCacheSyncService;
+import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
