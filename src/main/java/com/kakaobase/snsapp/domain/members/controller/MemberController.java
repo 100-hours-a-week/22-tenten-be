@@ -32,7 +32,7 @@ import java.util.List;
 @Slf4j
 @Tag(name = "회원 API", description = "회원 관련 API")
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class MemberController {
 

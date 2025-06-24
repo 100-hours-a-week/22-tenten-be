@@ -22,7 +22,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 @Tag(name = "팔로우 API", description = "팔로잉, 팔로우 관련 API")
 public class FollowController {

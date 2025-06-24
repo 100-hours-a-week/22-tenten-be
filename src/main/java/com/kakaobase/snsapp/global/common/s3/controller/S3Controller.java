@@ -29,7 +29,7 @@ import jakarta.validation.constraints.Positive;
  */
 @Tag(name = "이미지 관리", description = "이미지 업로드를 위한 Presigned URL 발급 API")
 @RestController
-@RequestMapping("/images")
+@RequestMapping("/api/images")
 @RequiredArgsConstructor
 public class S3Controller {
 

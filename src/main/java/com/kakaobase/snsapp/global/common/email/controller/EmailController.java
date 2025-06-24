@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @Tag(name = "이메일 API", description = "이메일인증 관련 API")
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class EmailController {
 
