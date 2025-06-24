@@ -17,7 +17,6 @@ public class CorsConfig {
         config.setAllowedOrigins(Arrays.asList(
                 "https://www.kakaobase.com",
                 "https://dev.kakaobase.com"
-
         ));
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
