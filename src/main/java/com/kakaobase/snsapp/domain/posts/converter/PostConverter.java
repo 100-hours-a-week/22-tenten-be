@@ -8,6 +8,7 @@ import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.entity.PostImage;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.service.PostCacheService;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
@@ -33,10 +34,10 @@ public class PostConverter {
      * @param boardType 게시판 타입
      * @return 생성된 Post 엔티티
      */
-    public static Post toPost(
+    public Post toPost(
             PostRequestDto.PostCreateRequestDto requestDto,
             Member member,
-            Post.BoardType boardType) {
+            BoardType boardType) {
 
         return Post.builder()
                 .member(member)
@@ -50,7 +51,7 @@ public class PostConverter {
      * 게시글 이미지 엔티티를 생성합니다
      *
      */
-    public static PostImage toPostImage(
+    public PostImage toPostImage(
             Post post,
             Integer sortIndex,
             String imageUrl) {
@@ -101,15 +102,19 @@ public class PostConverter {
      * @return BoardType enum 값
      * @throws IllegalArgumentException 유효하지 않은 postType인 경우
      */
-    public static Post.BoardType toBoardType(String postType) {
+    public BoardType toBoardType(String postType) {
+        if(postType == null || postType.isBlank()){
+            log.error("잘못된 게시판 타입: {}", postType);
+            throw new PostException(GeneralErrorCode.INVALID_FORMAT, "postType");
+        }
+
         try {
             if ("all".equalsIgnoreCase(postType)) {
-                return Post.BoardType.ALL;
+                return BoardType.ALL;
             }
 
             // snake_case를 대문자와 underscore로 변환 (pangyo_1 -> PANGYO_1)
-            String enumFormat = postType.toUpperCase();
-            return Post.BoardType.valueOf(enumFormat);
+            return BoardType.valueOf(postType.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new PostException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "postType");
         }
