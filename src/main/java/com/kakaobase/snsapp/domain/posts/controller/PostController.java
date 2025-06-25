@@ -92,7 +92,7 @@ public class PostController {
     @DeleteMapping("/{postType}/{postId}")
     @Operation(summary = "게시글 삭제", description = "게시글을 삭제합니다.")
     @PreAuthorize("@accessChecker.isPostOwner(#postId, authentication.principal)")
-    public CustomResponse<?> deletePost(
+    public CustomResponse<Void> deletePost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -111,7 +111,7 @@ public class PostController {
      */
     @PostMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 추가", description = "게시글에 좋아요를 추가합니다.")
-    public CustomResponse<?> postPostLike(
+    public CustomResponse<Void> postPostLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
@@ -129,7 +129,7 @@ public class PostController {
      */
     @DeleteMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 취소", description = "게시글 좋아요를 취소합니다.")
-    public CustomResponse<?> deletePostLike(
+    public CustomResponse<Void> deletePostLike(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
