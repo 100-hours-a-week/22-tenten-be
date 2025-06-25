@@ -9,10 +9,6 @@ import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -43,13 +39,6 @@ public class CommentController {
             summary = "댓글 작성",
             description = "게시글에 댓글을 작성합니다. parentId가 없으면 일반 댓글, 있으면 대댓글로 등록됩니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "댓글 작성 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.CreateCommentResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청"),
-            @ApiResponse(responseCode = "403", description = "권한 없음"),
-            @ApiResponse(responseCode = "404", description = "게시글 없음")
-    })
     public ResponseEntity<CustomResponse<CommentResponseDto.CreateCommentResponse>> createComment(
             @PathVariable Long postId,
             @Valid @RequestBody CommentRequestDto.CreateCommentRequest request,
@@ -66,17 +55,10 @@ public class CommentController {
      * 댓글 상세 조회 API
      */
     @GetMapping("/comments/{commentId}")
-    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "댓글 상세 조회",
             description = "특정 댓글의 상세 정보를 조회합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "댓글 상세 조회 성공",
-                    content = @Content(schema = @Schema(implementation = CommentResponseDto.CommentInfo.class))),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
-    })
     public CustomResponse<CommentResponseDto.CommentInfo> getCommentDetail(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -95,11 +77,6 @@ public class CommentController {
             summary = "댓글 삭제",
             description = "댓글을 삭제합니다. 자신이 작성한 댓글만 삭제할 수 있습니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "댓글 삭제 성공"),
-            @ApiResponse(responseCode = "403", description = "권한 없음"),
-            @ApiResponse(responseCode = "404", description = "댓글 없음")
-    })
     public ResponseEntity<CustomResponse<Void>> deleteComment(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -113,7 +90,6 @@ public class CommentController {
      * 게시글의 댓글 목록 조회 API
      */
     @GetMapping("/posts/{postId}/comments")
-    @PreAuthorize("isAuthenticated() && @accessChecker.canAccessOnComments(#postId, authentication.principal)")
     @Operation(
             summary = "게시글의 댓글 목록 조회",
             description = "게시글에 작성된 댓글 목록을 조회합니다. 페이지네이션을 지원합니다."
@@ -133,7 +109,6 @@ public class CommentController {
      * 댓글의 대댓글 목록 조회 API
      */
     @GetMapping("/comments/{commentId}/recomments")
-    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "댓글의 대댓글 목록 조회",
             description = "특정 댓글에 작성된 대댓글 목록을 조회합니다. 페이지네이션을 지원합니다."
@@ -153,18 +128,11 @@ public class CommentController {
      * 댓글 좋아요 추가 API
      */
     @PostMapping("/comments/{commentId}/likes")
-    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "댓글 좋아요 추가",
             description = "댓글에 좋아요를 추가합니다. 이미 좋아요를 누른 경우 에러가 발생합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "좋아요 추가 성공"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음"),
-            @ApiResponse(responseCode = "409", description = "이미 좋아요한 댓글입니다")
-    })
-    public CustomResponse<?> addCommentLike(
+    public CustomResponse<Void> addCommentLike(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -176,18 +144,11 @@ public class CommentController {
      * 댓글 좋아요 취소 API
      */
     @DeleteMapping("/comments/{commentId}/likes")
-    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "댓글 좋아요 취소",
             description = "댓글의 좋아요를 취소합니다. 좋아요하지 않은 경우 에러가 발생합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "좋아요 취소 성공"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음"),
-            @ApiResponse(responseCode = "409", description = "좋아요하지 않은 댓글입니다")
-    })
-    public CustomResponse<?> removeCommentLike(
+    public CustomResponse<Void> removeCommentLike(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -200,18 +161,11 @@ public class CommentController {
      * 대댓글 좋아요 추가 API
      */
     @PostMapping("/recomments/{recommentId}/likes")
-    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "대댓글 좋아요 추가",
             description = "대댓글에 좋아요를 추가합니다. 이미 좋아요를 누른 경우 에러가 발생합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "좋아요 추가 성공"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @ApiResponse(responseCode = "404", description = "대댓글을 찾을 수 없음"),
-            @ApiResponse(responseCode = "409", description = "이미 좋아요한 대댓글입니다")
-    })
-    public CustomResponse<?> addRecommentLike(
+    public CustomResponse<Void> addRecommentLike(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -224,18 +178,11 @@ public class CommentController {
      * 대댓글 좋아요 취소 API
      */
     @DeleteMapping("/recomments/{recommentId}/likes")
-    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "대댓글 좋아요 취소",
             description = "대댓글의 좋아요를 취소합니다. 좋아요하지 않은 경우 에러가 발생합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "좋아요 취소 성공"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @ApiResponse(responseCode = "404", description = "대댓글을 찾을 수 없음"),
-            @ApiResponse(responseCode = "409", description = "좋아요하지 않은 대댓글입니다")
-    })
-    public CustomResponse<?> removeRecommentLike(
+    public CustomResponse<Void> removeRecommentLike(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -254,13 +201,7 @@ public class CommentController {
             summary = "대댓글 삭제",
             description = "대댓글을 삭제합니다. 자신이 작성한 대댓글만 삭제할 수 있습니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "대댓글 삭제 성공"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @ApiResponse(responseCode = "403", description = "본인이 작성한 대댓글만 삭제할 수 있습니다"),
-            @ApiResponse(responseCode = "404", description = "해당 대댓글을 찾을 수 없습니다")
-    })
-    public CustomResponse<?> deleteRecomment(
+    public CustomResponse<Void> deleteRecomment(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {

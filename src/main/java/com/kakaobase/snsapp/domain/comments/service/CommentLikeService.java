@@ -46,7 +46,7 @@ public class CommentLikeService {
     @Transactional
     public void addCommentLike(Long memberId, Long commentId) {
         // 댓글 존재 여부 확인
-        if(commentRepository.existsById(commentId)) {
+        if(!commentRepository.existsById(commentId)) {
             throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId");
         }
 
@@ -77,7 +77,7 @@ public class CommentLikeService {
     @Transactional
     public void removeCommentLike(Long memberId, Long commentId) {
         // 댓글 존재 여부 확인
-        if(commentRepository.existsById(commentId)) {
+        if(!commentRepository.existsById(commentId)) {
             throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId");
         }
 

@@ -42,6 +42,9 @@ public class PostLikeService {
      */
     @Transactional
     public void addLike(Long postId, Long memberId) {
+        if(!postRepository.existsById(postId)) {
+            throw new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId");
+        }
 
         // 이미 좋아요한 경우 확인
         if (postLikeRepository.existsByMemberIdAndPostId(memberId, postId)) {
