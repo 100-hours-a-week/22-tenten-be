@@ -9,10 +9,6 @@ import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -136,7 +132,7 @@ public class CommentController {
             summary = "댓글 좋아요 추가",
             description = "댓글에 좋아요를 추가합니다. 이미 좋아요를 누른 경우 에러가 발생합니다."
     )
-    public CustomResponse<?> addCommentLike(
+    public CustomResponse<Void> addCommentLike(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -152,7 +148,7 @@ public class CommentController {
             summary = "댓글 좋아요 취소",
             description = "댓글의 좋아요를 취소합니다. 좋아요하지 않은 경우 에러가 발생합니다."
     )
-    public CustomResponse<?> removeCommentLike(
+    public CustomResponse<Void> removeCommentLike(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -169,7 +165,7 @@ public class CommentController {
             summary = "대댓글 좋아요 추가",
             description = "대댓글에 좋아요를 추가합니다. 이미 좋아요를 누른 경우 에러가 발생합니다."
     )
-    public CustomResponse<?> addRecommentLike(
+    public CustomResponse<Void> addRecommentLike(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -186,7 +182,7 @@ public class CommentController {
             summary = "대댓글 좋아요 취소",
             description = "대댓글의 좋아요를 취소합니다. 좋아요하지 않은 경우 에러가 발생합니다."
     )
-    public CustomResponse<?> removeRecommentLike(
+    public CustomResponse<Void> removeRecommentLike(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -205,7 +201,7 @@ public class CommentController {
             summary = "대댓글 삭제",
             description = "대댓글을 삭제합니다. 자신이 작성한 대댓글만 삭제할 수 있습니다."
     )
-    public CustomResponse<?> deleteRecomment(
+    public CustomResponse<Void> deleteRecomment(
             @PathVariable Long recommentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
