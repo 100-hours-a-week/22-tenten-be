@@ -61,6 +61,7 @@ public class CommentResponseDto {
             return CommentInfo.builder()
                     .id(this.id)
                     .user(this.user)
+                    .postId(this.postId)
                     .content(this.content)
                     .createdAt(this.createdAt)
                     .likeCount(newLikeCount)
