@@ -15,6 +15,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(Arrays.asList(
+                "https://localhost:3000/",
                 "https://www.kakaobase.com",
                 "https://dev.kakaobase.com"
         ));
