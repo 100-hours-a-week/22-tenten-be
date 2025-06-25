@@ -2,11 +2,14 @@ package com.kakaobase.snsapp.global.security.jwt;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetailsService;
+import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -44,13 +47,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/actuator/health"
     );
 
-    /**
-     * 특정 경로에 대해 이 필터를 적용하지 않아야 하는지 결정합니다.
-     * 인증이 필요 없는 경로들(로그인, 토큰 갱신, 회원가입 등)에는 필터를 적용하지 않습니다.
-     *
-     * @param request 현재 요청
-     * @return true이면 필터를 적용하지 않음, false이면 필터 적용
-     */
+    @Data
+    @AllArgsConstructor
+    private static class PathMethodPattern {
+        private String pathPattern;
+        private String method;
+
+        public boolean matches(String path, String method, AntPathMatcher matcher) {
+            return this.method.equals(method) && matcher.match(this.pathPattern, path);
+        }
+    }
+
+    // 익명 사용자도 접근 가능한 경로 (임의 인증 객체 생성)
+    private final List<PathMethodPattern> anonymousAccessiblePatterns = List.of(
+            new PathMethodPattern("/api/comments/**", "GET"),
+            new PathMethodPattern("/api/comments/*/likes", "GET"),
+            new PathMethodPattern("/api/posts/*/comments", "GET"),
+            new PathMethodPattern("/api/recomments/*/likes", "GET"),
+            new PathMethodPattern("/api/comments/*/recomments", "GET"),
+            new PathMethodPattern("/api/posts/**", "GET"),
+            new PathMethodPattern("/api/users/**", "GET")
+    );
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
@@ -64,37 +82,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 
-    /**
-     * JWT 토큰을 검증하고 인증 정보를 설정하는 필터 메서드입니다.
-     *
-     * @param request HTTP 요청
-     * @param response HTTP 응답
-     * @param filterChain 필터 체인
-     * @throws ServletException 서블릿 예외
-     * @throws IOException IO 예외
-     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // 요청 정보 로깅
         log.debug("JwtAuthenticationFilter 실행 - URI: {}, 메서드: {}", request.getRequestURI(), request.getMethod());
 
-        // 요청에서 JWT 토큰 추출
-        String token = jwtUtil.resolveTokenFromCookie(request);
-        log.debug("추출된 토큰: {}", token != null ? "존재함 (길이: " + token.length() + ")" : "없음");
+        String path = request.getServletPath();
+        String method = request.getMethod();
 
-        // 토큰이 존재하고 현재 인증 정보가 없는 경우에만 처리
+        // 익명 접근 가능한 경로인지 확인
+        boolean isAnonymousAccessible = anonymousAccessiblePatterns.stream()
+                .anyMatch(pattern -> pattern.matches(path, method, pathMatcher));
+
+        String token = jwtUtil.resolveTokenFromCookie(request);
+
         if (StringUtils.hasText(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                // 토큰 유효성 검증
+                // 토큰이 있으면 정상적인 인증 처리
                 if (jwtTokenValidator.validateToken(token)) {
                     String userId = jwtUtil.getSubject(token);
+                    CustomUserDetails userDetails = userDetailsService.loadUserById(userId);
 
-                    // DB에서 CustomUserDetails 조회
-                    CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserById(userId);
-
-                    //CustomUserDetails기반으로 인증 객체 생성
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -105,13 +114,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.debug("JWT 인증 성공: {}", userId);
                 }
             } catch (CustomException e) {
-                // 토큰 검증 실패 시 로깅
                 log.error("JWT 인증 실패: {}", e.getMessage());
                 SecurityContextHolder.clearContext();
+
+                // 익명 접근 가능한 경로라면 익명 인증 객체 생성
+                if (isAnonymousAccessible) {
+                    createAnonymousAuthentication();
+                }
             }
+        } else if (isAnonymousAccessible && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // 토큰이 없지만 익명 접근 가능한 경로라면 익명 인증 객체 생성
+            createAnonymousAuthentication();
         }
 
-        // 다음 필터 실행
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * 익명 사용자를 위한 임시 인증 객체 생성
+     */
+    private void createAnonymousAuthentication() {
+        // 익명 사용자용 CustomUserDetails 생성
+        CustomUserDetails anonymousUser = userDetailsService.loadUserById(BotConstants.BOT_MEMBER_ID.toString());
+
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                anonymousUser,
+                null,
+                anonymousUser.getAuthorities()
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.debug("익명 사용자 인증 객체 생성");
     }
 }
