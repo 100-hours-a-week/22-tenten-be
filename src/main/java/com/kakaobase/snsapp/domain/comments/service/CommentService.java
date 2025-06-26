@@ -132,11 +132,6 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId", "삭제할 댓글을 찾을 수 없습니다."));
 
-        // 댓글 작성자 확인
-        if (!comment.getMember().getId().equals(memberId)) {
-            throw new CommentException(CommentErrorCode.POST_NOT_AUTHORIZED, "commentId", "본인이 작성한 댓글만 삭제할 수 있습니다.");
-        }
-
         recommentLikeRepository.deleteByCommentId(commentId);
         recommentRepository.deleteByCommentId(commentId);
         commentLikeRepository.deleteByCommentId(commentId);
