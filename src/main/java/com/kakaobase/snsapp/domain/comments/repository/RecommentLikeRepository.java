@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -53,6 +54,9 @@ public interface RecommentLikeRepository extends JpaRepository<RecommentLike, Re
     @Query("DELETE FROM RecommentLike rl WHERE rl.member.id = :memberId")
     void deleteByMemberId(@Param("memberId") Long memberId);
 
+    @Modifying
+    @Query("DELETE FROM RecommentLike rl WHERE rl.recomment.id IN :recommentIds")
+    void deleteByRecommentIdIn(@Param("recommentIds") List<Long> recommentIds);
 
     /**
      * 특정 댓글의 모든 대댓글에 대한 좋아요를 삭제합니다.

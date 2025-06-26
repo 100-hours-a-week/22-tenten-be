@@ -58,20 +58,17 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, Commen
      * 특정 댓글의 모든 좋아요를 삭제
      *
      * @param commentId 댓글 ID
-     * @return 삭제된 레코드 수
      */
     @Modifying
     @Query("DELETE FROM CommentLike cl WHERE cl.comment.id = :commentId")
     void deleteByCommentId(@Param("commentId") Long commentId);
 
     /**
-     * 특정 게시글과 연관된 모든 댓글의 좋아요를 직접 하드 삭제
-     * JOIN을 통해 한 번의 쿼리로 처리
+     * 특정 댓글목록의 모든 좋아요를 삭제
      *
-     * @param postId 게시글 ID
-     * @return 삭제된 좋아요 수
+     * @param commentIds 댓글 ID의 List
      */
     @Modifying
-    @Query("DELETE FROM CommentLike cl WHERE cl.comment.post.id = :postId")
-    void deleteByPostId(@Param("postId") Long postId);
+    @Query("DELETE FROM CommentLike cl WHERE cl.comment.id IN :commentIds")
+    void deleteByCommentIdIn(@Param("commentIds") List<Long> commentIds);
 }
