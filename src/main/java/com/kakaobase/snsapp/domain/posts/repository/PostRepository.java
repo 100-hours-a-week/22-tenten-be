@@ -29,5 +29,4 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostCustomRep
     long countByMemberId(Long memberId);
 
     List<Post> findTop10ByBoardTypeOrderByCreatedAtDescIdDesc(BoardType boardType);
-
 }

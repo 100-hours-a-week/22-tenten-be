@@ -1,5 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.entity;
 
+import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.entity.BaseSoftDeletableEntity;
@@ -8,7 +9,9 @@ import lombok.*;
 import org.hibernate.annotations.Where;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 게시글 정보를 담는 엔티티
@@ -118,4 +121,11 @@ public class Post extends BaseSoftDeletableEntity {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @OrderBy("sortIndex ASC")
     private final List<PostImage> postImages = new ArrayList<>();
+
+
+    @OneToMany(mappedBy = "post", fetch = FetchType.LAZY)
+    private final Set<Comment> comments = new HashSet<>();
+
+    @OneToMany(mappedBy = "post", fetch = FetchType.LAZY)
+    private final Set<PostLike> postLikes = new HashSet<>();
 }

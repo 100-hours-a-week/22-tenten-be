@@ -134,7 +134,7 @@ public class CommentCustomRepositoryImpl implements CommentCustomRepository {
                         comment.post.id.eq(postId)
                                 .and(cursor != null ? comment.id.lt(cursor) : null)
                 )
-                .orderBy(comment.createdAt.desc(), comment.id.desc())
+                .orderBy(comment.createdAt.asc(), comment.id.asc())
                 .limit(limit)
                 .fetch();
     }
@@ -197,7 +197,7 @@ public class CommentCustomRepositoryImpl implements CommentCustomRepository {
                         comment.member.id.eq(authorMemberId)
                                 .and(cursor != null ? comment.id.lt(cursor) : null)
                 )
-                .orderBy(comment.createdAt.desc(), comment.id.desc())
+                .orderBy(comment.createdAt.asc(), comment.id.asc())
                 .limit(limit)
                 .fetch();
     }
@@ -269,7 +269,7 @@ public class CommentCustomRepositoryImpl implements CommentCustomRepository {
                 .where(
                         cursor != null ? comment.id.lt(cursor) : null
                 )
-                .orderBy(comment.createdAt.desc(), comment.id.desc())
+                .orderBy(comment.createdAt.asc(), comment.id.asc())
                 .limit(limit)
                 .fetch();
     }

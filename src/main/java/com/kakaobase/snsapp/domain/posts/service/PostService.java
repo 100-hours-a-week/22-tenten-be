@@ -1,9 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
-import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
-import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
-import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
@@ -15,7 +12,6 @@ import com.kakaobase.snsapp.domain.posts.event.PostCreatedEvent;
 import com.kakaobase.snsapp.domain.posts.exception.PostErrorCode;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
-import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.service.async.YouTubeSummaryService;
 import com.kakaobase.snsapp.domain.posts.service.cache.PostCacheService;
@@ -53,10 +49,6 @@ public class PostService {
     private final PostConverter postConverter;
     private final MemberRepository memberRepository;
     private final PostCacheService postCacheService;
-    private final CommentRepository commentRepository;
-    private final RecommentRepository recommentRepository;
-    private final CommentLikeRepository commentLikeRepository;
-    private final PostLikeRepository postLikeRepository;
 
     /**
      * 게시글을 생성합니다.
@@ -134,25 +126,15 @@ public class PostService {
      * 게시글을 삭제합니다.
      */
     @Transactional
-    public void deletePost(Long postId, Long memberId) {
-        
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND,"postId", "이미 존재하지 않는 게시물 입니다"));
+    public void deletePost(Long postId) {
 
-        //해당 게시글과 연관된 댓글, 대댓글과 좋아요 삭제
-        recommentRepository.deleteByPostId(postId);
-        recommentRepository.deleteByPostId(postId);
-        commentRepository.deleteByPostId(postId);
-        commentLikeRepository.deleteByPostId(postId);
-        postLikeRepository.deleteByPostId(postId);
-        // 소프트 삭제 처리
-        postRepository.delete(post);
-        //캐시에서 제거
-        postCacheService.delete(post.getId());
+        if(!postRepository.existsById(postId)) {
+            throw new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND);
+        }
 
-        log.info("게시글 삭제 완료: 게시글 ID={}, 삭제자 ID={}", postId, memberId);
+        postCacheService.delete(postId);
+        postRepository.deletePost(postId);
     }
-
 
     /**
      * 게시글 목록을 조회합니다.

@@ -4,9 +4,10 @@ import com.kakaobase.snsapp.domain.posts.entity.PostLike;
 import com.kakaobase.snsapp.domain.posts.repository.custom.PostLikeCustomRepository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -25,11 +26,9 @@ public interface PostLikeRepository extends JpaRepository<PostLike, PostLike.Pos
      */
     boolean existsByMemberIdAndPostId(Long memberId, Long postId);
 
-    /**
-     * 특정 게시글의 모든 좋아요 삭제 - JPA 메서드명
-     */
     @Modifying
-    void deleteByPostId(Long postId);
+    @Query("DELETE FROM PostLike pl WHERE pl.post.id = :postId")
+    void deleteByPostId(@Param("postId") Long postId);
 
     /**
      * 특정 회원의 모든 좋아요 삭제 - JPA 메서드명

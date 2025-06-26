@@ -1,5 +1,9 @@
 package com.kakaobase.snsapp.domain.posts.repository.custom;
 
+import com.kakaobase.snsapp.domain.comments.entity.QComment;
+import com.kakaobase.snsapp.domain.comments.entity.QCommentLike;
+import com.kakaobase.snsapp.domain.comments.entity.QRecomment;
+import com.kakaobase.snsapp.domain.comments.entity.QRecommentLike;
 import com.kakaobase.snsapp.domain.follow.entity.QFollow;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.QMember;
@@ -12,8 +16,11 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -320,5 +327,59 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
                 .orderBy(post.createdAt.desc(), post.id.desc())
                 .limit(limit)
                 .fetch();
+    }
+
+
+    @Override
+    @Modifying
+    public void deletePost(Long postId) {
+
+        QPost post = QPost.post;
+        QComment comment = QComment.comment;
+        QRecomment recomment = QRecomment.recomment;
+        QCommentLike commentLike = QCommentLike.commentLike;
+        QRecommentLike recommentLike = QRecommentLike.recommentLike;
+        QPostLike postLike = QPostLike.postLike;
+        QPostImage postImage = QPostImage.postImage;
+
+        // 1. Comment ID 조회
+        List<Long> commentIds = queryFactory
+                .select(comment.id)
+                .from(comment)
+                .where(comment.post.id.eq(postId).and(comment.deletedAt.isNull()))
+                .fetch();
+
+        // 2. Recomment ID 조회
+        List<Long> recommentIds = Collections.emptyList();
+        if (!commentIds.isEmpty()) {
+            recommentIds = queryFactory
+                    .select(recomment.id)
+                    .from(recomment)
+                    .where(recomment.comment.id.in(commentIds).and(recomment.deletedAt.isNull()))
+                    .fetch();
+        }
+
+        // 3. 순차적 삭제 (의존성 순서)
+        if (!recommentIds.isEmpty()) {
+            queryFactory.delete(recommentLike)
+                    .where(recommentLike.recomment.id.in(recommentIds)).execute();
+            queryFactory.update(recomment)
+                    .set(recomment.deletedAt, LocalDateTime.now())
+                    .where(recomment.id.in(recommentIds).and(recomment.deletedAt.isNull())).execute();
+        }
+
+        if (!commentIds.isEmpty()) {
+            queryFactory.delete(commentLike)
+                    .where(commentLike.comment.id.in(commentIds)).execute();
+            queryFactory.update(comment)
+                    .set(comment.deletedAt, LocalDateTime.now())
+                    .where(comment.id.in(commentIds).and(comment.deletedAt.isNull())).execute();
+        }
+
+        queryFactory.delete(postLike).where(postLike.post.id.eq(postId)).execute();
+        queryFactory.delete(postImage).where(postImage.post.id.eq(postId)).execute();
+        queryFactory.update(post)
+                .set(post.deletedAt, LocalDateTime.now())
+                .where(post.id.eq(postId).and(post.deletedAt.isNull())).execute();
     }
 }

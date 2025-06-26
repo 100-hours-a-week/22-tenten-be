@@ -8,9 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * 댓글 좋아요 엔티티에 대한 데이터 액세스 객체
@@ -40,38 +38,11 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, Commen
     boolean existsByMemberIdAndCommentId(Long memberId, Long commentId);
 
     /**
-     * 특정 사용자가 좋아요를 누른 댓글 ID 목록을 일괄 조회
-     *
-     * @param memberId 사용자 ID
-     * @param commentIds 확인할 댓글 ID 목록
-     * @return 좋아요를 누른 댓글 ID Set
-     */
-    @Query("SELECT cl.id.commentId FROM CommentLike cl " +
-            "WHERE cl.id.memberId = :memberId " +
-            "AND cl.id.commentId IN :commentIds")
-    Set<Long> findLikedCommentIdsByMemberAndComments(
-            @Param("memberId") Long memberId,
-            @Param("commentIds") List<Long> commentIds
-    );
-
-    /**
      * 특정 댓글의 모든 좋아요를 삭제
      *
      * @param commentId 댓글 ID
-     * @return 삭제된 레코드 수
      */
     @Modifying
     @Query("DELETE FROM CommentLike cl WHERE cl.comment.id = :commentId")
     void deleteByCommentId(@Param("commentId") Long commentId);
-
-    /**
-     * 특정 게시글과 연관된 모든 댓글의 좋아요를 직접 하드 삭제
-     * JOIN을 통해 한 번의 쿼리로 처리
-     *
-     * @param postId 게시글 ID
-     * @return 삭제된 좋아요 수
-     */
-    @Modifying
-    @Query("DELETE FROM CommentLike cl WHERE cl.comment.post.id = :postId")
-    void deleteByPostId(@Param("postId") Long postId);
 }

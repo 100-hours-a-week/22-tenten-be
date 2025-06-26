@@ -27,4 +27,6 @@ public interface PostCustomRepository {
             Long cursor,
             int limit,
             Long currentMemberId);
+
+    void deletePost(Long postId);
 }
