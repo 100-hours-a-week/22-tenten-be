@@ -31,17 +31,6 @@ public interface RecommentRepository extends JpaRepository<Recomment, Long>, Rec
     void deleteByCommentId(@Param("commentId") Long commentId);
 
     /**
-     * 특정 게시글과 연관된 모든 대댓글을 소프트 삭제 처리합니다.
-     * 게시글이 삭제될 때 해당 게시글의 모든 댓글의 대댓글을 함께 삭제합니다.
-     *
-     * @param postId 삭제할 게시글 ID
-     * @return 삭제 처리된 대댓글 수
-     */
-    @Modifying
-    @Query("UPDATE Recomment r SET r.deletedAt = CURRENT_TIMESTAMP WHERE r.comment.post.id = :postId AND r.deletedAt IS NULL")
-    void deleteByPostId(@Param("postId") Long postId);
-
-    /**
      * 특정 댓글의 대댓글을 모두 조회합니다. (댓글 목록 조회 시 사용)
      * 삭제되지 않은 대댓글만 조회하며, 생성 시간 오름차순으로 정렬합니다.
      *

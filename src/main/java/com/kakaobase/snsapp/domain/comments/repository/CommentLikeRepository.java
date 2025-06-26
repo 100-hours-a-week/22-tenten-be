@@ -40,21 +40,6 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, Commen
     boolean existsByMemberIdAndCommentId(Long memberId, Long commentId);
 
     /**
-     * 특정 사용자가 좋아요를 누른 댓글 ID 목록을 일괄 조회
-     *
-     * @param memberId 사용자 ID
-     * @param commentIds 확인할 댓글 ID 목록
-     * @return 좋아요를 누른 댓글 ID Set
-     */
-    @Query("SELECT cl.id.commentId FROM CommentLike cl " +
-            "WHERE cl.id.memberId = :memberId " +
-            "AND cl.id.commentId IN :commentIds")
-    Set<Long> findLikedCommentIdsByMemberAndComments(
-            @Param("memberId") Long memberId,
-            @Param("commentIds") List<Long> commentIds
-    );
-
-    /**
      * 특정 댓글의 모든 좋아요를 삭제
      *
      * @param commentId 댓글 ID
@@ -62,13 +47,4 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, Commen
     @Modifying
     @Query("DELETE FROM CommentLike cl WHERE cl.comment.id = :commentId")
     void deleteByCommentId(@Param("commentId") Long commentId);
-
-    /**
-     * 특정 댓글목록의 모든 좋아요를 삭제
-     *
-     * @param commentIds 댓글 ID의 List
-     */
-    @Modifying
-    @Query("DELETE FROM CommentLike cl WHERE cl.comment.id IN :commentIds")
-    void deleteByCommentIdIn(@Param("commentIds") List<Long> commentIds);
 }
