@@ -135,58 +135,15 @@ public class PostService {
     /**
      * 게시글을 삭제합니다.
      */
+    @Transactional
     public void deletePost(Long postId) {
 
-        // 📍 1단계: EntityGraph로 모든 관련 데이터 한번에 조회
-        // 역할: Post + Comments + Recomments를 1번의 쿼리로 로딩
-        // 핵심: 이후 getComments(), getRecomments() 호출 시 추가 쿼리 없음!
-        Post post = postRepository.findByIdWithCommentsAndRecomments(postId)
-                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
-
-        // 📍 2단계: 이미 로딩된 컬렉션에서 ID 추출
-        // 역할: 삭제할 대상들의 ID를 수집 (추가 쿼리 없음!)
-        Set<Comment> comments = post.getComments();  // ✅ 이미 EntityGraph로 로딩됨
-
-        List<Long> commentIds = new ArrayList<>();
-        List<Long> recommentIds = new ArrayList<>();
-
-        for (Comment comment : comments) {
-            commentIds.add(comment.getId());
-
-            // ✅ 이것도 이미 EntityGraph로 로딩됨 (추가 쿼리 없음!)
-            Set<Recomment> recomments = comment.getRecomments();
-            for (Recomment recomment : recomments) {
-                recommentIds.add(recomment.getId());
-            }
+        if(!postRepository.existsById(postId)) {
+            throw new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        // 📍 3단계: 의존성 순서대로 삭제 실행
-        // 역할: FK 제약조건을 위반하지 않는 순서로 안전하게 삭제
-
-        // 3-1. 대댓글 좋아요 삭제 (HardDelete)
-        if (!recommentIds.isEmpty()) {
-            recommentLikeRepository.deleteByRecommentIdIn(recommentIds);
-            log.info("대댓글 좋아요 {}개 삭제 완료", recommentIds.size());
-        }
-
-        // 3-2. 댓글 좋아요 삭제 (HardDelete)
-        if (!commentIds.isEmpty()) {
-            commentLikeRepository.deleteByCommentIdIn(commentIds);
-            log.info("댓글 좋아요 {}개 삭제 완료", commentIds.size());
-        }
-
-        // 3-3. 게시글 좋아요 삭제 (HardDelete)
-        postLikeRepository.deleteByPostId(postId);
-
-        // 📍 4단계: Post 삭제 (Cascade나 @SQLDelete로 연관 데이터 자동 처리)
-        // 역할:
-        // - Post 삭제 시 @SQLDelete로 SoftDelete 실행
-        // - PostImage는 cascade로 자동 삭제 (orphanRemoval = true)
-        // - Comment, Recomment도 @SQLDelete로 SoftDelete 실행 (Cascade 설정 시)
-        postRepository.delete(post);
-
-        log.info("게시글 삭제 완료: postId={}, 댓글={}개, 대댓글={}개",
-                postId, commentIds.size(), recommentIds.size());
+        postCacheService.delete(postId);
+        postRepository.deletePost(postId);
     }
 
     /**
