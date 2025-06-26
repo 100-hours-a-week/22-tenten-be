@@ -1,5 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kakaobase.snsapp.domain.posts.dto.BotRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
@@ -14,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -63,6 +66,12 @@ public class BotPostService {
 
             // 4. AI 서버 요청 DTO 생성
             BotRequestDto.CreatePostRequest request = createBotRequest(boardType, filteredPosts);
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                log.info("createBotRequest result: {}", mapper.writeValueAsString(request));
+            } catch (Exception e) {
+                log.info("createBotRequest result: {}", request);
+            }
 
             // 5. AI 서버 호출
             BotRequestDto.AiPostResponse aiResponse = callAiServer(request);
@@ -138,12 +147,26 @@ public class BotPostService {
                                 .nickname(post.getMember().getNickname())
                                 .className(post.getMember().getClassName()) // enum을 문자열로 변환
                                 .build())
-                        .createdAt(post.getCreatedAt().toString()) // LocalDateTime을 ISO 8601 문자열로 변환
+                        .createdAt(formatUtc(post.getCreatedAt().atZone(ZoneOffset.UTC).toInstant())) // formatUtc 적용
                         .content(post.getContent())
                         .build())
                 .toList();
 
         return new BotRequestDto.CreatePostRequest(boardType.name(), botPosts);
+    }
+
+    private String formatUtc(Instant instant) {
+        // 마이크로초까지만 출력하고 Z 붙이기
+        long seconds = instant.getEpochSecond();
+        int micros = instant.getNano() / 1000;  // 나노초를 마이크로초로 변환
+
+        // 포맷: yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'
+        return String.format("%s.%06dZ",
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+                        .withZone(ZoneOffset.UTC)
+                        .format(instant),
+                micros
+        );
     }
 
 
