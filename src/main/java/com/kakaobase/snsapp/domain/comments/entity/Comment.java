@@ -12,8 +12,8 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 댓글 정보를 담는 엔티티
@@ -59,7 +59,7 @@ public class Comment extends BaseSoftDeletableEntity {
     private Long recommentCount = 0L;
 
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
-    private List<Recomment> recomments = new ArrayList<>();
+    private Set<Recomment> recomments = new HashSet<>();
 
     /**
      * 댓글 생성을 위한 생성자
