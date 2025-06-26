@@ -1,10 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
-import com.kakaobase.snsapp.domain.comments.entity.Comment;
-import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
-import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
-import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
@@ -16,7 +12,6 @@ import com.kakaobase.snsapp.domain.posts.event.PostCreatedEvent;
 import com.kakaobase.snsapp.domain.posts.exception.PostErrorCode;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostImageRepository;
-import com.kakaobase.snsapp.domain.posts.repository.PostLikeRepository;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
 import com.kakaobase.snsapp.domain.posts.service.async.YouTubeSummaryService;
 import com.kakaobase.snsapp.domain.posts.service.cache.PostCacheService;
@@ -35,9 +30,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * 게시글 관련 비즈니스 로직을 처리하는 서비스
@@ -56,9 +49,6 @@ public class PostService {
     private final PostConverter postConverter;
     private final MemberRepository memberRepository;
     private final PostCacheService postCacheService;
-    private final CommentLikeRepository commentLikeRepository;
-    private final RecommentLikeRepository recommentLikeRepository;
-    private final PostLikeRepository postLikeRepository;
 
     /**
      * 게시글을 생성합니다.

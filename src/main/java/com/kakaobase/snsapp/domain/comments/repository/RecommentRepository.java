@@ -24,7 +24,6 @@ public interface RecommentRepository extends JpaRepository<Recomment, Long>, Rec
      * 댓글이 삭제될 때 해당 댓글의 모든 대댓글을 함께 삭제합니다.
      *
      * @param commentId 삭제할 댓글 ID
-     * @return 삭제 처리된 대댓글 수
      */
     @Modifying
     @Query("UPDATE Recomment r SET r.deletedAt = CURRENT_TIMESTAMP WHERE r.comment.id = :commentId AND r.deletedAt IS NULL")
