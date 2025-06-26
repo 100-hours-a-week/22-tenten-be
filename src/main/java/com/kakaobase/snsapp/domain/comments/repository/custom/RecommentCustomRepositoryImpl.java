@@ -130,7 +130,7 @@ public class RecommentCustomRepositoryImpl implements RecommentCustomRepository 
                         recomment.comment.id.eq(commentId)
                                 .and(cursor != null ? recomment.id.lt(cursor) : null)
                 )
-                .orderBy(recomment.createdAt.desc(), recomment.id.desc())
+                .orderBy(recomment.createdAt.asc(), recomment.id.asc())
                 .limit(limit)
                 .fetch();
     }
@@ -191,7 +191,7 @@ public class RecommentCustomRepositoryImpl implements RecommentCustomRepository 
                         recomment.member.id.eq(authorMemberId)
                                 .and(cursor != null ? recomment.id.lt(cursor) : null)
                 )
-                .orderBy(recomment.createdAt.desc(), recomment.id.desc())
+                .orderBy(recomment.createdAt.asc(), recomment.id.asc())
                 .limit(limit)
                 .fetch();
     }
@@ -261,7 +261,7 @@ public class RecommentCustomRepositoryImpl implements RecommentCustomRepository 
                 .where(
                         cursor != null ? recomment.id.lt(cursor) : null
                 )
-                .orderBy(recomment.createdAt.desc(), recomment.id.desc())
+                .orderBy(recomment.createdAt.asc(), recomment.id.asc())
                 .limit(limit)
                 .fetch();
     }
