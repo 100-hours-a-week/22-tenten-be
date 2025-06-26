@@ -78,11 +78,9 @@ public class CommentController {
             description = "댓글을 삭제합니다. 자신이 작성한 댓글만 삭제할 수 있습니다."
     )
     public ResponseEntity<CustomResponse<Void>> deleteComment(
-            @PathVariable Long commentId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+            @PathVariable Long commentId
     ) {
-        Long memberId = Long.valueOf(userDetails.getId());
-        commentService.deleteComment(memberId, commentId);
+        commentService.deleteComment(commentId);
         return ResponseEntity.ok(CustomResponse.success("댓글이 삭제되었습니다.", null));
     }
 

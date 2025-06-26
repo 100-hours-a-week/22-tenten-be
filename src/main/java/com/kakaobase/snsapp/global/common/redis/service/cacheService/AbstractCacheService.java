@@ -185,7 +185,7 @@ public abstract class AbstractCacheService<V, T> implements CacheService<Long, V
     protected void decrementFieldAndSync(Long id, String fieldName) throws CacheException{
         try {
             String key = generateCacheKey(id);
-            Long newValue = redisTemplate.opsForHash().increment(key, fieldName, -(long) -1);
+            Long newValue = redisTemplate.opsForHash().increment(key, fieldName, -1);
 
             // 음수 방지
             if (newValue < 0) {
