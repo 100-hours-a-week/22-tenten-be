@@ -30,6 +30,17 @@ import java.util.Set;
                         columnList = "board_type, deleted_at, created_at DESC, id DESC")
         }
 )
+@NamedEntityGraph(
+        name = "Post.withCommentsAndRecomments",
+        attributeNodes = @NamedAttributeNode(
+                value = "comments",
+                subgraph = "comments-subgraph"
+        ),
+        subgraphs = @NamedSubgraph(
+                name = "comments-subgraph",
+                attributeNodes = @NamedAttributeNode("recomments")
+        )
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Where(clause = "deleted_at IS NULL")
