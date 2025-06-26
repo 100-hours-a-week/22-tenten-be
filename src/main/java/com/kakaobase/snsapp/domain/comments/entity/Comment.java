@@ -58,8 +58,8 @@ public class Comment extends BaseSoftDeletableEntity {
     @Column(name = "recomment_count", nullable = false)
     private Long recommentCount = 0L;
 
-    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
-    private Set<Recomment> recomments = new HashSet<>();
+    @OneToMany(mappedBy = "comment", fetch = FetchType.LAZY)
+    private final Set<Recomment> recomments = new HashSet<>();
 
     /**
      * 댓글 생성을 위한 생성자
