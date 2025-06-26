@@ -1,6 +1,5 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kakaobase.snsapp.domain.posts.dto.BotRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
@@ -66,12 +65,6 @@ public class BotPostService {
 
             // 4. AI 서버 요청 DTO 생성
             BotRequestDto.CreatePostRequest request = createBotRequest(boardType, filteredPosts);
-            ObjectMapper mapper = new ObjectMapper();
-            try {
-                log.info("createBotRequest result: {}", mapper.writeValueAsString(request));
-            } catch (Exception e) {
-                log.info("createBotRequest result: {}", request);
-            }
 
             // 5. AI 서버 호출
             BotRequestDto.AiPostResponse aiResponse = callAiServer(request);
