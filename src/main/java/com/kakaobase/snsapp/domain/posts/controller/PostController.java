@@ -94,14 +94,11 @@ public class PostController {
     @PreAuthorize("@accessChecker.isPostOwner(#postId, authentication.principal)")
     public CustomResponse<Void> deletePost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
-            @Parameter(description = "게시글 ID") @PathVariable Long postId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+            @Parameter(description = "게시글 ID") @PathVariable Long postId
             ) {
 
-        Long memberId = Long.valueOf(userDetails.getId());
-
         // 게시글 삭제
-        postService.deletePost(postId, memberId);
+        postService.deletePost(postId);
 
         return CustomResponse.success("게시글이 삭제되었습니다");
     }

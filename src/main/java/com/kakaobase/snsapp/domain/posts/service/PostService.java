@@ -1,9 +1,10 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.kakaobase.snsapp.domain.comments.entity.Comment;
+import com.kakaobase.snsapp.domain.comments.entity.Recomment;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.comments.repository.CommentLikeRepository;
-import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
-import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
+import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
@@ -34,7 +35,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 게시글 관련 비즈니스 로직을 처리하는 서비스
@@ -53,9 +56,8 @@ public class PostService {
     private final PostConverter postConverter;
     private final MemberRepository memberRepository;
     private final PostCacheService postCacheService;
-    private final CommentRepository commentRepository;
-    private final RecommentRepository recommentRepository;
     private final CommentLikeRepository commentLikeRepository;
+    private final RecommentLikeRepository recommentLikeRepository;
     private final PostLikeRepository postLikeRepository;
 
     /**
@@ -133,26 +135,59 @@ public class PostService {
     /**
      * 게시글을 삭제합니다.
      */
-    @Transactional
-    public void deletePost(Long postId, Long memberId) {
-        
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND,"postId", "이미 존재하지 않는 게시물 입니다"));
+    public void deletePost(Long postId) {
 
-        //해당 게시글과 연관된 댓글, 대댓글과 좋아요 삭제
-        recommentRepository.deleteByPostId(postId);
-        recommentRepository.deleteByPostId(postId);
-        commentRepository.deleteByPostId(postId);
-        commentLikeRepository.deleteByPostId(postId);
+        // 📍 1단계: EntityGraph로 모든 관련 데이터 한번에 조회
+        // 역할: Post + Comments + Recomments를 1번의 쿼리로 로딩
+        // 핵심: 이후 getComments(), getRecomments() 호출 시 추가 쿼리 없음!
+        Post post = postRepository.findByIdWithCommentsAndRecomments(postId)
+                .orElseThrow(() -> new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postId"));
+
+        // 📍 2단계: 이미 로딩된 컬렉션에서 ID 추출
+        // 역할: 삭제할 대상들의 ID를 수집 (추가 쿼리 없음!)
+        Set<Comment> comments = post.getComments();  // ✅ 이미 EntityGraph로 로딩됨
+
+        List<Long> commentIds = new ArrayList<>();
+        List<Long> recommentIds = new ArrayList<>();
+
+        for (Comment comment : comments) {
+            commentIds.add(comment.getId());
+
+            // ✅ 이것도 이미 EntityGraph로 로딩됨 (추가 쿼리 없음!)
+            Set<Recomment> recomments = comment.getRecomments();
+            for (Recomment recomment : recomments) {
+                recommentIds.add(recomment.getId());
+            }
+        }
+
+        // 📍 3단계: 의존성 순서대로 삭제 실행
+        // 역할: FK 제약조건을 위반하지 않는 순서로 안전하게 삭제
+
+        // 3-1. 대댓글 좋아요 삭제 (HardDelete)
+        if (!recommentIds.isEmpty()) {
+            recommentLikeRepository.deleteByRecommentIdIn(recommentIds);
+            log.info("대댓글 좋아요 {}개 삭제 완료", recommentIds.size());
+        }
+
+        // 3-2. 댓글 좋아요 삭제 (HardDelete)
+        if (!commentIds.isEmpty()) {
+            commentLikeRepository.deleteByCommentIdIn(commentIds);
+            log.info("댓글 좋아요 {}개 삭제 완료", commentIds.size());
+        }
+
+        // 3-3. 게시글 좋아요 삭제 (HardDelete)
         postLikeRepository.deleteByPostId(postId);
-        // 소프트 삭제 처리
+
+        // 📍 4단계: Post 삭제 (Cascade나 @SQLDelete로 연관 데이터 자동 처리)
+        // 역할:
+        // - Post 삭제 시 @SQLDelete로 SoftDelete 실행
+        // - PostImage는 cascade로 자동 삭제 (orphanRemoval = true)
+        // - Comment, Recomment도 @SQLDelete로 SoftDelete 실행 (Cascade 설정 시)
         postRepository.delete(post);
-        //캐시에서 제거
-        postCacheService.delete(post.getId());
 
-        log.info("게시글 삭제 완료: 게시글 ID={}, 삭제자 ID={}", postId, memberId);
+        log.info("게시글 삭제 완료: postId={}, 댓글={}개, 대댓글={}개",
+                postId, commentIds.size(), recommentIds.size());
     }
-
 
     /**
      * 게시글 목록을 조회합니다.
