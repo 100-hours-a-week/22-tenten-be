@@ -127,7 +127,7 @@ public class CommentService {
      * 댓글을 삭제합니다.
      */
     @Transactional
-    public void deleteComment(Long memberId, Long commentId) {
+    public void deleteComment(Long commentId) {
         // 댓글 조회
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "commentId", "삭제할 댓글을 찾을 수 없습니다."));
@@ -147,8 +147,6 @@ public class CommentService {
 
         // 댓글 삭제 (Soft Delete)
         commentRepository.delete(comment);
-
-        log.info("댓글 삭제 완료: 댓글 ID={}, 삭제자 ID={}", commentId, memberId);
     }
 
     /**
