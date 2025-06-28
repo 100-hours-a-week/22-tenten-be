@@ -116,14 +116,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } catch (CustomException e) {
                 log.error("JWT 인증 실패: {}", e.getMessage());
                 SecurityContextHolder.clearContext();
-
-                // 익명 접근 가능한 경로라면 익명 인증 객체 생성
-                if (isAnonymousAccessible) {
-                    createAnonymousAuthentication();
-                }
+                return;
             }
-        } else if (isAnonymousAccessible && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // 토큰이 없지만 익명 접근 가능한 경로라면 익명 인증 객체 생성
+        } else if (isAnonymousAccessible && !StringUtils.hasText(token) &&
+                SecurityContextHolder.getContext().getAuthentication() == null) {
+            log.debug("토큰이 없는 익명 사용자 - 임시 인증 객체 생성");
             createAnonymousAuthentication();
         }
 
