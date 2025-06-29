@@ -128,7 +128,7 @@ public class RecommentCustomRepositoryImpl implements RecommentCustomRepository 
 
                 .where(
                         recomment.comment.id.eq(commentId)
-                                .and(cursor != null ? recomment.id.lt(cursor) : null)
+                                .and(cursor != null ? recomment.id.gt(cursor) : null)
                 )
                 .orderBy(recomment.createdAt.asc(), recomment.id.asc())
                 .limit(limit)
