@@ -48,7 +48,7 @@ public class CookieUtil {
     }
 
     public ResponseCookie createTokenToAccessCookie(String accessToken) {
-        return createTokenToCookie(accessToken, accessTokenCookieName, accessTokenCookiePath, accessTokenExpiration);
+        return createTokenToCookie(accessToken, accessTokenCookieName, accessTokenCookiePath, refreshTokenExpiration);
     }
 
     public ResponseCookie createEmptyAccessCookie() {
