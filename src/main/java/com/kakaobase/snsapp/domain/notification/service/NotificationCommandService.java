@@ -1,0 +1,49 @@
+package com.kakaobase.snsapp.domain.notification.service;
+
+
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
+import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
+import com.kakaobase.snsapp.domain.notification.dto.packets.NotificationPacket;
+import com.kakaobase.snsapp.domain.notification.entity.Notification;
+import com.kakaobase.snsapp.domain.notification.error.NotificationException;
+import com.kakaobase.snsapp.domain.notification.repository.NotificationRepository;
+import com.kakaobase.snsapp.domain.notification.util.NotificationType;
+import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class NotificationCommandService {
+
+    private final NotificationConverter notificationConverter;
+    private final NotificationRepository notifiRepository;
+    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final NotificationRepository notificationRepository;
+
+    @Transactional
+    public Long createNotification(Long receiverId, NotificationType type, Long targetId) {
+        Notification notification = notificationConverter.toEntity(receiverId, type, targetId);
+        notifiRepository.save(notification);
+        return notification.getId();
+    }
+
+    @Transactional
+    public void updateNotificationRead(Long notifId) {
+        Notification notification = notificationRepository.findById(notifId)
+                .orElseThrow(()-> new NotificationException(GeneralErrorCode.INTERNAL_SERVER_ERROR));
+
+        notification.markAsRead();
+    }
+
+    @Async
+    public void sendNotification(Long notifId, NotificationType type, String content, Long targetId, MemberResponseDto.UserInfo userInfo) {
+        NotificationPacket packet = notificationConverter.toPacket(notifId, type, targetId, content, userInfo);
+        simpMessagingTemplate.convertAndSendToUser(userInfo.id().toString(), "/queue/notifications", packet);
+    }
+}
