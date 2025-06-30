@@ -1,8 +1,8 @@
 package com.kakaobase.snsapp.global.common.entity;
 
-import lombok.Builder;
+import lombok.experimental.SuperBuilder;
 
-@Builder
+@SuperBuilder
 public abstract class WebSocketPacket<T> {
     public final String event;  // 세부 동작 (ex: liked, read, joined, error)
     public final T data;       // 실제 메시지 데이터 (개별 DTO로 분기)
