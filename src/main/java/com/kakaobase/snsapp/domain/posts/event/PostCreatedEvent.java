@@ -1,6 +1,6 @@
 package com.kakaobase.snsapp.domain.posts.event;
 
-import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
@@ -23,7 +23,7 @@ public class PostCreatedEvent extends ApplicationEvent {
     /**
      * 게시판 타입
      */
-    private final Post.BoardType boardType;
+    private final BoardType boardType;
 
     /**
      * 게시글 작성자 ID
@@ -43,7 +43,7 @@ public class PostCreatedEvent extends ApplicationEvent {
      * @param boardType 게시판 타입
      * @param memberId 작성자 ID
      */
-    public PostCreatedEvent(Object source, Long postId, Post.BoardType boardType, Long memberId) {
+    public PostCreatedEvent(Object source, Long postId, BoardType boardType, Long memberId) {
         super(source);
         this.postId = postId;
         this.boardType = boardType;
@@ -58,7 +58,7 @@ public class PostCreatedEvent extends ApplicationEvent {
      * @param boardType 게시판 타입
      * @param memberId 작성자 ID
      */
-    public PostCreatedEvent(Long postId, Post.BoardType boardType, Long memberId) {
+    public PostCreatedEvent(Long postId, BoardType boardType, Long memberId) {
         this(postId, postId, boardType, memberId);
     }
 

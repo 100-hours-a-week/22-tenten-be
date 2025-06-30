@@ -72,7 +72,6 @@ tmp/
 *.crt
 
 ### Redis
-CONFIG
 *.rdb
 *.aof
 *.pid

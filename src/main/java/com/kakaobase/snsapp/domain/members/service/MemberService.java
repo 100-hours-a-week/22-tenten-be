@@ -4,7 +4,7 @@ import com.kakaobase.snsapp.domain.auth.entity.AuthToken;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.auth.repository.AuthTokenRepository;
 import com.kakaobase.snsapp.domain.auth.service.AuthCacheService;
-import com.kakaobase.snsapp.domain.auth.service.SecurityTokenManager;
+import com.kakaobase.snsapp.domain.follow.dto.FollowCount;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
@@ -47,7 +47,6 @@ public class MemberService {
     private final FollowRepository followRepository;
     private final EntityManager em;
     private final AuthTokenRepository authTokenRepository;
-    private final SecurityTokenManager securityTokenManager;
     private final AuthCacheService authCacheService;
 
     /**
@@ -136,8 +135,10 @@ public class MemberService {
             throw new MemberException(MemberErrorCode.EMAIL_VERIFICATION_FAILED);
         }
 
+        followRepository.cleanupAllFollowRelationships(member.getId());
+
         // Member 엔티티 삭제
-        member.softDelete();
+        memberRepository.delete(member);
 
     }
 
@@ -199,7 +200,7 @@ public class MemberService {
             try {
                 String refreshTokenHash = authToken.getRefreshTokenHash();
 
-                boolean updateResult = authCacheService.updateRefershCacheImage(refreshTokenHash, newImageUrl);
+                boolean updateResult = authCacheService.updateRefreshCacheImage(refreshTokenHash, newImageUrl);
 
                 if (updateResult) {
                     log.debug("캐시 이미지 업데이트 성공: memberId={}, tokenHash={}", memberId, refreshTokenHash);
@@ -234,6 +235,43 @@ public class MemberService {
         }
 
         return memberConverter.toMypage(tagetMember, postCount, isMine, isFollowing);
+    }
+
+    @Transactional
+    public void syncMemberFollowCount() {
+        List<Member> members = memberRepository.findAll();
+
+        // 배치 조회 (Record 방식)
+        Map<Long, Long> followingCounts = followRepository.findFollowingCounts()
+                .stream()
+                .collect(Collectors.toMap(
+                        FollowCount::memberId,
+                        FollowCount::count
+                ));
+
+        Map<Long, Long> followerCounts = followRepository.findFollowerCounts()
+                .stream()
+                .collect(Collectors.toMap(
+                        FollowCount::memberId,
+                        FollowCount::count
+                ));
+
+        // 업데이트
+        members.forEach(member -> {
+            Long id = member.getId();
+
+            // 팔로잉 카운트 동기화
+            Long newFollowingCount = followingCounts.getOrDefault(id, 0L);
+            if (!member.getFollowingCount().equals(newFollowingCount)) {
+                member.updateFollowingCount(newFollowingCount);
+            }
+
+            // 팔로워 카운트 동기화
+            Long newFollowerCount = followerCounts.getOrDefault(id, 0L);
+            if (!member.getFollowerCount().equals(newFollowerCount)) {
+                member.updateFollowerCount(newFollowerCount);
+            }
+        });
     }
 
     private Long getCurrentUserId() {

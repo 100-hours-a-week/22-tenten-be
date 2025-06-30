@@ -9,9 +9,11 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 댓글 정보를 담는 엔티티
@@ -30,7 +32,9 @@ import java.util.List;
         }
 )
 @Getter
+@SQLDelete(sql = "UPDATE comments SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Where(clause = "deleted_at IS NULL")
 public class Comment extends BaseSoftDeletableEntity {
 
     @Id
@@ -49,13 +53,13 @@ public class Comment extends BaseSoftDeletableEntity {
     private String content;
 
     @Column(name = "like_count", nullable = false)
-    private int likeCount = 0;
+    private Long likeCount = 0L;
 
     @Column(name = "recomment_count", nullable = false)
-    private int recommentCount = 0;
+    private Long recommentCount = 0L;
 
-    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL)
-    private List<Recomment> recomments = new ArrayList<>();
+    @OneToMany(mappedBy = "comment", fetch = FetchType.LAZY)
+    private final Set<Recomment> recomments = new HashSet<>();
 
     /**
      * 댓글 생성을 위한 생성자
@@ -68,15 +72,6 @@ public class Comment extends BaseSoftDeletableEntity {
     public Comment(Post post, Member member, String content) {
         this.post = post;
         this.member = member;
-        this.content = content;
-    }
-
-    /**
-     * 댓글 내용 수정
-     *
-     * @param content 수정할 댓글 내용
-     */
-    public void updateContent(String content) {
         this.content = content;
     }
 
@@ -110,15 +105,5 @@ public class Comment extends BaseSoftDeletableEntity {
         if (this.recommentCount > 0) {
             this.recommentCount--;
         }
-    }
-
-    /**
-     * 작성자 확인
-     *
-     * @param member 확인할 회원
-     * @return 입력받은 회원이 작성자면 true, 아니면 false
-     */
-    public boolean isWrittenBy(Member member) {
-        return this.member.getId().equals(member.getId());
     }
 }

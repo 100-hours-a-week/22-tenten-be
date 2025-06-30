@@ -1,5 +1,6 @@
 package com.kakaobase.snsapp.domain.members.controller;
 
+import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.service.CommentService;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,7 +32,7 @@ import java.util.List;
 @Slf4j
 @Tag(name = "회원 API", description = "회원 관련 API")
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class MemberController {
 
@@ -80,9 +82,12 @@ public class MemberController {
     public CustomResponse<List<PostResponseDto.PostDetails>> getUserPosts(
             @Parameter(description = "조회할 유저id") @PathVariable Long userId,
             @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
-            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor
+            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<PostResponseDto.PostDetails> response = postService.getUserPostList(limit, cursor, userId);
+        Long currentUserId = Long.valueOf(userDetails.getId());
+
+        List<PostResponseDto.PostDetails> response = postService.getUserPostList(limit, cursor, userId, currentUserId);
 
         return CustomResponse.success("유저 게시글 조회에 성공하였습니다",response);
     }
@@ -92,10 +97,12 @@ public class MemberController {
     public CustomResponse<List<CommentResponseDto.CommentInfo>> getUserComments(
             @Parameter(description = "조회할 유저id") @PathVariable Long userId,
             @Parameter(description = "한 페이지에 표시할 댓글 수") @RequestParam(defaultValue = "12") int limit,
-            @Parameter(description = "마지막으로 조회한 댓글 ID") @RequestParam(required = false) Long cursor
+            @Parameter(description = "마지막으로 조회한 댓글 ID") @RequestParam(required = false) Long cursor,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        Long currentUserId = Long.valueOf(userDetails.getId());
 
-        List<CommentResponseDto.CommentInfo> response = commentService.getUserCommentList(limit, cursor, userId);
+        List<CommentResponseDto.CommentInfo> response = commentService.getUserCommentList(limit, cursor, userId, currentUserId);
 
         return CustomResponse.success("유저 댓글 조회에 성공하였습니다",response);
     }
@@ -105,10 +112,12 @@ public class MemberController {
     public CustomResponse<List<PostResponseDto.PostDetails>> getLikedPosts(
             @Parameter(description = "조회할 유저id") @PathVariable Long userId,
             @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
-            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor
+            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        Long currentUserId = Long.valueOf(userDetails.getId());
 
-        List<PostResponseDto.PostDetails> response = postService.getLikedPostList(limit, cursor, userId);
+        List<PostResponseDto.PostDetails> response = postService.getLikedPostList(limit, cursor, userId, currentUserId);
 
         return CustomResponse.success("좋아요한 게시글 목록이 정상적으로 조회되었습니다",response);
     }

@@ -1,56 +1,33 @@
 package com.kakaobase.snsapp.domain.follow.repository;
 
-
 import com.kakaobase.snsapp.domain.follow.entity.Follow;
+import com.kakaobase.snsapp.domain.follow.repository.custom.FollowCustomRepository;
 import com.kakaobase.snsapp.domain.members.entity.Member;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
 @Repository
-public interface FollowRepository extends JpaRepository<Follow, Long> {
+public interface FollowRepository extends JpaRepository<Follow, Long>, FollowCustomRepository {
 
+
+    /**
+     * 팔로우 관계가 존재하는지 확인
+     */
     boolean existsByFollowerUserAndFollowingUser(Member followerUser, Member followingUser);
 
+    /**
+     * 특정 팔로우 관계 조회
+     */
     Optional<Follow> findByFollowerUserAndFollowingUser(Member followerUser, Member followingUser);
 
-    @Query(value = """
-    SELECT m.id, m.nickname, m.name, m.profile_img_url
-    FROM follow f
-    JOIN members m ON f.follower_user_id = m.id
-    WHERE f.following_id = :followingId
-      AND (:cursor IS NULL OR m.id > :cursor)
-    ORDER BY m.id ASC
-    LIMIT :limit
-    """, nativeQuery = true)
-    List<Object[]> findFollowersByFollowingUserWithCursor(
-            @Param("followingId") Long followingId,
-            @Param("limit") Integer limit,
-            @Param("cursor") Long cursor
+    /**
+     * 특정 Member가 다른 사람들을 팔로우한 관계들을 모두 삭제
+     */
+    Long deleteByFollowerUserId(Long followerUserId);
 
-    );
-
-    @Query(value = """
-    SELECT m.id, m.nickname, m.name, m.profile_img_url
-    FROM follow f
-    JOIN members m ON f.following_id = m.id
-    WHERE f.follower_user_id = :followerId
-      AND (:cursor IS NULL OR m.id > :cursor)
-    ORDER BY m.id ASC
-    LIMIT :limit
-    """, nativeQuery = true)
-    List<Object[]> findFollowingsByFollowerUserWithCursor(
-            @Param("followerId") Long followerId,
-            @Param("limit") Integer limit,
-            @Param("cursor") Long cursor
-    );
-
-    @Query("SELECT f.followingUser.id FROM Follow f WHERE f.followerUser = :followerUser")
-    Set<Long> findFollowingUserIdsByFollowerUser(@Param("followerUser") Member followerUser);
-
+    /**
+     * 특정 Member를 팔로우하는 관계들을 모두 삭제)
+     */
+    Long deleteByFollowingUserId(Long followingUserId);
 }

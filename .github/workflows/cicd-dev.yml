@@ -1,0 +1,150 @@
+name: Backend CI/CD - Develop
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+    paths-ignore:
+      - '**.md'
+      - '**/README*'
+
+jobs:
+  ci:
+    name: CI (Build)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Gradle Caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build (Gradle)
+        run: ./gradlew build -x test
+
+  cd:
+    name: CD (Deploy to EC2 via SSM)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build Spring Project
+        run: ./gradlew build -x test
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.DEPLOY_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEPLOY_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set deployment variables
+        run: |
+          TAG=$(date +%Y%m%d%H%M%S)
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          IMAGE_TAG=dev-${SHORT_SHA}-${TAG}
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Build Docker Image
+        run: |
+          docker build --no-cache -t ${{ secrets.ECR_REPO_BE }}:$IMAGE_TAG \
+                         -t ${{ secrets.ECR_REPO_BE }}:dev .
+
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.ECR_REPO_BE }}:$IMAGE_TAG
+          docker push ${{ secrets.ECR_REPO_BE }}:dev
+
+      - name: Deploy to EC2 via SSM
+        run: |
+          IMAGE_URI=${{ secrets.ECR_REPO_BE }}:$IMAGE_TAG
+
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --comment "GitHub Actions 배포" \
+            --instance-ids ${{ secrets.SSM_INSTANCE_TAG }} \
+            --parameters commands='[
+              "docker stop backend-app || true",
+              "docker rm backend-app || true",
+              "aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin '"${{ secrets.ECR_REPO_BE }}"'",
+              "bash -c \"\
+                KEYS=\\\"DISCORD_ERROR_WEBHOOK_URL JWT_SECRET MYSQL_URL MYSQL_PASSWORD COOKIE_DOMAIN EMAIL EMAIL_PASSWORD BUCKET_NAME AWS_ACCESS_KEY AWS_SECRET_KEY AI_SERVER_URL REDIS_URL\\\"; \
+                DOCKER_ENV_ARGS=\\\"\\\"; \
+                for KEY in \\$KEYS; do \
+                  VALUE=\\\"\\$(aws ssm get-parameter --name \\\"/kakaobase/dev/\\$KEY\\\" --with-decryption --region ap-northeast-2 --query \\\"Parameter.Value\\\" --output text)\\\"; \
+                  DOCKER_ENV_ARGS=\\\"\\$DOCKER_ENV_ARGS -e \\$KEY=\\\"\\$VALUE\\\"\\\"; \
+                done; \
+                DOCKER_ENV_ARGS=\\\"\\$DOCKER_ENV_ARGS -e SPRING_LOGGING_LEVEL_ROOT=DEBUG -e SPRING_LOGGING_LEVEL_COM_KAKAOBASE_SNSAPP_GLOBAL_SECURITY=DEBUG\\\"; \
+                echo \\\"Launching with SPRING_PROFILES_ACTIVE=dev and envs: \\$DOCKER_ENV_ARGS\\\"; \
+                docker run -d --name backend-app -e SPRING_PROFILES_ACTIVE=dev \\$DOCKER_ENV_ARGS -p 8080:8080 '"$IMAGE_URI"'\
+              \""
+            ]' \
+            --region ap-northeast-2 \
+            --timeout-seconds 600
+
+  notify:
+    name: Discord Notification
+    if: always()
+    needs: [ci, cd]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Notification
+        run: |
+          CI_RESULT="${{ needs.ci.result || 'skipped' }}"
+          CD_RESULT="${{ needs.cd.result || 'skipped' }}"
+          
+          COLOR="8359053"
+          STATUS="⚪ CI/CD 실행됨"
+          
+          if [ "$CI_RESULT" = "success" ]; then
+            STATUS="✅ CI 성공"
+            COLOR="5763719"
+          elif [ "$CI_RESULT" = "failure" ]; then
+            STATUS="❌ CI 실패"
+            COLOR="15158332"
+          fi
+          
+          if [ "$CD_RESULT" = "success" ]; then
+            STATUS="✅ CD 성공"
+            COLOR="3066993"
+          elif [ "$CD_RESULT" = "failure" ]; then
+            STATUS="❌ CD 실패"
+            COLOR="15158332"
+          fi
+          
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"🔔 GitHub Actions 결과: ${{ github.workflow }}\",
+                \"description\": \"$STATUS\n브랜치: \`${{ github.ref_name }}\`\n커밋: \`${{ github.actor }}\`\n[👉 실행 로그 보기](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\",
+                \"color\": $COLOR
+              }]
+            }" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}

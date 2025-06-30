@@ -1,28 +1,22 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
-import com.kakaobase.snsapp.domain.members.entity.Member;
-import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
-import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.dto.BotRequestDto;
 import com.kakaobase.snsapp.domain.posts.dto.PostRequestDto;
-import com.kakaobase.snsapp.domain.posts.dto.PostResponseDto;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import java.time.ZoneId;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * AI 봇의 게시글 관련 서비스
@@ -37,9 +31,6 @@ public class BotPostService {
     private final PostService postService;
     private final PostRepository postRepository;
     private final WebClient webClient;
-    private final MemberRepository memberRepository;
-    private final EntityManager em;
-    private final PostConverter postConverter;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -52,12 +43,12 @@ public class BotPostService {
      * @param boardType 게시판 타입
      */
     @Transactional
-    public void createBotPost(Post.BoardType boardType) {
+    public void createBotPost(BoardType boardType) {
         try {
             log.info("봇 게시글 생성 시작 - boardType: {}", boardType);
 
             // 1. 최근 게시글 조회 (봇 게시글 필터링을 위해 여유있게 10개 조회)
-            List<Post> recentPosts = findRecentPosts(boardType, 10);
+            List<Post> recentPosts = postRepository.findTop10ByBoardTypeOrderByCreatedAtDescIdDesc(boardType);
             log.info("조회된 최근 게시글 수: {}", recentPosts.size());
 
             // 2. 봇이 작성하지 않은 게시글만 필터링하여 5개 선택
@@ -86,18 +77,6 @@ public class BotPostService {
         } catch (Exception e) {
             log.error("봇 게시글 생성 실패 - boardType: {}", boardType, e);
         }
-    }
-
-    /**
-     * 최근 게시글을 조회합니다.
-     *
-     * @param boardType 게시판 타입
-     * @param limit 조회할 게시글 수
-     * @return 최근 게시글 목록
-     */
-    private List<Post> findRecentPosts(Post.BoardType boardType, int limit) {
-        Pageable pageable = PageRequest.of(0, limit);
-        return postRepository.findByBoardTypeWithCursor(boardType, null, pageable);
     }
 
     /**
@@ -151,54 +130,39 @@ public class BotPostService {
      * AI 서버 요청 DTO 생성
      *
      * @param boardType 게시판 타입
-     * @param posts 최근 게시글 목록
      * @return AI 서버 요청 DTO
      */
-    private BotRequestDto.CreatePostRequest createBotRequest(Post.BoardType boardType, List<Post> posts) {
-        // 게시글 작성자들의 정보를 한 번에 조회
-        Map<Long, Map<String, String>> memberInfoMap = getMemberInfoByPosts(posts);
-
-        List<BotRequestDto.PostDto> botPosts = posts.stream()
-                .map(post -> {
-                    Map<String, String> memberInfo = memberInfoMap.get(post.getMember().getId());
-                    if (memberInfo == null) {
-                        throw new IllegalStateException("회원 정보를 찾을 수 없습니다. memberId: " + post.getMember().getId());
-                    }
-
-                    String className = post.getMember().getClassName();
-                    log.debug("게시글 작성자 정보: {}, {}", memberInfo.get("nickname"), className);
-
-                    return new BotRequestDto.PostDto(
-                            new BotRequestDto.UserDto(
-                                    memberInfo.get("nickname"),
-                                    className
-                            ),
-                            post.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toString(),
-                            post.getContent()
-                    );
-                })
-                .collect(Collectors.toList());
+    private BotRequestDto.CreatePostRequest createBotRequest(BoardType boardType, List<Post> filteredPosts) {
+        // 게시글 리스트를 PostDto 리스트로 변환
+        List<BotRequestDto.PostDto> botPosts = filteredPosts.stream()
+                .map(post -> BotRequestDto.PostDto.builder()
+                        .user(BotRequestDto.UserDto.builder()
+                                .nickname(post.getMember().getNickname())
+                                .className(post.getMember().getClassName()) // enum을 문자열로 변환
+                                .build())
+                        .createdAt(formatUtc(post.getCreatedAt().atZone(ZoneOffset.UTC).toInstant())) // formatUtc 적용
+                        .content(post.getContent())
+                        .build())
+                .toList();
 
         return new BotRequestDto.CreatePostRequest(boardType.name(), botPosts);
     }
 
-    /**
-     * 게시글 목록으로부터 작성자들의 정보를 조회합니다.
-     *
-     * @param posts 게시글 목록
-     * @return 회원 ID를 키로 하는 회원 정보 맵
-     */
-    private Map<Long, Map<String, String>> getMemberInfoByPosts(List<Post> posts) {
-        Set<Long> memberIds = posts.stream()
-                .map(post -> post.getMember().getId())
-                .collect(Collectors.toSet());
+    private String formatUtc(Instant instant) {
+        // 마이크로초까지만 출력하고 Z 붙이기
+        long seconds = instant.getEpochSecond();
+        int micros = instant.getNano() / 1000;  // 나노초를 마이크로초로 변환
 
-        return memberIds.stream()
-                .collect(Collectors.toMap(
-                        memberId -> memberId,
-                        postService::getMemberInfo
-                ));
+        // 포맷: yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'
+        return String.format("%s.%06dZ",
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+                        .withZone(ZoneOffset.UTC)
+                        .format(instant),
+                micros
+        );
     }
+
+
 
     /**
      * AI 서버 호출
@@ -235,15 +199,9 @@ public class BotPostService {
         );
 
         // AI 응답 데이터를 사용하여 게시글 생성
-        Post.BoardType boardType;
-        try {
-            boardType = Post.BoardType.valueOf(data.boardType());
-        } catch (IllegalArgumentException e) {
-            log.error("잘못된 게시판 타입: {}", data.boardType());
-            throw new RuntimeException("잘못된 게시판 타입", e);
-        }
+        String postType = data.boardType();
 
         // PostService를 통해 게시글 생성 (PostResponseDto.PostDetails 반환)
-        postService.createPost(boardType, requestDto, BotConstants.BOT_MEMBER_ID);
+        postService.createPost(postType, requestDto, BotConstants.BOT_MEMBER_ID);
     }
 }

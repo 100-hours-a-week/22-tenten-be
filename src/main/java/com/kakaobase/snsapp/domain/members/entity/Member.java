@@ -1,11 +1,22 @@
 package com.kakaobase.snsapp.domain.members.entity;
 
+import com.kakaobase.snsapp.domain.comments.entity.CommentLike;
+import com.kakaobase.snsapp.domain.comments.entity.Comment;
+import com.kakaobase.snsapp.domain.comments.entity.Recomment;
+import com.kakaobase.snsapp.domain.comments.entity.RecommentLike;
+import com.kakaobase.snsapp.domain.follow.entity.Follow;
+import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.domain.posts.entity.PostLike;
 import com.kakaobase.snsapp.global.common.entity.BaseSoftDeletableEntity;
 import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.*;
 import org.hibernate.annotations.*;
+
+import java.util.HashSet;
+import java.util.Set;
 
 
 @Entity
@@ -20,7 +31,7 @@ import org.hibernate.annotations.*;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @DynamicInsert
-@SQLDelete(sql = "UPDATE members SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@BatchSize(size = 50)
 @Where(clause = "deleted_at IS NULL")
 public class Member extends BaseSoftDeletableEntity {
 
@@ -61,11 +72,11 @@ public class Member extends BaseSoftDeletableEntity {
 
     @Column(name = "following_count", nullable = false)
     @ColumnDefault("0")
-    private Integer followingCount = 0;
+    private Long followingCount = 0L;
 
     @Column(name = "follower_count", nullable = false)
     @ColumnDefault("0")
-    private Integer followerCount = 0;
+    private Long followerCount = 0L;
 
     @Builder
     public Member(String email, String name, String nickname, String password, ClassName className, String githubUrl) {
@@ -76,7 +87,6 @@ public class Member extends BaseSoftDeletableEntity {
         this.className = className;
         this.githubUrl = githubUrl;
     }
-
 
     /**
      * 회원 역할을 정의하는 열거형입니다.
@@ -135,6 +145,11 @@ public class Member extends BaseSoftDeletableEntity {
         this.isBanned = isBanned;
     }
 
+
+    public void updateFollowingCount(Long followingCount) {
+        this.followingCount = followingCount;
+    }
+
     /**
      * 팔로잉 카운트를 증가시킵니다.
      */
@@ -149,6 +164,10 @@ public class Member extends BaseSoftDeletableEntity {
         if (this.followingCount > 0) {
             this.followingCount--;
         }
+    }
+
+    public void updateFollowerCount(Long followerCount) {
+        this.followerCount = followerCount;
     }
 
     /**
@@ -194,4 +213,38 @@ public class Member extends BaseSoftDeletableEntity {
     public boolean isEnabled() {
         return !isDeleted() && !isBanned;
     }
+
+    // === 연관관계 매핑 ===
+
+    // 작성한 게시글들 (1:N)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<Post> posts = new HashSet<>();
+
+    // 작성한 댓글들 (1:N)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<Comment> comments = new HashSet<>();
+
+    // 작성한 대댓글들 (1:N)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<Recomment> recomments = new HashSet<>();
+
+    // 팔로우 관계 - 나를 팔로우하는 사람들 (1:N)
+    @OneToMany(mappedBy = "followerUser", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<Follow> followings = new HashSet<>();
+
+    // 팔로워 관계 - 내가 팔로잉하는 사람들 (1:N)
+    @OneToMany(mappedBy = "followingUser", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<Follow> followers = new HashSet<>();
+
+    // 좋아요한 게시글들 (1:N)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<PostLike> postLikes = new HashSet<>();
+
+    // 좋아요한 댓글들 (1:N)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<CommentLike> commentLikes = new HashSet<>();
+
+    // 좋아요한 대댓글들 (1:N)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<RecommentLike> recommentLikes = new HashSet<>();
 }

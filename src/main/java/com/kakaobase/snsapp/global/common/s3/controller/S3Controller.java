@@ -1,6 +1,5 @@
 package com.kakaobase.snsapp.global.common.s3.controller;
 
-import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import com.kakaobase.snsapp.global.common.s3.service.S3Service;
 import com.kakaobase.snsapp.global.common.s3.dto.PresignedUrlResponseDto;
@@ -29,7 +28,7 @@ import jakarta.validation.constraints.Positive;
  */
 @Tag(name = "이미지 관리", description = "이미지 업로드를 위한 Presigned URL 발급 API")
 @RestController
-@RequestMapping("/images")
+@RequestMapping("/api/images")
 @RequiredArgsConstructor
 public class S3Controller {
 
@@ -76,8 +75,7 @@ public class S3Controller {
             @RequestParam @NotBlank(message = "파일명은 필수입니다") String fileName,
             @RequestParam @Positive(message = "파일 크기는 0보다 커야 합니다") Long fileSize,
             @RequestParam @NotBlank(message = "MIME 타입은 필수입니다") String mimeType,
-            @RequestParam @NotBlank(message = "이미지 타입은 필수입니다") String type,
-            @RequestParam(required = false) Post.BoardType boardType
+            @RequestParam @NotBlank(message = "이미지 타입은 필수입니다") String type
     ) {
         // Presigned URL 생성 및 반환
         PresignedUrlResponseDto response = s3Service.generatePresignedUrl(fileName, fileSize, mimeType, type);

@@ -32,14 +32,11 @@ public class CustomUserDetailsService implements UserDetailsService {
      */
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public CustomUserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         log.debug("사용자 인증 정보 조회: {}", email);
 
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> {
-                    log.debug("이메일로 사용자를 찾을 수 없습니다: {}", email);
-                    throw new UsernameNotFoundException("이메일로 사용자를 찾을 수 없습니다: " + email);
-                });
+                .orElseThrow(() -> new UsernameNotFoundException("이메일로 사용자를 찾을 수 없습니다: " + email));
 
         // 로그인 시 사용하는 생성자 사용 (이메일, 비밀번호 포함)
         return new CustomUserDetails(
@@ -64,7 +61,7 @@ public class CustomUserDetailsService implements UserDetailsService {
      * @throws CustomException 사용자를 찾을 수 없는 경우 발생
      */
     @Transactional(readOnly = true)
-    public UserDetails loadUserById(String id) {
+    public CustomUserDetails loadUserById(String id) {
         log.debug("ID로 사용자 인증 정보 조회: {}", id);
 
         Long memberId;
@@ -76,11 +73,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> {
-                    log.debug("ID로 사용자를 찾을 수 없습니다: {}", id);
-                    throw new CustomException(GeneralErrorCode.RESOURCE_NOT_FOUND, "사용자를 찾을 수 없습니다.");
-                });
-
+                .orElseThrow(() -> new CustomException(GeneralErrorCode.RESOURCE_NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
         return new CustomUserDetails(
                 member.getId().toString(),

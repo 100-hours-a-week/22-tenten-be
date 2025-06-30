@@ -56,31 +56,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
      */
     List<Member> findByIdIn(List<Long> ids);
 
-    // MemberRepository.java 수정
-    @Query("SELECT m FROM Member m WHERE " +
-            "(:name IS NOT NULL AND :name != '' AND m.name LIKE %:name%) " +
-            "AND m.deletedAt IS NULL")
-    List<Member> searchByName(@Param("name") String name);
-
-    @Query("SELECT m FROM Member m WHERE " +
-            "(:nickname IS NOT NULL AND :nickname != '' AND m.nickname LIKE %:nickname%) " +
-            "AND m.deletedAt IS NULL")
-    List<Member> searchByNickname(@Param("nickname") String nickname);
-
-    @Query("SELECT m FROM Member m WHERE " +
-            "(:nickname IS NOT NULL AND :nickname != '' AND LOWER(m.nickname) LIKE LOWER(CONCAT('%', :nickname, '%'))) " +
-            "ORDER BY m.nickname ASC LIMIT :limit")
-    List<Member> findByNicknameContainingLimit(@Param("nickname") String nickname, @Param("limit") int limit);
-
-    /**
-     * 특정 회원의 프로필 정보와 팔로우 통계를 조회합니다.
-     * 필요한 컬럼만 선택하여 성능을 최적화합니다.
-     *
-     * @param id 회원 ID
-     * @return 회원 프로필 정보
-     */
-    @Query("SELECT m FROM Member m WHERE m.id = :id")
-    Optional<Member> findProfileById(@Param("id") Long id);
 
     /**
      * 여러 회원 ID로 회원 목록을 조회합니다.

@@ -8,13 +8,19 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: localhost
+      host: ${REDIS_URL}
       port: 6379
       password:
       fallback: true
       timeout: 2000
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          address: "redis://${REDIS_URL}:6379"
+          password: null
+          timeout: 3000
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -49,9 +55,6 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-server:
-  forward-headers-strategy: framework
-  
 app:
   jwt:
     secret: ${JWT_SECRET}
@@ -77,6 +80,7 @@ management:
   endpoints:
     web:
       exposure:
+        base-path: /actuator
         include:
           - health
           - info
@@ -90,3 +94,12 @@ management:
   metrics:
     tags:
       application: sns-app
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+
+server:
+  forward-headers-strategy: framework

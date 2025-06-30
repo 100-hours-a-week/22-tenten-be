@@ -1,8 +1,11 @@
 package com.kakaobase.snsapp.domain.members.converter;
 
+import com.kakaobase.snsapp.domain.follow.service.FollowCacheService;
 import com.kakaobase.snsapp.domain.members.dto.MemberRequestDto;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
+import com.kakaobase.snsapp.global.common.redis.CacheRecord;
+import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 public class MemberConverter {
 
     private final PasswordEncoder passwordEncoder;
+    private final FollowCacheService followCacheService;
 
     /**
      * 회원가입 요청 DTO를 Member 엔티티로 변환합니다.
@@ -49,24 +53,23 @@ public class MemberConverter {
 
     }
 
-
     /**
      * Member Entity 리스트를 UserInfo DTO 리스트로 변환합니다.
      *
      * @param members Member Entity 리스트
      * @return UserInfo DTO 리스트
      */
-    public List<MemberResponseDto.UserInfo> convertToUserInfoList(List<Member> members) {
+    public List<MemberResponseDto.UserInfo> toUserInfoList(List<Member> members) {
         if (members == null) {
             return List.of();
         }
 
         return members.stream()
-                .map(this::convertToUserInfo)
+                .map(this::toUserInfo)
                 .collect(Collectors.toList());
     }
 
-    public MemberResponseDto.UserInfo convertToUserInfo(Member member) {
+    public MemberResponseDto.UserInfo toUserInfo(Member member) {
         if (member == null) {
             return null;
         }
@@ -80,20 +83,37 @@ public class MemberConverter {
     }
 
     public MemberResponseDto.Mypage toMypage(Member member, Long postCount, Boolean isMe, boolean isFollowing) {
-        return MemberResponseDto.Mypage
-                .builder()
-                .id(member.getId())
-                .name(member.getName())
-                .nickname(member.getNickname())
-                .imageUrl(member.getProfileImgUrl())
-                .githubUrl(member.getGithubUrl())
-                .className(member.getClassName())
-                .postCount(postCount)
-                .followerCount(member.getFollowerCount())
-                .followingCount(member.getFollowingCount())
-                .isMe(isMe)
-                .isFollowed(isFollowing)
-                .build();
-
+        try {
+            CacheRecord.FollowStatsCache cacheData = followCacheService.findBy(member.getId());
+            return MemberResponseDto.Mypage
+                    .builder()
+                    .id(member.getId())
+                    .name(member.getName())
+                    .nickname(member.getNickname())
+                    .imageUrl(member.getProfileImgUrl())
+                    .githubUrl(member.getGithubUrl())
+                    .className(member.getClassName())
+                    .postCount(postCount)
+                    .followerCount(cacheData.followerCount())
+                    .followingCount(cacheData.followingCount())
+                    .isMe(isMe)
+                    .isFollowed(isFollowing)
+                    .build();
+        } catch (CacheException e) {
+            return MemberResponseDto.Mypage
+                    .builder()
+                    .id(member.getId())
+                    .name(member.getName())
+                    .nickname(member.getNickname())
+                    .imageUrl(member.getProfileImgUrl())
+                    .githubUrl(member.getGithubUrl())
+                    .className(member.getClassName())
+                    .postCount(postCount)
+                    .followerCount(member.getFollowerCount())
+                    .followingCount(member.getFollowingCount())
+                    .isMe(isMe)
+                    .isFollowed(isFollowing)
+                    .build();
+        }
     }
 }

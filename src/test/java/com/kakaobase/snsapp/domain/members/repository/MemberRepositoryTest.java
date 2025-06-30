@@ -216,22 +216,6 @@ class MemberRepositoryTest {
     }
 
     @Test
-    @DisplayName("닉네임 부분 검색이 동작한다")
-    void searchByNickname_WithPartialNickname_ReturnsMatchingMembers() {
-        // given
-        String partialNickname = "user"; // "user1", "user2", "user3" 매칭 예상
-
-        // when
-        List<Member> results = memberRepository.searchByNickname(partialNickname);
-
-        // then
-        assertThat(results).isNotEmpty();
-        assertThat(results).allSatisfy(member ->
-                assertThat(member.getNickname()).containsIgnoringCase(partialNickname));
-
-    }
-
-    @Test
     @DisplayName("닉네임 목록으로 회원들을 일괄 조회할 수 있다")
     void findAllByNicknameIn_WithNicknameList_ReturnsMatchingMembers() {
         // given
@@ -249,25 +233,6 @@ class MemberRepositoryTest {
                 assertThat(nicknames).contains(member.getNickname()));
     }
 
-    @ParameterizedTest
-    @DisplayName("닉네임 부분 검색 시 결과 수를 제한할 수 있다")
-    @CsvSource({
-            "user, 2",
-            "admin, 1",
-            "bot, 1"
-    })
-    void findByNicknameContainingLimit_WithLimitedResults_ReturnsCorrectSize(
-            String nickname, int limit) {
-        // when
-        List<Member> results = memberRepository.findByNicknameContainingLimit(nickname, limit);
-
-        // then
-        assertThat(results).hasSizeLessThanOrEqualTo(limit);
-        if (!results.isEmpty()) {
-            assertThat(results).allSatisfy(member ->
-                    assertThat(member.getNickname().toLowerCase()).contains(nickname.toLowerCase()));
-        }
-    }
 
     // === 기수 관련 쿼리 테스트 ===
 
@@ -365,87 +330,6 @@ class MemberRepositoryTest {
 
     // === 프로필 조회 테스트 ===
 
-    @Test
-    @DisplayName("프로필 정보를 조회할 수 있다")
-    void findProfileById_WithValidId_ReturnsProfile() {
-        // given
-        Long validId = testMember.getId();
-
-        // when
-        Optional<Member> result = memberRepository.findProfileById(validId);
-
-        // then
-        assertThat(result).isPresent();
-        assertThat(result.get().getId()).isEqualTo(validId);
-        assertThat(result.get().getNickname()).isNotNull();
-        assertThat(result.get().getEmail()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 ID로 프로필 조회 시 빈 Optional을 반환한다")
-    void findProfileById_WithNonExistentId_ReturnsEmpty() {
-        // given
-        Long nonExistentId = 999999L;
-
-        // when
-        Optional<Member> result = memberRepository.findProfileById(nonExistentId);
-
-        // then
-        assertThat(result).isEmpty();
-    }
-
-    // === 성능 및 정렬 테스트 ===
-
-    @Test
-    @DisplayName("닉네임 검색 결과가 알파벳 순으로 정렬된다")
-    void findByNicknameContainingLimit_ResultsAreSorted() {
-        // given
-        String searchTerm = "user";
-        int limit = 10;
-
-        // when
-        List<Member> results = memberRepository.findByNicknameContainingLimit(searchTerm, limit);
-
-        // then
-        if (results.size() > 1) {
-            for (int i = 0; i < results.size() - 1; i++) {
-                String currentNickname = results.get(i).getNickname();
-                String nextNickname = results.get(i + 1).getNickname();
-                assertThat(currentNickname.compareToIgnoreCase(nextNickname))
-                        .isLessThanOrEqualTo(0);
-            }
-        }
-    }
-
-    // === 대소문자 구분 테스트 ===
-
-    @Test
-    @DisplayName("닉네임 검색 시 대소문자를 구분하지 않는다")
-    void findByNicknameContainingLimit_CaseInsensitive() {
-        // given
-        String lowerCase = "user";
-        String upperCase = "USER";
-        String mixedCase = "User";
-
-        // when
-        List<Member> lowerResults = memberRepository.findByNicknameContainingLimit(lowerCase, 10);
-        List<Member> upperResults = memberRepository.findByNicknameContainingLimit(upperCase, 10);
-        List<Member> mixedResults = memberRepository.findByNicknameContainingLimit(mixedCase, 10);
-
-        // then
-        assertThat(lowerResults).hasSameSizeAs(upperResults);
-        assertThat(lowerResults).hasSameSizeAs(mixedResults);
-
-        // 결과의 ID가 동일한지 확인 (순서는 같아야 함)
-        if (!lowerResults.isEmpty()) {
-            List<Long> lowerIds = lowerResults.stream().map(Member::getId).toList();
-            List<Long> upperIds = upperResults.stream().map(Member::getId).toList();
-            List<Long> mixedIds = mixedResults.stream().map(Member::getId).toList();
-
-            assertThat(lowerIds).isEqualTo(upperIds);
-            assertThat(lowerIds).isEqualTo(mixedIds);
-        }
-    }
 
     // === 데이터 무결성 및 이메일 인증 연동 테스트 ===
 
@@ -466,45 +350,6 @@ class MemberRepositoryTest {
         assertThat(result).isEmpty();
     }
 
-
-    @Test
-    @DisplayName("다양한 조건으로 회원 목록을 조회할 수 있다")
-    void complexQueryTest() {
-        // given - MemberFixture의 다양한 생성 메서드 활용
-        List<Member> additionalMembers = List.of(
-                MemberFixture.createMemberWithClassName("jeju1@example.com", Member.ClassName.JEJU_1),
-                MemberFixture.createMemberWithClassName("jeju2@example.com", Member.ClassName.JEJU_2),
-                MemberFixture.createMemberWithClassName("pangyo1@example.com", Member.ClassName.PANGYO_1)
-        );
-
-        memberRepository.saveAll(additionalMembers);
-
-        // when & then
-        // 1. 기수별 조회
-        List<Member> jejuMembers = memberRepository.findByClassName(Member.ClassName.JEJU_1);
-        assertThat(jejuMembers).isNotEmpty();
-
-        // 2. 닉네임 검색
-        List<Member> searchResults = memberRepository.searchByNickname("user");
-        assertThat(searchResults).isNotEmpty();
-
-        // 3. ID 목록 조회
-        List<Long> allIds = memberRepository.findAll().stream().map(Member::getId).toList();
-        List<Member> allByIds = memberRepository.findAllByIdIn(allIds);
-        assertThat(allByIds).hasSizeGreaterThanOrEqualTo(testMembers.size());
-    }
-
-    // === 예외 상황 테스트 ===
-
-    @Test
-    @DisplayName("빈 문자열로 검색 시 적절히 처리된다")
-    void handleEmptyStrings() {
-        // when & then
-        assertThat(memberRepository.searchByName("")).isEmpty();
-        assertThat(memberRepository.searchByNickname("")).isEmpty();
-        assertThat(memberRepository.findByNicknameContainingLimit("", 10)).isEmpty();
-
-    }
 
     // === MemberFixture 특화 테스트 ===
 
@@ -627,28 +472,6 @@ class MemberRepositoryTest {
         assertThat(retrievedMembers).allSatisfy(member -> {
             assertThat(member.getId()).isNotNull();
             assertThat(member.getNickname()).startsWith("example");
-        });
-    }
-
-    @Test
-    @DisplayName("MemberFixture로 생성한 회원들의 닉네임 검색이 정상 동작한다")
-    void searchMembersByNicknameFromFixture() {
-        // given
-        List<Member> searchTestMembers = List.of(
-                MemberFixture.createMemberWithNickname("searchuser1"),
-                MemberFixture.createMemberWithNickname("searchuser2"),
-                MemberFixture.createMemberWithNickname("testuser")
-        );
-
-        memberRepository.saveAll(searchTestMembers);
-
-        // when
-        List<Member> searchResults = memberRepository.searchByNickname("search");
-
-        // then
-        assertThat(searchResults).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(searchResults).allSatisfy(member -> {
-            assertThat(member.getNickname()).containsIgnoringCase("search");
         });
     }
 }

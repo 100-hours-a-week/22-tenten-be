@@ -2,6 +2,7 @@ package com.kakaobase.snsapp.domain.posts.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 
 import java.util.List;
 
@@ -18,13 +19,14 @@ public class BotRequestDto {
      * @param boardType 게시판 타입 (PANGYO_2 등)
      * @param posts 최근 5개 게시글 정보
      */
+    @Builder
     @Schema(description = "AI 서버 게시글 생성 요청")
     public record CreatePostRequest(
-            @Schema(description = "게시판 타입", example = "PANGYO_2", required = true)
+            @Schema(description = "게시판 타입", example = "PANGYO_2")
             @JsonProperty("board_type")
             String boardType,
 
-            @Schema(description = "최근 5개 게시글 목록", required = true)
+            @Schema(description = "최근 5개 게시글 목록")
             List<PostDto> posts
     ) { }
 
@@ -35,19 +37,19 @@ public class BotRequestDto {
      * @param createdAt 게시글 작성 시각 (ISO 8601 형식)
      * @param content 게시글 내용
      */
+    @Builder
     @Schema(description = "게시글 정보")
     public record PostDto(
-            @Schema(description = "게시글 작성자 정보", required = true)
+            @Schema(description = "게시글 작성자 정보")
             UserDto user,
 
-            @Schema(description = "게시글 작성 시각", example = "2025-04-27T10:30:32.311141Z", required = true)
+            @Schema(description = "게시글 작성 시각", example = "2025-04-27T10:30:32.311141Z")
             @JsonProperty("created_at")
             String createdAt,
 
-            @Schema(description = "게시글 내용", example = "좋은아침입니당", required = true)
+            @Schema(description = "게시글 내용", example = "좋은아침입니당")
             String content
-    ) {
-    }
+    ) {}
 
     /**
      * 사용자 정보 DTO
@@ -55,16 +57,16 @@ public class BotRequestDto {
      * @param nickname 사용자 닉네임
      * @param className 사용자 기수
      */
+    @Builder
     @Schema(description = "사용자 정보")
     public record UserDto(
-            @Schema(description = "사용자 닉네임", example = "hazel.kim", required = true)
+            @Schema(description = "사용자 닉네임", example = "hazel.kim")
             String nickname,
 
-            @Schema(description = "사용자 기수", example = "PANGYO_2", required = true)
+            @Schema(description = "사용자 기수", example = "PANGYO_2")
             @JsonProperty("class_name")
             String className
-    ) {
-    }
+    ) {}
 
     /**
      * AI 서버로부터의 게시글 생성 응답 DTO
@@ -118,7 +120,7 @@ public class BotRequestDto {
             @Schema(description = "에러 메시지", example = "전달받은 게시글이 5개 미만입니다.")
             String message,
 
-            @Schema(description = "에러 필드 목록", example = "[\"body\", \"board_type\"]", required = false)
+            @Schema(description = "에러 필드 목록", example = "[\"body\", \"board_type\"]")
             List<String> field
     ) {
     }

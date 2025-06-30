@@ -2,7 +2,7 @@ package com.kakaobase.snsapp.domain.auth.service;
 
 import com.kakaobase.snsapp.domain.auth.exception.AuthException;
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
-import com.kakaobase.snsapp.domain.auth.util.RedisUtilImpl;
+import com.kakaobase.snsapp.domain.auth.util.AuthCacheUtil;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AuthCacheService {
 
-    private final RedisUtilImpl redisUtil;
+    private final AuthCacheUtil redisUtil;
     private final RedisTemplate<String, Object> redisTemplate;
 
     private static final String AUTH_INFO_PREFIX = "refresh_token:";
@@ -118,7 +118,7 @@ public class AuthCacheService {
      * @param newImageUrl 새로운 프로필 이미지 URL
      * @return 업데이트 성공 여부
      */
-    public boolean updateRefershCacheImage(String refreshTokenHash, String newImageUrl) {
+    public boolean updateRefreshCacheImage(String refreshTokenHash, String newImageUrl) {
         try {
             String key = AUTH_INFO_PREFIX + refreshTokenHash;
 

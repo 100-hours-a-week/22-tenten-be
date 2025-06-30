@@ -1,14 +1,17 @@
 package com.kakaobase.snsapp.domain.posts.entity;
 
+import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.members.entity.Member;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.entity.BaseSoftDeletableEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 게시글 정보를 담는 엔티티
@@ -29,7 +32,6 @@ import java.util.List;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@SQLDelete(sql = "UPDATE posts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")
 public class Post extends BaseSoftDeletableEntity {
 
@@ -56,10 +58,10 @@ public class Post extends BaseSoftDeletableEntity {
     private String youtubeSummary;
 
     @Column(name = "like_count", nullable = false)
-    private Integer likeCount = 0;
+    private Long likeCount = 0L;
 
     @Column(name = "comment_count", nullable = false)
-    private Integer commentCount = 0;
+    private Long commentCount = 0L;
 
 
     @Builder
@@ -68,15 +70,6 @@ public class Post extends BaseSoftDeletableEntity {
         this.boardType = boardType;
         this.content = content;
         this.youtubeUrl = youtubeUrl;
-    }
-
-    public enum BoardType {
-        ALL,        // 전체 게시판
-        PANGYO_1,   // 판교 1기 게시판
-        PANGYO_2,   // 판교 2기 게시판
-        JEJU_1,     // 제주 1기 게시판
-        JEJU_2,     // 제주 2기 게시판
-        JEJU_3      // 제주 3기 게시판
     }
 
     /**
@@ -124,4 +117,15 @@ public class Post extends BaseSoftDeletableEntity {
             this.commentCount--;
         }
     }
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @OrderBy("sortIndex ASC")
+    private final List<PostImage> postImages = new ArrayList<>();
+
+
+    @OneToMany(mappedBy = "post", fetch = FetchType.LAZY)
+    private final Set<Comment> comments = new HashSet<>();
+
+    @OneToMany(mappedBy = "post", fetch = FetchType.LAZY)
+    private final Set<PostLike> postLikes = new HashSet<>();
 }

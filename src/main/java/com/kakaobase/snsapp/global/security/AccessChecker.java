@@ -1,12 +1,8 @@
 package com.kakaobase.snsapp.global.security;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
-import com.kakaobase.snsapp.domain.comments.entity.Recomment;
-import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
-import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
-import com.kakaobase.snsapp.domain.posts.converter.PostConverter;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
@@ -30,7 +26,6 @@ public class AccessChecker {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final RecommentRepository recommentRepository;
-    private final MemberRepository memberRepository;
 
     /**
      * 사용자가 특정 게시판에 접근할 권한이 있는지 검증합니다.
@@ -173,20 +168,5 @@ public class AccessChecker {
                                 authority.equals("ROLE_BACKEND_BOT") ||
                                 authority.equals("ROLE_FRONTEND_BOT")
                 );
-    }
-
-    /**
-     * 문자열 형태의 postType을 BoardType enum으로 변환합니다.
-     *
-     * @param postType 게시판 타입 문자열
-     * @return BoardType enum 값
-     * @throws PostException 유효하지 않은 postType인 경우
-     */
-    public Post.BoardType convertToBoardType(String postType) {
-        try {
-            return PostConverter.toBoardType(postType);
-        } catch (IllegalArgumentException e) {
-            throw new PostException(GeneralErrorCode.RESOURCE_NOT_FOUND, "postType");
-        }
     }
 }
