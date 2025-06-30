@@ -3,11 +3,13 @@ package com.kakaobase.snsapp.domain.notification.service;
 
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
-import com.kakaobase.snsapp.domain.notification.dto.packets.NotificationPacket;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationData;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationFollowingData;
 import com.kakaobase.snsapp.domain.notification.entity.Notification;
 import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.repository.NotificationRepository;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
+import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +45,13 @@ public class NotificationCommandService {
 
     @Async
     public void sendNotification(Long notifId, NotificationType type, String content, Long targetId, MemberResponseDto.UserInfo userInfo) {
-        NotificationPacket packet = notificationConverter.toPacket(notifId, type, targetId, content, userInfo);
+        WebSocketPacket<NotificationData> packet = notificationConverter.toPacket(notifId, type, targetId, content, userInfo);
+        simpMessagingTemplate.convertAndSendToUser(userInfo.id().toString(), "/queue/notifications", packet);
+    }
+
+    @Async
+    public void sendNotification(Long notifId, NotificationType type, String content, Long targetId, MemberResponseDto.UserInfoWithFollowing userInfo) {
+        WebSocketPacket<NotificationFollowingData> packet = notificationConverter.toPacket(notifId, type, targetId, content, userInfo);
         simpMessagingTemplate.convertAndSendToUser(userInfo.id().toString(), "/queue/notifications", packet);
     }
 }
