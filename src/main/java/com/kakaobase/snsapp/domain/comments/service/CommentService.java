@@ -13,8 +13,10 @@ import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.comments.service.async.CommentAsyncService;
 import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
+import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
+import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
@@ -50,6 +52,8 @@ public class CommentService {
     private final CommentCacheService commentCacheService;
     private final RecommentLikeRepository recommentLikeRepository;
     private final CommentAsyncService commentAsyncService;
+    private final NotificationService notificationService;
+    private final MemberConverter memberConverter;
 
     /**
      * 댓글을 생성합니다.
@@ -119,6 +123,13 @@ public class CommentService {
         } else {
             log.info("🙅 [Skip] 게시글 작성자가 소셜봇이 아님 → 트리거 생략");
         }
+
+        //알림 전송
+        if(!memberId.equals(post.getMember().getId())) {
+            var userInfo = memberConverter.toUserInfo(proxyMember);
+            notificationService.sendCommentCreatedNotification(post.getMember().getId(), post.getId(), request.content(), userInfo);
+        }
+
 
         return commentConverter.toCreateCommentResponse(savedComment);
     }
