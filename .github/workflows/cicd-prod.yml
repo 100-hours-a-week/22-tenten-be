@@ -108,41 +108,40 @@ jobs:
 
   notify:
     name: Discord Notification
-    needs: [ci, cd]
     if: always()
+    needs: [ci, cd]
     runs-on: ubuntu-latest
-
     steps:
       - name: Send Discord Notification
         run: |
-          if [ "${{ needs.ci.result }}" = "success" ]; then
-            CI_STATUS="✅ CI 성공"
-            CI_COLOR=5763719
-          else
-            CI_STATUS="❌ CI 실패"
-            CI_COLOR=15158332
+          CI_RESULT="${{ needs.ci.result || 'skipped' }}"
+          CD_RESULT="${{ needs.cd.result || 'skipped' }}"
+          
+          COLOR="8359053"
+          STATUS="⚪ CI/CD 실행됨"
+          
+          if [ "$CI_RESULT" = "success" ]; then
+            STATUS="✅ CI 성공"
+            COLOR="5763719"
+          elif [ "$CI_RESULT" = "failure" ]; then
+            STATUS="❌ CI 실패"
+            COLOR="15158332"
           fi
-
-          if [ "${{ needs.cd.result }}" = "success" ]; then
-            CD_STATUS="✅ CD 성공"
-            CD_COLOR=3066993
-          else
-            CD_STATUS="❌ CD 실패"
-            CD_COLOR=15158332
+          
+          if [ "$CD_RESULT" = "success" ]; then
+            STATUS="✅ CD 성공"
+            COLOR="3066993"
+          elif [ "$CD_RESULT" = "failure" ]; then
+            STATUS="❌ CD 실패"
+            COLOR="15158332"
           fi
-
-          if [ "${{ needs.ci.result }}" = "failure" ] || [ "${{ needs.cd.result }}" = "failure" ]; then
-            COLOR=15158332
-          else
-            COLOR=3066993
-          fi
-
+          
           curl -X POST -H "Content-Type: application/json" \
             -d "{
               \"embeds\": [{
                 \"title\": \"🔔 GitHub Actions 결과: ${{ github.workflow }}\",
-                \"description\": \"${CI_STATUS}\n${CD_STATUS}\n브랜치: \`${{ github.ref_name }}\`\n커밋: \`${{ github.actor }}\`\n[👉 실행 로그 보기](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\",
-                \"color\": ${COLOR}
+                \"description\": \"$STATUS\n브랜치: \`${{ github.ref_name }}\`\n커밋: \`${{ github.actor }}\`\n[👉 실행 로그 보기](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\",
+                \"color\": $COLOR
               }]
             }" \
             ${{ secrets.DISCORD_WEBHOOK_URL }}
