@@ -1,8 +1,10 @@
 package com.kakaobase.snsapp.domain.notification.controller;
 
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationRequestData;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponseData;
 import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
+import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
 import com.kakaobase.snsapp.global.error.code.ErrorPacketData;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +27,9 @@ public class NotificationController {
 
     @MessageMapping("/notification.read")
     @SendToUser("/queue/notification")
-    public WebSocketPacket<?> NotificationReadHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
-
+    public WebSocketPacket<NotificationResponseData> notificationReadHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
         return notifService.readNotification(request);
     }
-
 
     @MessageExceptionHandler(Exception.class)
     @SendToUser("/queue/errors")
@@ -42,9 +42,6 @@ public class NotificationController {
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        return WebSocketPacket.<ErrorPacketData>builder()
-                .event("internal_server_error")
-                .data(errorData)
-                .build();
+        return new WebSocketPacketImpl<>("internal_server_error", errorData);
     }
 }

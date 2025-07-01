@@ -8,6 +8,7 @@ import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponse
 import com.kakaobase.snsapp.domain.notification.entity.Notification;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
+import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -37,10 +38,7 @@ public class NotificationConverter {
                 .target_id(targetId)
                 .build();
 
-        return WebSocketPacket.<NotificationData>builder()
-                .event(type.getEvent())
-                .data(data)
-                .build();
+        return new WebSocketPacketImpl<>(type.getEvent(), data);
     }
 
     public WebSocketPacket<NotificationFollowingData> toPacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfoWithFollowing userInfo){
@@ -53,10 +51,7 @@ public class NotificationConverter {
                 .target_id(targetId)
                 .build();
 
-        return WebSocketPacket.<NotificationFollowingData>builder()
-                .event(type.getEvent())
-                .data(data)
-                .build();
+        return new WebSocketPacketImpl<>(type.getEvent(), data);
     }
 
     public WebSocketPacket<NotificationResponseData> toResponsePacket(Long notifId, String event, String error, String message){
@@ -67,9 +62,6 @@ public class NotificationConverter {
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        return WebSocketPacket.<NotificationResponseData>builder()
-                .event(event)
-                .data(data)
-                .build();
+        return new WebSocketPacketImpl<>(event, data);
     }
 }
