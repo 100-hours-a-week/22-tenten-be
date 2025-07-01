@@ -24,14 +24,14 @@ import org.springframework.stereotype.Service;
 public class NotificationCommandService {
 
     private final NotificationConverter notificationConverter;
-    private final NotificationRepository notifiRepository;
+    private final NotificationRepository notifRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final NotificationRepository notificationRepository;
 
     @Transactional
     public Long createNotification(Long receiverId, NotificationType type, Long targetId) {
         Notification notification = notificationConverter.toEntity(receiverId, type, targetId);
-        notifiRepository.save(notification);
+        notifRepository.save(notification);
         return notification.getId();
     }
 

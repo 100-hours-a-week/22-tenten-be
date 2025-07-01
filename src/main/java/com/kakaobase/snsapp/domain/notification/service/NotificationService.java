@@ -1,8 +1,9 @@
 package com.kakaobase.snsapp.domain.notification.service;
 
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
+import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationRequestData;
-import com.kakaobase.snsapp.domain.notification.repository.NotificationRepository;
+import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +15,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class NotificationService {
 
-    private final NotificationRepository notifRepository;
     private final NotificationCommandService commandService;
+    private final NotificationConverter notifConverter;
 
     public void sendCommentCreatedNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfo userInfo) {
         NotificationType type = NotificationType.COMMENT_CREATED;
@@ -56,8 +57,13 @@ public class NotificationService {
     }
 
 
-    public void markNotificationRead(WebSocketPacket<NotificationRequestData> packet) {
+    public WebSocketPacket<?> readNotification(WebSocketPacket<NotificationRequestData> packet) {
+        try{
+            commandService.updateNotificationRead(packet.data.id());
+            return notifConverter.toResponsePacket(packet.data.id(),)
+        } catch (NotificationException e){
 
-        commandService.updateNotificationRead(packet.data.id());
+        }
+
     }
 }

@@ -1,10 +1,12 @@
 package com.kakaobase.snsapp.domain.notification.dto.records;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 
-public record NotificationNackData(
+@Builder
+public record NotificationResponseData(
         Long id,
         String error,
         String message,

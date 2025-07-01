@@ -1,8 +1,10 @@
 package com.kakaobase.snsapp.domain.notification.converter;
 
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationAckData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationFollowingData;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponseData;
 import com.kakaobase.snsapp.domain.notification.entity.Notification;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
@@ -53,6 +55,20 @@ public class NotificationConverter {
 
         return WebSocketPacket.<NotificationFollowingData>builder()
                 .event(type.getEvent())
+                .data(data)
+                .build();
+    }
+
+    public WebSocketPacket<NotificationResponseData> toResponsePacket(Long notifId, String event, String error, String message){
+        var data = NotificationResponseData.builder()
+                .id(notifId)
+                .error(error)
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return WebSocketPacket.<NotificationResponseData>builder()
+                .event(event)
                 .data(data)
                 .build();
     }

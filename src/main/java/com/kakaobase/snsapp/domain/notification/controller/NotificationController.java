@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.notification.controller;
 
-import com.kakaobase.snsapp.domain.notification.dto.packets.NotificationNackPacket;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationRequestData;
+import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import com.kakaobase.snsapp.global.error.code.ErrorPacketData;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
@@ -8,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 
@@ -19,7 +20,16 @@ import java.time.LocalDateTime;
 @Controller
 @RequiredArgsConstructor
 public class NotificationController {
-    private final SimpMessagingTemplate messagingTemplate;
+
+    private final NotificationService notifService;
+
+    @MessageMapping("/notification.read")
+    @SendToUser("/queue/notification")
+    public WebSocketPacket<?> NotificationReadHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
+
+        return notifService.readNotification(request);
+    }
+
 
     @MessageExceptionHandler(Exception.class)
     @SendToUser("/queue/errors")
