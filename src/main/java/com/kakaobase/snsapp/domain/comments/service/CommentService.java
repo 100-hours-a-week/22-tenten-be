@@ -130,7 +130,6 @@ public class CommentService {
             notificationService.sendCommentCreatedNotification(post.getMember().getId(), post.getId(), request.content(), userInfo);
         }
 
-
         return commentConverter.toCreateCommentResponse(savedComment);
     }
 
