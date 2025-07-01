@@ -67,7 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/tokens", "/api/auth/tokens/refresh").permitAll()
                         .requestMatchers("/api/users/email/verification-requests").permitAll()
                         .requestMatchers("/api/users/email/verification").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/users").authenticated()
                         // 그 외 모든 요청은 인증 필요

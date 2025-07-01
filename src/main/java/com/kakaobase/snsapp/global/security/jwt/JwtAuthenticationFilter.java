@@ -44,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/users/email/verification",
             "/api/swagger-ui/**",
             "/v3/api-docs/**",
-            "/actuator/health"
+            "/actuator/**"
     );
 
     @Data
