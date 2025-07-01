@@ -29,11 +29,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // 구독(sub) : 접두사로 시작하는 메시지를 브로커가 처리하도록 설정합니다. 클라이언트는 이 접두사로 시작하는 주제를 구독하여 메시지를 받을 수 있습니다.
         // 예를 들어, 소켓 통신에서 사용자가 특정 메시지를 받기위해 "/sub"이라는 prefix 기반 메시지 수신을 위해 Subscribe합니다.
-        config.enableSimpleBroker("/sub");
-
-
+        config.enableSimpleBroker("/sub", "/queue", "/topic");
         config.setApplicationDestinationPrefixes("/pub");
-        config.enableSimpleBroker("/queue", "/topic");
         config.setUserDestinationPrefix("/user");
     }
 
@@ -52,8 +49,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 // 클라이언트의 origin을 명시적으로 지정
                 .setAllowedOrigins(
                         "https://*.kakaobase.com",
-                        "http://localhost:3000")
-                .addInterceptors(jwtWebSocketHandshakeInterceptor)
-                .withSockJS();
+                        "https://localhost:3000")
+                .addInterceptors(jwtWebSocketHandshakeInterceptor);
     }
 }
