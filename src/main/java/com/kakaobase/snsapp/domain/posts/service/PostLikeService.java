@@ -1,7 +1,9 @@
 package com.kakaobase.snsapp.domain.posts.service;
 
+import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
+import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.entity.PostLike;
 import com.kakaobase.snsapp.domain.posts.exception.PostErrorCode;
@@ -32,6 +34,8 @@ public class PostLikeService {
     private final PostRepository postRepository;
     private final EntityManager em;
     private final PostCacheService postCacheService;
+    private final NotificationService notifService;
+    private final MemberConverter memberConverter;
 
     /**
      * 게시글에 좋아요를 추가합니다.
@@ -66,6 +70,11 @@ public class PostLikeService {
         PostLike postLike = new PostLike(proxyMember, proxyPost);
         postLikeRepository.save(postLike);
         log.info("게시글 좋아요 추가 완료: 게시글 ID={}, 회원 ID={}", postId, memberId);
+
+        if(!proxyPost.getMember().getId().equals(memberId)) {
+            MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
+           notifService.sendPostLikeCreatedNotification(proxyPost.getMember().getId(), proxyPost.getId(),null, userInfo, postId);
+        }
     }
 
     /**
