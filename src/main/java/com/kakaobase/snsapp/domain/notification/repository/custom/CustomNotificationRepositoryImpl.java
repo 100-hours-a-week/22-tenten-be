@@ -49,7 +49,6 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                 WebSocketPacket<?> packet = notificationConverter.toPacket(
                         notif.getId(),
                         notif.getNotificationType(),
-                        content,
                         sender,
                         notif.getCreatedAt(),
                         notif.getIsRead()

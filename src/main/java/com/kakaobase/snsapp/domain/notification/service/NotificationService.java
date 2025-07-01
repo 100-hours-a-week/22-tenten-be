@@ -21,38 +21,39 @@ public class NotificationService {
     private final NotificationCommandService commandService;
     private final NotificationConverter notifConverter;
 
-    public void sendCommentCreatedNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfo userInfo) {
-        sendNotification(receiverId, postId, content, userInfo, NotificationType.COMMENT_CREATED);
+    public void sendCommentCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
+        sendNotification(receiverId, targetId, content, userInfo, NotificationType.COMMENT_CREATED, postId);
     }
 
-    public void sendRecommentCreatedNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfo userInfo) {
-        sendNotification(receiverId, postId, content, userInfo, NotificationType.RECOMMENT_CREATED);
+    public void sendRecommentCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
+        sendNotification(receiverId, targetId, content, userInfo, NotificationType.RECOMMENT_CREATED, postId);
     }
 
-    public void sendPostLikeCreatedNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfo userInfo) {
-        sendNotification(receiverId, postId, content, userInfo, NotificationType.POST_LIKE_CREATED);
+    public void sendPostLikeCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
+        sendNotification(receiverId, targetId, content, userInfo, NotificationType.POST_LIKE_CREATED, postId);
     }
 
-    public void sendCommentLikeCreatedNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfo userInfo) {
-        sendNotification(receiverId, postId, content, userInfo, NotificationType.COMMENT_LIKE_CREATED);
+    public void sendCommentLikeCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
+        sendNotification(receiverId, targetId, content, userInfo, NotificationType.COMMENT_LIKE_CREATED, postId);
     }
 
-    public void sendRecommentLikeCreatedNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfo userInfo) {
-        sendNotification(receiverId, postId, content, userInfo, NotificationType.RECOMMENT_LIKE_CREATED);
+    public void sendRecommentLikeCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
+        sendNotification(receiverId, targetId, content, userInfo, NotificationType.RECOMMENT_LIKE_CREATED, postId);
     }
 
-    public void sendFollowingCreatedNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfoWithFollowing userInfo) {
-        sendNotification(receiverId, postId, content, userInfo, NotificationType.FOLLOWING_CREATED);
+    public void sendFollowingCreatedNotification(Long receiverId, Long targetId, MemberResponseDto.UserInfoWithFollowing userInfo) {
+        sendFollowNotification(receiverId, targetId, userInfo, NotificationType.FOLLOWING_CREATED);
     }
 
-    private void sendNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfo userInfo, NotificationType type) {
-        Long notifId = commandService.createNotification(receiverId, type, postId);
+    private void sendNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, NotificationType type, Long postId) {
+        Long notifId = commandService.createNotification(receiverId, type, targetId);
         commandService.sendNotification(receiverId, notifId, type, content, postId, userInfo);
     }
 
-    private void sendNotification(Long receiverId, Long postId, String content, MemberResponseDto.UserInfoWithFollowing userInfo, NotificationType type) {
-        Long notifId = commandService.createNotification(receiverId, type, postId);
-        commandService.sendNotification(receiverId, notifId, type, content, postId, userInfo);
+    //팔로우 알림용
+    private void sendFollowNotification(Long receiverId, Long targetId, MemberResponseDto.UserInfoWithFollowing userInfo, NotificationType type) {
+        Long notifId = commandService.createNotification(receiverId, type, targetId);
+        commandService.sendNotification(receiverId, notifId, type, userInfo);
     }
 
 

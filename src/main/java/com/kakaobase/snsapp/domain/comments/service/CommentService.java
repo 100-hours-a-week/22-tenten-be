@@ -127,7 +127,7 @@ public class CommentService {
         //알림 전송
         if(!memberId.equals(post.getMember().getId())) {
             var userInfo = memberConverter.toUserInfo(proxyMember);
-            notificationService.sendCommentCreatedNotification(post.getMember().getId(), post.getId(), request.content(), userInfo);
+            notificationService.sendCommentCreatedNotification(post.getMember().getId(), savedComment.getId(), request.content(), userInfo, post.getId());
         }
 
         return commentConverter.toCreateCommentResponse(savedComment);

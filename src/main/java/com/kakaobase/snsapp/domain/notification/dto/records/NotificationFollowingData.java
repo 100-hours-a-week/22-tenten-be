@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 public record NotificationFollowingData(
         Long id,
         MemberResponseDto.UserInfoWithFollowing sender,
-        Long target_id,
-        String content,
         @JsonProperty("is_read")
         Boolean isRead,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")

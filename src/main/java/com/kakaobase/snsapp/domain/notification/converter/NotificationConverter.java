@@ -69,26 +69,23 @@ public class NotificationConverter {
         return new WebSocketPacketImpl<>(type.getEvent(), data);
     }
 
-    public WebSocketPacket<NotificationFollowingData> toPacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfoWithFollowing userInfo){
+    public WebSocketPacket<NotificationFollowingData> toPacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo){
 
         var data = NotificationFollowingData.builder()
                 .id(notifId)
                 .sender(userInfo)
-                .content(content)
                 .isRead(false)
                 .timestamp(LocalDateTime.now())
-                .target_id(targetId)
                 .build();
 
         return new WebSocketPacketImpl<>(type.getEvent(), data);
     }
 
-    public WebSocketPacket<NotificationFollowingData> toPacket(Long notifId, NotificationType type, String content, MemberResponseDto.UserInfoWithFollowing userInfo, LocalDateTime timestamp, Boolean isRead){
+    public WebSocketPacket<NotificationFollowingData> toPacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo, LocalDateTime timestamp, Boolean isRead){
 
         var data = NotificationFollowingData.builder()
                 .id(notifId)
                 .sender(userInfo)
-                .content(content)
                 .timestamp(timestamp)
                 .isRead(isRead)
                 .build();
