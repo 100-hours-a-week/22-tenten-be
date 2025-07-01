@@ -10,6 +10,7 @@ import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.repository.NotificationRepository;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
+import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -53,5 +56,34 @@ public class NotificationCommandService {
     public void sendNotification(Long receiverId, Long notifId, NotificationType type, String content, Long targetId, MemberResponseDto.UserInfoWithFollowing userInfo) {
         WebSocketPacket<NotificationFollowingData> packet = notificationConverter.toPacket(notifId, type, targetId, content, userInfo);
         simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/notifications", packet);
+    }
+
+    /**
+     * 사용자의 모든 알림을 WebSocket으로 전송
+     */
+    @Async
+    public void sendAllNotificationsToUser(Long userId) {
+        log.info("사용자 {}의 모든 알림 조회 및 전송", userId);
+        
+        try {
+            // 사용자의 모든 알림을 WebSocketPacket List로 조회
+            List<WebSocketPacket<?>> notifications = 
+                notificationRepository.findAllNotificationsByUserId(userId);
+            
+            log.info("사용자 {}의 알림 {}개 조회됨", userId, notifications.size());
+            
+            // 최종 응답 형식: WebSocketPacketImpl로 감싸서 전송
+            WebSocketPacketImpl<List<WebSocketPacket<?>>> finalPacket = 
+                new WebSocketPacketImpl<>("notification.fetch", notifications);
+            
+            // WebSocket으로 전송
+            simpMessagingTemplate.convertAndSendToUser(userId.toString(), "/queue/notifications", finalPacket);
+            
+            log.info("사용자 {}에게 모든 알림 전송 완료", userId);
+            
+        } catch (Exception e) {
+            log.error("사용자 {}의 모든 알림 전송 실패", userId, e);
+            throw e;
+        }
     }
 }

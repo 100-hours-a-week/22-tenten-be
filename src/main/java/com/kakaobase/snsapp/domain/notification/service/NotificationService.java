@@ -68,4 +68,18 @@ public class NotificationService {
         }
 
     }
+
+    /**
+     * 사용자의 모든 알림을 WebSocket으로 전송
+     */
+    public void sendAllNotifications(Long userId) {
+        log.info("사용자 {}의 모든 알림 전송 시작", userId);
+        
+        try {
+            commandService.sendAllNotificationsToUser(userId);
+            log.info("사용자 {}의 모든 알림 전송 완료", userId);
+        } catch (Exception e) {
+            log.error("사용자 {}의 모든 알림 전송 중 오류 발생", userId, e);
+        }
+    }
 }
