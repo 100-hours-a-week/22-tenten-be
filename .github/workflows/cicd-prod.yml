@@ -94,7 +94,8 @@ jobs:
           zip -r ../be-deploy.zip appspec.yml scripts imageDetail.json
 
       - name: Upload bundle to S3
-        run: aws s3 cp be-deploy.zip s3://${{ secrets.CODEDEPLOY_S3_BUCKET }}/be/be-deploy.zip
+        run: |
+          aws s3 cp "be-deploy.zip" "s3://${{ secrets.CODEDEPLOY_S3_BUCKET }}/be/be-deploy.zip"
 
       - name: Deploy via CodeDeploy
         run: |
