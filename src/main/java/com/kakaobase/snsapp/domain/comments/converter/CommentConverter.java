@@ -119,17 +119,6 @@ public class CommentConverter {
     }
 
     /**
-     * 댓글 좋아요 엔티티 생성
-     */
-    public CommentLike toCommentLikeEntity(Long memberId, Long commentId) {
-
-        Member proxyMember = em.getReference(Member.class, memberId);
-        Comment proxyCommennt = em.getReference(Comment.class, commentId);
-
-        return new CommentLike(proxyMember, proxyCommennt);
-    }
-
-    /**
      * 대댓글 좋아요 엔티티 생성
      */
     public RecommentLike toRecommentLikeEntity(Long memberId, Long recommentId) {
