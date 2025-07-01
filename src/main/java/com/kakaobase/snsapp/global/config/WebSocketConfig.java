@@ -1,6 +1,5 @@
 package com.kakaobase.snsapp.global.config;
 
-import com.kakaobase.snsapp.global.error.handler.StompErrorHandler;
 import com.kakaobase.snsapp.interceptor.JwtWebSocketHandshakeInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +19,6 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtWebSocketHandshakeInterceptor jwtWebSocketHandshakeInterceptor;
-    private final StompErrorHandler stompErrorHandler;
 
     /**
      * configureMessageBroker() : 메시지 브로커 옵션을 구성합니다.
@@ -57,7 +55,5 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         "http://localhost:3000")
                 .addInterceptors(jwtWebSocketHandshakeInterceptor)
                 .withSockJS();
-
-        registry.setErrorHandler(stompErrorHandler);
     }
 }
