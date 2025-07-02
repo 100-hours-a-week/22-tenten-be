@@ -123,10 +123,6 @@ public class CommentConverter {
      */
     public RecommentLike toRecommentLikeEntity(Long memberId, Long recommentId) {
 
-        Member proxyMember = em.getReference(Member.class, memberId);
-        Recomment proxyRecomment = em.getReference(Recomment.class, recommentId);
-
-        return new RecommentLike(proxyMember, proxyRecomment);
     }
 
     /**

@@ -14,6 +14,7 @@ import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.comments.service.async.CommentAsyncService;
 import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
 import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import com.kakaobase.snsapp.domain.notification.service.NotificationService;
@@ -52,7 +53,7 @@ public class CommentService {
     private final CommentCacheService commentCacheService;
     private final RecommentLikeRepository recommentLikeRepository;
     private final CommentAsyncService commentAsyncService;
-    private final NotificationService notificationService;
+    private final NotificationService notifService;
     private final MemberConverter memberConverter;
 
     /**
@@ -94,6 +95,17 @@ public class CommentService {
                 comment.increaseRecommentCount();
             }
 
+            if(!proxyComment.getMember().getId().equals(memberId)) {
+                MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
+                notifService.sendRecommentCreatedNotification(
+                        proxyComment.getMember().getId(),
+                        recomment.getId(),
+                        request.content(),
+                        userInfo,
+                        proxyComment.getPost().getId()
+                );
+            }
+
             return commentConverter.toCreateRecommentResponse(savedRecomment);
         }
 
@@ -127,7 +139,12 @@ public class CommentService {
         //알림 전송
         if(!memberId.equals(post.getMember().getId())) {
             var userInfo = memberConverter.toUserInfo(proxyMember);
-            notificationService.sendCommentCreatedNotification(post.getMember().getId(), savedComment.getId(), request.content(), userInfo, post.getId());
+            notifService.sendCommentCreatedNotification(
+                    post.getMember().getId(),
+                    savedComment.getId(),
+                    request.content(),
+                    userInfo,
+                    post.getId());
         }
 
         return commentConverter.toCreateCommentResponse(savedComment);

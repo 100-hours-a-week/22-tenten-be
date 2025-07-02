@@ -80,7 +80,12 @@ public class CommentLikeService {
 
         if(!proxyComment.getMember().getId().equals(memberId)) {
             MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
-            notifService.sendPostLikeCreatedNotification(memberId, commentId, null, userInfo, proxyComment.getPost().getId());
+            notifService.sendPostLikeCreatedNotification(
+                    proxyComment.getMember().getId(),
+                    commentId,
+                    null,
+                    userInfo,
+                    proxyComment.getPost().getId());
         }
     }
 
@@ -131,6 +136,10 @@ public class CommentLikeService {
             throw new CommentException(CommentErrorCode.ALREADY_LIKED);
         }
 
+
+        Member proxyMember = em.getReference(Member.class, memberId);
+        Recomment proxyRecomment = em.getReference(Recomment.class, recommentId);
+
         // 좋아요 엔티티 생성 및 저장
         RecommentLike recommentLike = commentConverter.toRecommentLikeEntity(memberId, recommentId);
         recommentLikeRepository.save(recommentLike);
@@ -139,6 +148,16 @@ public class CommentLikeService {
         recomment.increaseLikeCount();
 
         log.info("대댓글 좋아요 추가 완료: 대댓글 ID={}, 회원 ID={}", recommentId, memberId);
+
+        if(!proxyRecomment.getMember().getId().equals(memberId)){
+            MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
+            notifService.sendRecommentLikeCreatedNotification(
+                    proxyRecomment.getMember().getId(),
+                    recommentId,
+                    null,
+                    userInfo,
+                    proxyRecomment.getComment().getPost().getId());
+        }
     }
 
     /**
