@@ -29,7 +29,7 @@ public class WebSocketSubscriptionListener {
         log.info("구독 이벤트 - 사용자: {}, 세션: {}, 구독 경로: {}", userId, sessionId, destination);
         
         // 알림 큐 구독시 해당 사용자의 모든 알림 전송
-        if (destination != null && destination.equals("/user/queue/notifications")) {
+        if (destination != null && destination.equals("/user/queue/notification")) {
             log.info("알림 큐 구독 감지 - 모든 알림 전송 시작: 사용자 {}", userId);
             
             try {
