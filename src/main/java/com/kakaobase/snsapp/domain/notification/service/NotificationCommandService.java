@@ -31,6 +31,8 @@ public class NotificationCommandService {
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final NotificationRepository notificationRepository;
 
+    private static final String NOTIFY_SUBSCRIBE_PATH = "/queue/notification";
+
     @Transactional
     public Long createNotification(Long receiverId, NotificationType type, Long targetId) {
         Notification notification = notificationConverter.toEntity(receiverId, type, targetId);
@@ -57,13 +59,13 @@ public class NotificationCommandService {
     @Async
     public void sendNotification(Long receiverId, Long notifId, NotificationType type, String content, Long targetId, MemberResponseDto.UserInfo userInfo) {
         WebSocketPacket<NotificationData> packet = notificationConverter.toNewPacket(notifId, type, targetId, content, userInfo);
-        simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/notifications", packet);
+        simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), NOTIFY_SUBSCRIBE_PATH, packet);
     }
 
     @Async
     public void sendNotification(Long receiverId, Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo) {
         WebSocketPacket<NotificationFollowingData> packet = notificationConverter.toNewPacket(notifId, type, userInfo);
-        simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/notifications", packet);
+        simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), NOTIFY_SUBSCRIBE_PATH, packet);
     }
 
     /**
@@ -85,7 +87,7 @@ public class NotificationCommandService {
                 new WebSocketPacketImpl<>("notification.fetch", notifications);
             
             // WebSocket으로 전송
-            simpMessagingTemplate.convertAndSendToUser(userId.toString(), "/queue/notifications", finalPacket);
+            simpMessagingTemplate.convertAndSendToUser(userId.toString(), NOTIFY_SUBSCRIBE_PATH, finalPacket);
             
             log.info("사용자 {}에게 모든 알림 전송 완료", userId);
             
