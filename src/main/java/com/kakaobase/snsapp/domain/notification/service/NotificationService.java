@@ -70,6 +70,19 @@ public class NotificationService {
 
     }
 
+    public WebSocketPacket<NotificationResponseData> removeNotification(WebSocketPacket<NotificationRequestData> packet) {
+        try{
+            commandService.deleteNotification(packet.data.id());
+            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.REMOVE_SUCCESS.getEvent(), null, ResponseEnum.REMOVE_SUCCESS.getMessage());
+        } catch (NotificationException e){
+            log.error("에러 삭제 처리중 예외 발생 알림id: {}, 에러 코드: {}", packet.data.id(), e.getErrorCode().toString() );
+            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.REMOVE_FAIL.getEvent(), e.getErrorCode().toString(), ResponseEnum.REMOVE_FAIL.getMessage());
+        } catch (Exception e){
+            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.REMOVE_FAIL.getEvent(), GeneralErrorCode.INTERNAL_SERVER_ERROR.getError(), ResponseEnum.REMOVE_FAIL.getMessage());
+        }
+
+    }
+
     /**
      * 사용자의 모든 알림을 WebSocket으로 전송
      */

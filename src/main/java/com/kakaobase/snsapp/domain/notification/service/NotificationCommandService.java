@@ -46,6 +46,14 @@ public class NotificationCommandService {
         notification.markAsRead();
     }
 
+    @Transactional
+    public void deleteNotification(Long notifId) {
+        Notification notification = notificationRepository.findById(notifId)
+                .orElseThrow(()-> new NotificationException(GeneralErrorCode.INTERNAL_SERVER_ERROR));
+
+        notifRepository.delete(notification);
+    }
+
     @Async
     public void sendNotification(Long receiverId, Long notifId, NotificationType type, String content, Long targetId, MemberResponseDto.UserInfo userInfo) {
         WebSocketPacket<NotificationData> packet = notificationConverter.toNewPacket(notifId, type, targetId, content, userInfo);

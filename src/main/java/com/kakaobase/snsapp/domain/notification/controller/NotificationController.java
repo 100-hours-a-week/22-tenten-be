@@ -31,6 +31,12 @@ public class NotificationController {
         return notifService.readNotification(request);
     }
 
+    @MessageMapping("/notification.remove")
+    @SendToUser("/queue/notification")
+    public WebSocketPacket<NotificationResponseData> notificationRemoveHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
+        return notifService.readNotification(request);
+    }
+
     @MessageExceptionHandler(Exception.class)
     @SendToUser("/queue/errors")
     public WebSocketPacket<ErrorPacketData> handleBusinessException(CustomException ex, Principal principal) {
