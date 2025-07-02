@@ -46,7 +46,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
             if (notif.getNotificationType() == NotificationType.FOLLOWING_CREATED) {
                 // 팔로우 알림 처리
                 MemberResponseDto.UserInfoWithFollowing sender = getSenderInfoWithFollowing(notif);
-                WebSocketPacket<?> packet = notificationConverter.toPacket(
+                WebSocketPacket<?> packet = notificationConverter.toNewPacket(
                         notif.getId(),
                         notif.getNotificationType(),
                         sender,
@@ -58,7 +58,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                 // 일반 알림 처리 (댓글, 좋아요 등) - target_id는 PostId로 변환
                 MemberResponseDto.UserInfo sender = getSenderInfo(notif);
                 Long postId = getPostIdFromNotification(notif);
-                WebSocketPacket<?> packet = notificationConverter.toPacket(
+                WebSocketPacket<?> packet = notificationConverter.toNewPacket(
                         notif.getId(),
                         notif.getNotificationType(),
                         postId,

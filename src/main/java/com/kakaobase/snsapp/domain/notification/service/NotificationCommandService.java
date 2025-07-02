@@ -48,13 +48,13 @@ public class NotificationCommandService {
 
     @Async
     public void sendNotification(Long receiverId, Long notifId, NotificationType type, String content, Long targetId, MemberResponseDto.UserInfo userInfo) {
-        WebSocketPacket<NotificationData> packet = notificationConverter.toPacket(notifId, type, targetId, content, userInfo);
+        WebSocketPacket<NotificationData> packet = notificationConverter.toNewPacket(notifId, type, targetId, content, userInfo);
         simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/notifications", packet);
     }
 
     @Async
     public void sendNotification(Long receiverId, Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo) {
-        WebSocketPacket<NotificationFollowingData> packet = notificationConverter.toPacket(notifId, type, userInfo);
+        WebSocketPacket<NotificationFollowingData> packet = notificationConverter.toNewPacket(notifId, type, userInfo);
         simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/notifications", packet);
     }
 

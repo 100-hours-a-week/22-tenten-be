@@ -141,7 +141,7 @@ public class CommentLikeService {
         Recomment proxyRecomment = em.getReference(Recomment.class, recommentId);
 
         // 좋아요 엔티티 생성 및 저장
-        RecommentLike recommentLike = commentConverter.toRecommentLikeEntity(memberId, recommentId);
+        RecommentLike recommentLike = new RecommentLike(proxyMember, proxyRecomment);
         recommentLikeRepository.save(recommentLike);
 
         // 대댓글 좋아요 수 증가
