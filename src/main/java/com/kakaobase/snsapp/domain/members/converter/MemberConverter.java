@@ -82,6 +82,19 @@ public class MemberConverter {
                 .build();
     }
 
+    public MemberResponseDto.UserInfoWithFollowing toUserInfoWithFollowing(Member member, boolean isFollowed) {
+        if (member == null) {
+            return null;
+        }
+
+        return MemberResponseDto.UserInfoWithFollowing.builder()
+                .id(member.getId())
+                .nickname(member.getNickname())
+                .imageUrl(member.getProfileImgUrl())
+                .isFollowed(isFollowed)
+                .build();
+    }
+
     public MemberResponseDto.Mypage toMypage(Member member, Long postCount, Boolean isMe, boolean isFollowing) {
         try {
             CacheRecord.FollowStatsCache cacheData = followCacheService.findBy(member.getId());

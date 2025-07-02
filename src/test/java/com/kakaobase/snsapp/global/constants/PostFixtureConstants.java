@@ -1,13 +1,14 @@
 package com.kakaobase.snsapp.global.constants;
 
 import com.kakaobase.snsapp.domain.posts.entity.Post;
+import com.kakaobase.snsapp.domain.posts.util.BoardType;
 
 public class PostFixtureConstants {
 
     // ========== 기본 Mock 데이터 ==========
 
     public static final Long POST_ID = 1L;
-    public static final Post.BoardType POST_BOARD_TYPE = Post.BoardType.PANGYO_1;
+    public static final BoardType POST_BOARD_TYPE = BoardType.PANGYO_1;
     public static final String POST_CONTENT = "테스트 게시글 내용입니다.";
     public static final String POST_YOUTUBE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
     public static final String POST_YOUTUBE_SUMMARY = "테스트 유튜브 영상 요약";
@@ -16,12 +17,12 @@ public class PostFixtureConstants {
 
     // ========== 다양한 게시판 타입 데이터 ==========
 
-    public static final Post.BoardType ALL_BOARD_TYPE = Post.BoardType.ALL;
-    public static final Post.BoardType PANGYO_1_BOARD_TYPE = Post.BoardType.PANGYO_1;
-    public static final Post.BoardType PANGYO_2_BOARD_TYPE = Post.BoardType.PANGYO_2;
-    public static final Post.BoardType JEJU_1_BOARD_TYPE = Post.BoardType.JEJU_1;
-    public static final Post.BoardType JEJU_2_BOARD_TYPE = Post.BoardType.JEJU_2;
-    public static final Post.BoardType JEJU_3_BOARD_TYPE = Post.BoardType.JEJU_3;
+    public static final BoardType ALL_BOARD_TYPE = BoardType.ALL;
+    public static final BoardType PANGYO_1_BOARD_TYPE = BoardType.PANGYO_1;
+    public static final BoardType PANGYO_2_BOARD_TYPE = BoardType.PANGYO_2;
+    public static final BoardType JEJU_1_BOARD_TYPE = BoardType.JEJU_1;
+    public static final BoardType JEJU_2_BOARD_TYPE = BoardType.JEJU_2;
+    public static final BoardType JEJU_3_BOARD_TYPE = BoardType.JEJU_3;
 
     // ========== 관리자용 게시글 데이터 ==========
 

@@ -12,7 +12,10 @@ import com.kakaobase.snsapp.domain.comments.repository.CommentRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
+import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
+import com.kakaobase.snsapp.domain.members.entity.Member;
+import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
@@ -38,7 +41,9 @@ public class CommentLikeService {
     private final RecommentLikeRepository recommentLikeRepository;
     private final CommentConverter commentConverter;
     private final CommentCacheService commentCacheService;
+    private final NotificationService notifService;
     private final EntityManager em;
+    private final MemberConverter memberConverter;
 
     /**
      * 댓글에 좋아요를 추가합니다.
@@ -56,7 +61,10 @@ public class CommentLikeService {
         }
 
         // 좋아요 엔티티 생성 및 저장
-        CommentLike commentLike = commentConverter.toCommentLikeEntity(memberId, commentId);
+        Member proxyMember = em.getReference(Member.class, memberId);
+        Comment proxyComment = em.getReference(Comment.class, commentId);
+
+        CommentLike commentLike = new CommentLike(proxyMember, proxyComment);
         commentLikeRepository.save(commentLike);
 
         // 댓글 좋아요 수 증가
@@ -64,11 +72,21 @@ public class CommentLikeService {
             commentCacheService.incrementLikeCount(commentId);
         } catch (CacheException e){
             log.error(e.getMessage());
-            Comment commnet = em.find(Comment.class, commentId);
-            commnet.increaseLikeCount();
+            Comment comment = em.find(Comment.class, commentId);
+            comment.increaseLikeCount();
         }
 
         log.info("댓글 좋아요 추가 완료: 댓글 ID={}, 회원 ID={}", commentId, memberId);
+
+        if(!proxyComment.getMember().getId().equals(memberId)) {
+            MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
+            notifService.sendPostLikeCreatedNotification(
+                    proxyComment.getMember().getId(),
+                    commentId,
+                    null,
+                    userInfo,
+                    proxyComment.getPost().getId());
+        }
     }
 
     /**
@@ -118,14 +136,28 @@ public class CommentLikeService {
             throw new CommentException(CommentErrorCode.ALREADY_LIKED);
         }
 
+
+        Member proxyMember = em.getReference(Member.class, memberId);
+        Recomment proxyRecomment = em.getReference(Recomment.class, recommentId);
+
         // 좋아요 엔티티 생성 및 저장
-        RecommentLike recommentLike = commentConverter.toRecommentLikeEntity(memberId, recommentId);
+        RecommentLike recommentLike = new RecommentLike(proxyMember, proxyRecomment);
         recommentLikeRepository.save(recommentLike);
 
         // 대댓글 좋아요 수 증가
         recomment.increaseLikeCount();
 
         log.info("대댓글 좋아요 추가 완료: 대댓글 ID={}, 회원 ID={}", recommentId, memberId);
+
+        if(!proxyRecomment.getMember().getId().equals(memberId)){
+            MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
+            notifService.sendRecommentLikeCreatedNotification(
+                    proxyRecomment.getMember().getId(),
+                    recommentId,
+                    null,
+                    userInfo,
+                    proxyRecomment.getComment().getPost().getId());
+        }
     }
 
     /**

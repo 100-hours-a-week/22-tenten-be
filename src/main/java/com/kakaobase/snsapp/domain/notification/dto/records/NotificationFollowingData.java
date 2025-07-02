@@ -1,0 +1,18 @@
+package com.kakaobase.snsapp.domain.notification.dto.records;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
+import lombok.Builder;
+
+import java.time.LocalDateTime;
+
+@Builder
+public record NotificationFollowingData(
+        Long id,
+        MemberResponseDto.UserInfoWithFollowing sender,
+        @JsonProperty("is_read")
+        Boolean isRead,
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        LocalDateTime timestamp
+) {}

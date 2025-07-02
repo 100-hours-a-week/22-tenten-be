@@ -13,8 +13,11 @@ import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.comments.service.async.CommentAsyncService;
 import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
+import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
+import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
@@ -50,6 +53,8 @@ public class CommentService {
     private final CommentCacheService commentCacheService;
     private final RecommentLikeRepository recommentLikeRepository;
     private final CommentAsyncService commentAsyncService;
+    private final NotificationService notifService;
+    private final MemberConverter memberConverter;
 
     /**
      * 댓글을 생성합니다.
@@ -90,6 +95,17 @@ public class CommentService {
                 comment.increaseRecommentCount();
             }
 
+            if(!proxyComment.getMember().getId().equals(memberId)) {
+                MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
+                notifService.sendRecommentCreatedNotification(
+                        proxyComment.getMember().getId(),
+                        recomment.getId(),
+                        request.content(),
+                        userInfo,
+                        proxyComment.getPost().getId()
+                );
+            }
+
             return commentConverter.toCreateRecommentResponse(savedRecomment);
         }
 
@@ -118,6 +134,17 @@ public class CommentService {
             commentAsyncService.triggerAsync(post, savedComment);
         } else {
             log.info("🙅 [Skip] 게시글 작성자가 소셜봇이 아님 → 트리거 생략");
+        }
+
+        //알림 전송
+        if(!memberId.equals(post.getMember().getId())) {
+            var userInfo = memberConverter.toUserInfo(proxyMember);
+            notifService.sendCommentCreatedNotification(
+                    post.getMember().getId(),
+                    savedComment.getId(),
+                    request.content(),
+                    userInfo,
+                    post.getId());
         }
 
         return commentConverter.toCreateCommentResponse(savedComment);
