@@ -7,9 +7,11 @@ import com.kakaobase.snsapp.domain.follow.entity.Follow;
 import com.kakaobase.snsapp.domain.follow.exception.FollowErrorCode;
 import com.kakaobase.snsapp.domain.follow.exception.FollowException;
 import com.kakaobase.snsapp.domain.follow.repository.FollowRepository;
+import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
+import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import jakarta.persistence.EntityManager;
@@ -30,6 +32,8 @@ public class FollowService {
     private final MemberRepository memberRepository;
     private final FollowCacheService followCacheService;
     private final EntityManager em;
+    private final NotificationService notifService;
+    private final MemberConverter memberConverter;
 
 
     @Transactional
@@ -65,7 +69,17 @@ public class FollowService {
         }
 
         Follow follow = followConverter.toFollowEntity(followerUser, followingUser);
-        followRepository.save(follow);
+        Follow savedFollow = followRepository.save(follow);
+
+        // 팔로우 알림 전송 - 팔로우를 받은 사용자에게 팔로우한 사용자의 정보와 함께 알림 전송
+        // followingUser가 followerUser를 팔로우하고 있는지 확인 (상호 팔로우 여부)
+        boolean isFollowingBack = followRepository.existsByFollowerUserAndFollowingUser(followingUser, followerUser);
+        MemberResponseDto.UserInfoWithFollowing userInfoWithFollowing = memberConverter.toUserInfoWithFollowing(followerUser, isFollowingBack);
+        notifService.sendFollowingCreatedNotification(
+                targetUserId, 
+                savedFollow.getId(), 
+                userInfoWithFollowing
+        );
     }
 
     @Transactional
