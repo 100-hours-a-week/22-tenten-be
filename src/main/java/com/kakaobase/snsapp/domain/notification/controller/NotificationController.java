@@ -34,7 +34,7 @@ public class NotificationController {
     @MessageMapping("/notification.remove")
     @SendToUser("/queue/notification")
     public WebSocketPacket<NotificationResponseData> notificationRemoveHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
-        return notifService.readNotification(request);
+        return notifService.removeNotification(request);
     }
 
     @MessageExceptionHandler(Exception.class)
