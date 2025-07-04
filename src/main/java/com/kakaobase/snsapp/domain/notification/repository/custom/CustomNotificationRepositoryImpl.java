@@ -160,7 +160,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
         for (Notification notification : notifications) {
             MemberResponseDto.UserInfo sender = senderMap.get(notification.getTargetId());
             String content = contentMap.get(notification.getTargetId());
-            Long postId = postIdMap.get(notification.getTargetId());
+            Long postId = postIdMap.get(notification.getId());
             
             WebSocketPacket<?> packet = notificationConverter.toNewPacket(
                     notification.getId(),
@@ -334,18 +334,18 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
     }
 
     /**
-     * 타입별 PostId 일괄 조회
+     * 타입별 PostId 일괄 조회 (notificationId -> postId 매핑)
      */
     private Map<Long, Long> getPostIdBatch(List<Notification> notifications, NotificationType type) {
-        List<Long> targetIds = notifications.stream()
-                .map(Notification::getTargetId)
-                .toList();
-        
         QComment comment = QComment.comment;
         QRecomment recomment = QRecomment.recomment;
         
-        return switch (type) {
+        // targetId로 PostId를 조회한 후, notificationId와 매핑
+        Map<Long, Long> targetToPostMap = switch (type) {
             case COMMENT_CREATED -> {
+                List<Long> targetIds = notifications.stream()
+                        .map(Notification::getTargetId)
+                        .toList();
                 List<com.querydsl.core.Tuple> results = queryFactory
                         .select(comment.id, comment.post.id)
                         .from(comment)
@@ -357,8 +357,11 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                                 tuple -> tuple.get(comment.post.id)
                         ));
             }
-            
+
             case RECOMMENT_CREATED -> {
+                List<Long> targetIds = notifications.stream()
+                        .map(Notification::getTargetId)
+                        .toList();
                 List<com.querydsl.core.Tuple> results = queryFactory
                         .select(recomment.id, comment.post.id)
                         .from(recomment)
@@ -371,8 +374,11 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                                 tuple -> tuple.get(comment.post.id)
                         ));
             }
-            
+
             case COMMENT_LIKE_CREATED -> {
+                List<Long> targetIds = notifications.stream()
+                        .map(Notification::getTargetId)
+                        .toList();
                 QCommentLike commentLike = QCommentLike.commentLike;
                 List<com.querydsl.core.Tuple> results = queryFactory
                         .select(commentLike.comment.id, comment.post.id)
@@ -386,8 +392,11 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                                 tuple -> tuple.get(comment.post.id)
                         ));
             }
-            
+
             case RECOMMENT_LIKE_CREATED -> {
+                List<Long> targetIds = notifications.stream()
+                        .map(Notification::getTargetId)
+                        .toList();
                 QRecommentLike recommentLike = QRecommentLike.recommentLike;
                 List<com.querydsl.core.Tuple> results = queryFactory
                         .select(recommentLike.recomment.id, comment.post.id)
@@ -402,19 +411,26 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                                 tuple -> tuple.get(comment.post.id)
                         ));
             }
-            
+
             case POST_LIKE_CREATED -> notifications.stream()
                     .collect(Collectors.toMap(
                             Notification::getTargetId,
                             Notification::getTargetId
                     ));
-            
+
             default -> notifications.stream()
                     .collect(Collectors.toMap(
                             Notification::getTargetId,
                             Notification::getTargetId
                     ));
         };
+        
+        // notificationId -> postId로 변환
+        return notifications.stream()
+                .collect(Collectors.toMap(
+                        Notification::getId,
+                        notification -> targetToPostMap.get(notification.getTargetId())
+                ));
     }
 
 
