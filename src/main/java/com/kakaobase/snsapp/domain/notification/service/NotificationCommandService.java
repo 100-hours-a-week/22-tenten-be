@@ -20,6 +20,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -54,6 +55,23 @@ public class NotificationCommandService {
                 .orElseThrow(()-> new NotificationException(GeneralErrorCode.INTERNAL_SERVER_ERROR));
 
         notifRepository.delete(notification);
+    }
+
+    /**
+     * 특정 타입, 타겟 ID, 수신자 ID로 알림 삭제 (오버로딩)
+     */
+    @Transactional
+    public void deleteNotification(NotificationType notificationType, Long targetId, Long receiverId) {
+        Optional<Notification> notification = notificationRepository.findByNotificationTypeAndTargetIdAndReceiverId(notificationType, targetId, receiverId);
+        
+        if (notification.isPresent()) {
+            notifRepository.delete(notification.get());
+            log.info("알림 삭제 완료 - 타입: {}, 타겟ID: {}, 수신자ID: {}", 
+                    notificationType, targetId, receiverId);
+        } else {
+            log.debug("삭제할 알림이 없음 - 타입: {}, 타겟ID: {}, 수신자ID: {}", 
+                    notificationType, targetId, receiverId);
+        }
     }
 
     @Async
