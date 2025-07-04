@@ -2,6 +2,7 @@ package com.kakaobase.snsapp.domain.members.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * 회원 요청 DTO
