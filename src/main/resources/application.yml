@@ -6,6 +6,12 @@ spring:
     username: root
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 10          # 기존 10 (유지)
+      maximum-pool-size: 120    # 기존 10 → 120
+      connection-timeout: 30000 # 기본값 유지
+      idle-timeout: 600000      # 기본값 유지
+      max-lifetime: 1800000     # 기본값 유지
   jpa:
     database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:
