@@ -80,7 +80,7 @@ public class CommentLikeService {
 
         if(!proxyComment.getMember().getId().equals(memberId)) {
             MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
-            notifService.sendPostLikeCreatedNotification(
+            notifService.sendCommentLikeCreatedNotification(
                     proxyComment.getMember().getId(),
                     commentId,
                     null,
