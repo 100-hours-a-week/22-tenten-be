@@ -1,7 +1,10 @@
 package com.kakaobase.snsapp.domain.notification.controller;
 
+import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationAckData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationRequestData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponseData;
+import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
@@ -16,7 +19,6 @@ import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
-import java.time.LocalDateTime;
 
 @Slf4j
 @Controller
@@ -24,30 +26,25 @@ import java.time.LocalDateTime;
 public class NotificationController {
 
     private final NotificationService notifService;
+    private final NotificationConverter notifConverter;
 
     @MessageMapping("/notification.read")
     @SendToUser("/queue/notification")
-    public WebSocketPacket<NotificationResponseData> notificationReadHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
+    public WebSocketPacket<NotificationAckData> notificationReadHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
         return notifService.readNotification(request);
     }
 
     @MessageMapping("/notification.remove")
     @SendToUser("/queue/notification")
-    public WebSocketPacket<NotificationResponseData> notificationRemoveHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
+    public WebSocketPacket<NotificationAckData> notificationRemoveHandler(@Payload WebSocketPacket<NotificationRequestData> request, Principal principal) {
         return notifService.removeNotification(request);
     }
 
-    @MessageExceptionHandler(Exception.class)
-    @SendToUser("/queue/errors")
-    public WebSocketPacket<ErrorPacketData> handleBusinessException(CustomException ex, Principal principal) {
+    @MessageExceptionHandler(NotificationException.class)
+    @SendToUser("/queue/notification")
+    public WebSocketPacket<ErrorPacketData> handleBusinessException(NotificationException ex, Principal principal) {
         log.warn("비즈니스 에러 - 사용자: {}, 에러: {}", principal.getName(), ex.getMessage());
 
-        var errorData = ErrorPacketData.builder()
-                .error("internal_server_error")
-                .message(ex.getMessage())
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        return new WebSocketPacketImpl<>("internal_server_error", errorData);
+        return notifConverter.toErrorPacket(ex.getErorrCode());
     }
 }

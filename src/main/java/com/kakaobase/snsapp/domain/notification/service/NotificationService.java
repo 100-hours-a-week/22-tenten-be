@@ -2,16 +2,18 @@ package com.kakaobase.snsapp.domain.notification.service;
 
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
-import com.kakaobase.snsapp.domain.notification.dto.records.NotificationRequestData;
-import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponseData;
+import com.kakaobase.snsapp.domain.notification.dto.records.*;
+import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
 import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.domain.notification.util.ResponseEnum;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
-import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -57,28 +59,22 @@ public class NotificationService {
     }
 
 
-    public WebSocketPacket<NotificationResponseData> readNotification(WebSocketPacket<NotificationRequestData> packet) {
+    public WebSocketPacket<NotificationAckData> readNotification(WebSocketPacket<NotificationRequestData> packet) {
         try{
             commandService.updateNotificationRead(packet.data.id());
-            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.READ_SUCCESS.getEvent(), null, ResponseEnum.READ_SUCCESS.getMessage());
-        } catch (NotificationException e){
-            log.error("에러 읽음 처리중 예외 발생 알림id: {}, 에러 코드: {}", packet.data.id(), e.getErrorCode().toString() );
-            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.READ_FAIL.getEvent(), e.getErrorCode().toString(), ResponseEnum.READ_FAIL.getMessage());
+            return notifConverter.toAckPacket(packet.data.id(), ResponseEnum.READ_SUCCESS);
         } catch (Exception e){
-            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.READ_FAIL.getEvent(), GeneralErrorCode.INTERNAL_SERVER_ERROR.getError(), ResponseEnum.READ_FAIL.getMessage());
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_READ_FAIL);
         }
-
     }
 
-    public WebSocketPacket<NotificationResponseData> removeNotification(WebSocketPacket<NotificationRequestData> packet) {
+    public WebSocketPacket<NotificationAckData> removeNotification(WebSocketPacket<NotificationRequestData> packet) {
         try{
             commandService.deleteNotification(packet.data.id());
-            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.REMOVE_SUCCESS.getEvent(), null, ResponseEnum.REMOVE_SUCCESS.getMessage());
-        } catch (NotificationException e){
-            log.error("에러 삭제 처리중 예외 발생 알림id: {}, 에러 코드: {}", packet.data.id(), e.getErrorCode().toString() );
-            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.REMOVE_FAIL.getEvent(), e.getErrorCode().toString(), ResponseEnum.REMOVE_FAIL.getMessage());
+            return notifConverter.toAckPacket(packet.data.id(), ResponseEnum.REMOVE_SUCCESS);
         } catch (Exception e){
-            return notifConverter.toResponsePacket(packet.data.id(), ResponseEnum.REMOVE_FAIL.getEvent(), GeneralErrorCode.INTERNAL_SERVER_ERROR.getError(), ResponseEnum.REMOVE_FAIL.getMessage());
+            log.error("에러 삭제 처리중 예외 발생 알림id: {}, 에러: {}", packet.data.id(), e.getMessage());
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL);
         }
 
     }
@@ -90,10 +86,64 @@ public class NotificationService {
         log.info("사용자 {}의 모든 알림 전송 시작", userId);
         
         try {
-            commandService.sendAllNotificationsToUser(userId);
+            // 1. 알림 목록 조회
+            List<WebSocketPacket<?>> allNotifications = commandService.getAllNotifications(userId);
+
+            // 2. 필터링해서 유효한 알림과 무효한 알림 ID 분리
+            List<WebSocketPacket<?>> filterResult = filterNotifications(allNotifications);
+
+            log.info("사용자 {}의 알림 {}개 조회됨 (유효한 알림: {}개, 무효한 알림: {}개)",
+                    userId, allNotifications.size(),
+                    filterResult.validNotifications().size(),
+                    filterResult.invalidNotificationIds().size());
+            
+            // 3. 무효한 알림들 비동기 삭제 처리
+            if (!filterResult.invalidNotificationIds().isEmpty()) {
+                deleteInvalidNotificationsAsync(filterResult.invalidNotificationIds());
+            }
+            
+            // 4. 유효한 알림들 WebSocket 전송
+            commandService.sendValidNotificationsToUser(userId, filterResult.validNotifications());
+            
             log.info("사용자 {}의 모든 알림 전송 완료", userId);
         } catch (Exception e) {
             log.error("사용자 {}의 모든 알림 전송 중 오류 발생", userId, e);
         }
+    }
+
+    /**
+     * 알림 목록을 필터링하여 유효한 알림과 무효한 알림 ID 분리
+     */
+    private List<WebSocketPacket<?>> filterNotifications(List<WebSocketPacket<?>> notifications) {
+        List<WebSocketPacket<?>> validNotifications = new ArrayList<>();
+        List<Long> invalidNotificationIds = new ArrayList<>();
+        
+        for (WebSocketPacket<?> packet : notifications) {
+            boolean isValid = true;
+            Long notificationId = null;
+            
+            // sender가 null인 알림 필터링
+            if (packet.data instanceof NotificationData notificationData) {
+                notificationId = notificationData.id();
+                if (notificationData.sender() == null) {
+                    log.warn("무효한 알림 감지 - ID: {}, sender null", notificationId);
+                    isValid = false;
+                }
+            } else if (packet.data instanceof NotificationFollowingData followingData) {
+                notificationId = followingData.id();
+                if (followingData.sender() == null) {
+                    log.warn("무효한 팔로우 알림 감지 - ID: {}, sender null", notificationId);
+                    isValid = false;
+                }
+            }
+            
+            if (isValid) {
+                validNotifications.add(packet);
+            } else if (notificationId != null) {
+                invalidNotificationIds.add(notificationId);
+            }
+        }
+        
+        return validNotifications;
     }
 }

@@ -99,10 +99,11 @@ public class NotificationCommandService {
             List<WebSocketPacket<?>> allNotifications = 
                 notificationRepository.findAllNotificationsByUserId(userId);
             
-            // 유효성 검사 및 필터링
+            // 유효성 검사 및 필터링 (내부에서 무효한 알림 비동기 삭제)
             List<WebSocketPacket<?>> validNotifications = filterValidNotifications(allNotifications);
             
-            log.info("사용자 {}의 알림 {}개 조회됨 (유효한 알림: {}개)", userId, allNotifications.size(), validNotifications.size());
+            log.info("사용자 {}의 알림 {}개 조회됨 (유효한 알림: {}개)", 
+                    userId, allNotifications.size(), validNotifications.size());
             
             // 최종 응답 형식: WebSocketPacketImpl로 감싸서 전송
             WebSocketPacketImpl<List<WebSocketPacket<?>>> finalPacket = 
@@ -120,26 +121,60 @@ public class NotificationCommandService {
     }
 
     /**
-     * 유효한 알림만 필터링 (무효한 알림은 반환 목록에서만 제거)
+     * 유효한 알림만 필터링하고 무효한 알림은 비동기로 삭제
      */
     private List<WebSocketPacket<?>> filterValidNotifications(List<WebSocketPacket<?>> notifications) {
-        return notifications.stream()
-            .filter(packet -> {
-                // sender가 null인 알림 필터링
-                if (packet.data instanceof NotificationData notificationData) {
-                    if (notificationData.sender() == null) {
-                        log.warn("무효한 알림 감지 - ID: {}, sender null (반환 목록에서 제외)", notificationData.id());
-                        return false;
-                    }
-                } else if (packet.data instanceof NotificationFollowingData followingData) {
-                    if (followingData.sender() == null) {
-                        log.warn("무효한 팔로우 알림 감지 - ID: {}, sender null (반환 목록에서 제외)", followingData.id());
-                        return false;
-                    }
+        List<WebSocketPacket<?>> validNotifications = new ArrayList<>();
+        List<Long> invalidNotificationIds = new ArrayList<>();
+        
+        for (WebSocketPacket<?> packet : notifications) {
+            boolean isValid = true;
+            Long notificationId = null;
+            
+            // sender가 null인 알림 필터링
+            if (packet.data instanceof NotificationData notificationData) {
+                notificationId = notificationData.id();
+                if (notificationData.sender() == null) {
+                    log.warn("무효한 알림 감지 - ID: {}, sender null (반환 목록에서 제외)", notificationId);
+                    isValid = false;
                 }
-                return true;
-            })
-            .toList();
+            } else if (packet.data instanceof NotificationFollowingData followingData) {
+                notificationId = followingData.id();
+                if (followingData.sender() == null) {
+                    log.warn("무효한 팔로우 알림 감지 - ID: {}, sender null (반환 목록에서 제외)", notificationId);
+                    isValid = false;
+                }
+            }
+            
+            if (isValid) {
+                validNotifications.add(packet);
+            } else if (notificationId != null) {
+                invalidNotificationIds.add(notificationId);
+            }
+        }
+        
+        // 무효한 알림들 비동기 일괄 삭제
+        if (!invalidNotificationIds.isEmpty()) {
+            log.info("무효한 알림 {}개 비동기 삭제 예약", invalidNotificationIds.size());
+            deleteInvalidNotificationsAsync(invalidNotificationIds);
+        }
+        
+        return validNotifications;
+    }
+
+    /**
+     * 무효한 알림들을 비동기로 일괄 삭제
+     */
+    @Async
+    @Transactional
+    public void deleteInvalidNotificationsAsync(List<Long> invalidNotificationIds) {
+        try {
+            log.info("무효한 알림 {}개 비동기 삭제 시작", invalidNotificationIds.size());
+            notificationRepository.deleteAllById(invalidNotificationIds);
+            log.info("무효한 알림 {}개 비동기 삭제 완료", invalidNotificationIds.size());
+        } catch (Exception e) {
+            log.error("무효한 알림 삭제 중 오류 발생: {}", invalidNotificationIds, e);
+        }
     }
 
 }

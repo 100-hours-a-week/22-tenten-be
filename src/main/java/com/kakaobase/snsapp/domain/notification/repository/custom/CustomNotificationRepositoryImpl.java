@@ -128,7 +128,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
         for (Notification notification : notifications) {
             MemberResponseDto.UserInfoWithFollowing sender = senderMap.get(notification.getTargetId());
             
-            WebSocketPacket<?> packet = notificationConverter.toNewPacket(
+            WebSocketPacket<?> packet = notificationConverter.toPacket(
                     notification.getId(),
                     notification.getNotificationType(),
                     sender,
@@ -162,7 +162,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
             String content = contentMap.get(notification.getTargetId());
             Long postId = postIdMap.get(notification.getId());
             
-            WebSocketPacket<?> packet = notificationConverter.toNewPacket(
+            WebSocketPacket<?> packet = notificationConverter.toPacket(
                     notification.getId(),
                     notification.getNotificationType(),
                     postId,
