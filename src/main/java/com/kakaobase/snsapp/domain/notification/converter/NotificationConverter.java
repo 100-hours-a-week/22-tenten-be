@@ -4,7 +4,7 @@ import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationAckData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationFollowingData;
-import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponseData;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationNackData;
 import com.kakaobase.snsapp.domain.notification.entity.Notification;
 import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
@@ -95,8 +95,9 @@ public class NotificationConverter {
         return new WebSocketPacketImpl<>(responseEnum.getEvent(), data);
     }
 
-    public WebSocketPacket<ErrorPacketData> toErrorPacket(NotificationErrorCode errorCode){
-        var data = ErrorPacketData.builder()
+    public WebSocketPacket<NotificationNackData> toNackData(NotificationErrorCode errorCode, Long notifId){
+        var data = NotificationNackData.builder()
+                .id(notifId)
                 .error(errorCode.getError())
                 .message(errorCode.getMessage())
                 .timestamp(LocalDateTime.now())

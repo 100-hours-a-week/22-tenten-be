@@ -89,7 +89,7 @@ public class NotificationService {
             commandService.updateNotificationRead(packet.data.id());
             return notifConverter.toAckPacket(packet.data.id(), ResponseEnum.READ_SUCCESS);
         } catch (Exception e){
-            throw new NotificationException(NotificationErrorCode.NOTIFICATION_READ_FAIL);
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_READ_FAIL, packet.data.id() );
         }
     }
 
@@ -99,7 +99,7 @@ public class NotificationService {
             return notifConverter.toAckPacket(packet.data.id(), ResponseEnum.REMOVE_SUCCESS);
         } catch (Exception e){
             log.error("에러 삭제 처리중 예외 발생 알림id: {}, 에러: {}", packet.data.id(), e.getMessage());
-            throw new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL);
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL, packet.data.id());
         }
 
     }
