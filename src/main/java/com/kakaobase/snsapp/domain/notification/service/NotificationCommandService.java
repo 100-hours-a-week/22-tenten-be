@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.View;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,7 +34,6 @@ public class NotificationCommandService {
     private final NotificationRepository notificationRepository;
 
     private static final String NOTIFY_SUBSCRIBE_PATH = "/queue/notification";
-    private final View error;
 
     @Transactional
     public Long createNotification(Long receiverId, NotificationType type, Long targetId) {
