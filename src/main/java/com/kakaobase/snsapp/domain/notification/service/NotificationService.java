@@ -8,6 +8,7 @@ import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.domain.notification.util.ResponseEnum;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
+import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -87,23 +88,21 @@ public class NotificationService {
         
         try {
             // 1. 알림 목록 조회
-            List<WebSocketPacket<?>> allNotifications = commandService.getAllNotifications(userId);
+            List<WebSocketPacket<?>> allNotifications = commandService.getAllNotificationsToUser(userId);
 
-            // 2. 필터링해서 유효한 알림과 무효한 알림 ID 분리
-            List<WebSocketPacket<?>> filterResult = filterNotifications(allNotifications);
+            // 2. 필터링해서 NotificationFetchData 생성
+            NotificationFetchData fetchData = filterNotifications(allNotifications);
 
-            log.info("사용자 {}의 알림 {}개 조회됨 (유효한 알림: {}개, 무효한 알림: {}개)",
+            log.info("사용자 {}의 알림 {}개 조회됨 (유효한 알림: {}개, 읽지 않은 알림: {}개)",
                     userId, allNotifications.size(),
-                    filterResult.validNotifications().size(),
-                    filterResult.invalidNotificationIds().size());
-            
-            // 3. 무효한 알림들 비동기 삭제 처리
-            if (!filterResult.invalidNotificationIds().isEmpty()) {
-                deleteInvalidNotificationsAsync(filterResult.invalidNotificationIds());
-            }
-            
-            // 4. 유효한 알림들 WebSocket 전송
-            commandService.sendValidNotificationsToUser(userId, filterResult.validNotifications());
+                    fetchData.notifications().size(),
+                    fetchData.unread_count());
+
+            WebSocketPacketImpl<NotificationFetchData> packet =
+                    new WebSocketPacketImpl<>(NotificationType.NOTIFICATION_FETCH.getEvent(), fetchData);
+
+            // 3. NotificationFetchData를 WebSocket으로 전송
+            commandService.sendNotificationFetchData(userId, packet);
             
             log.info("사용자 {}의 모든 알림 전송 완료", userId);
         } catch (Exception e) {
@@ -112,25 +111,29 @@ public class NotificationService {
     }
 
     /**
-     * 알림 목록을 필터링하여 유효한 알림과 무효한 알림 ID 분리
+     * 알림 목록을 필터링하여 NotificationFetchData 생성
      */
-    private List<WebSocketPacket<?>> filterNotifications(List<WebSocketPacket<?>> notifications) {
+    private NotificationFetchData filterNotifications(List<WebSocketPacket<?>> notifications) {
         List<WebSocketPacket<?>> validNotifications = new ArrayList<>();
         List<Long> invalidNotificationIds = new ArrayList<>();
+        int unreadCount = 0;
         
         for (WebSocketPacket<?> packet : notifications) {
             boolean isValid = true;
             Long notificationId = null;
+            boolean isRead = false;
             
             // sender가 null인 알림 필터링
             if (packet.data instanceof NotificationData notificationData) {
                 notificationId = notificationData.id();
+                isRead = notificationData.isRead();
                 if (notificationData.sender() == null) {
                     log.warn("무효한 알림 감지 - ID: {}, sender null", notificationId);
                     isValid = false;
                 }
             } else if (packet.data instanceof NotificationFollowingData followingData) {
                 notificationId = followingData.id();
+                isRead = followingData.isRead();
                 if (followingData.sender() == null) {
                     log.warn("무효한 팔로우 알림 감지 - ID: {}, sender null", notificationId);
                     isValid = false;
@@ -139,11 +142,20 @@ public class NotificationService {
             
             if (isValid) {
                 validNotifications.add(packet);
+                // 읽지 않은 알림 개수 증가
+                if (!isRead) {
+                    unreadCount++;
+                }
             } else if (notificationId != null) {
                 invalidNotificationIds.add(notificationId);
             }
         }
-        
-        return validNotifications;
+
+        // 무효한 알림들 비동기 삭제
+        if (!invalidNotificationIds.isEmpty()) {
+            commandService.deleteInvalidNotifications(invalidNotificationIds);
+        }
+
+        return new NotificationFetchData(unreadCount, validNotifications);
     }
 }
