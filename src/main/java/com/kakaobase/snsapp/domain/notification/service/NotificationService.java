@@ -79,13 +79,13 @@ public class NotificationService {
     }
 
     private void sendNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, NotificationType type, Long postId) {
-        Long notifId = commandService.createNotification(receiverId, type, targetId);
+        Long notifId = commandService.createNotification(receiverId, userInfo.id(), type, targetId);
         commandService.sendNotification(receiverId, notifId, type, content, postId, userInfo);
     }
 
     //팔로우 알림용
     private void sendFollowNotification(Long receiverId, Long targetId, MemberResponseDto.UserInfoWithFollowing userInfo, NotificationType type) {
-        Long notifId = commandService.createNotification(receiverId, type, targetId);
+        Long notifId = commandService.createNotification(receiverId, userInfo.id(), type, targetId);
         commandService.sendNotification(receiverId, notifId, type, userInfo);
     }
 
