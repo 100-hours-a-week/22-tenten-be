@@ -194,100 +194,145 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
         QRecommentLike recommentLike = QRecommentLike.recommentLike;
         
         return switch (type) {
-            case COMMENT_CREATED -> queryFactory
-                    .select(com.querydsl.core.types.Projections.constructor(
-                            MemberResponseDto.UserInfo.class,
-                            senderMember.id,
-                            senderMember.name,
-                            senderMember.nickname,
-                            senderMember.profileImgUrl
-                    ))
-                    .from(comment)
-                    .leftJoin(comment.member, senderMember)
-                    .where(comment.id.in(targetIds))
-                    .fetch()
-                    .stream()
-                    .collect(Collectors.toMap(
-                            MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo,
-                            (existing, replacement) -> existing
-                    ));
+            case COMMENT_CREATED -> {
+                List<com.querydsl.core.Tuple> results = queryFactory
+                        .select(comment.id, 
+                               senderMember.id,
+                               senderMember.name,
+                               senderMember.nickname,
+                               senderMember.profileImgUrl)
+                        .from(comment)
+                        .leftJoin(comment.member, senderMember)
+                        .where(comment.id.in(targetIds))
+                        .fetch();
+                yield results.stream()
+                        .collect(Collectors.toMap(
+                                tuple -> tuple.get(comment.id),
+                                tuple -> {
+                                    Long memberId = tuple.get(senderMember.id);
+                                    if (memberId == null) return null;
+                                    return new MemberResponseDto.UserInfo(
+                                            memberId,
+                                            tuple.get(senderMember.name),
+                                            tuple.get(senderMember.nickname),
+                                            tuple.get(senderMember.profileImgUrl)
+                                    );
+                                },
+                                (existing, replacement) -> existing
+                        ));
+            }
                     
-            case RECOMMENT_CREATED -> queryFactory
-                    .select(com.querydsl.core.types.Projections.constructor(
-                            MemberResponseDto.UserInfo.class,
-                            senderMember.id,
-                            senderMember.name,
-                            senderMember.nickname,
-                            senderMember.profileImgUrl
-                    ))
-                    .from(recomment)
-                    .leftJoin(recomment.member, senderMember)
-                    .where(recomment.id.in(targetIds))
-                    .fetch()
-                    .stream()
-                    .collect(Collectors.toMap(
-                            MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo,
-                            (existing, replacement) -> existing
-                    ));
+            case RECOMMENT_CREATED -> {
+                List<com.querydsl.core.Tuple> results = queryFactory
+                        .select(recomment.id,
+                               senderMember.id,
+                               senderMember.name,
+                               senderMember.nickname,
+                               senderMember.profileImgUrl)
+                        .from(recomment)
+                        .leftJoin(recomment.member, senderMember)
+                        .where(recomment.id.in(targetIds))
+                        .fetch();
+                yield results.stream()
+                        .collect(Collectors.toMap(
+                                tuple -> tuple.get(recomment.id),
+                                tuple -> {
+                                    Long memberId = tuple.get(senderMember.id);
+                                    if (memberId == null) return null;
+                                    return new MemberResponseDto.UserInfo(
+                                            memberId,
+                                            tuple.get(senderMember.name),
+                                            tuple.get(senderMember.nickname),
+                                            tuple.get(senderMember.profileImgUrl)
+                                    );
+                                },
+                                (existing, replacement) -> existing
+                        ));
+            }
                     
-            case POST_LIKE_CREATED -> queryFactory
-                    .select(com.querydsl.core.types.Projections.constructor(
-                            MemberResponseDto.UserInfo.class,
-                            senderMember.id,
-                            senderMember.name,
-                            senderMember.nickname,
-                            senderMember.profileImgUrl
-                    ))
-                    .from(postLike)
-                    .leftJoin(postLike.member, senderMember)
-                    .where(postLike.id.postId.in(targetIds))
-                    .fetch()
-                    .stream()
-                    .collect(Collectors.toMap(
-                            MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo,
-                            (existing, replacement) -> existing
-                    ));
+            case POST_LIKE_CREATED -> {
+                List<com.querydsl.core.Tuple> results = queryFactory
+                        .select(postLike.id.postId,
+                               senderMember.id,
+                               senderMember.name,
+                               senderMember.nickname,
+                               senderMember.profileImgUrl)
+                        .from(postLike)
+                        .leftJoin(postLike.member, senderMember)
+                        .where(postLike.id.postId.in(targetIds))
+                        .fetch();
+                yield results.stream()
+                        .collect(Collectors.toMap(
+                                tuple -> tuple.get(postLike.id.postId),
+                                tuple -> {
+                                    Long memberId = tuple.get(senderMember.id);
+                                    if (memberId == null) return null;
+                                    return new MemberResponseDto.UserInfo(
+                                            memberId,
+                                            tuple.get(senderMember.name),
+                                            tuple.get(senderMember.nickname),
+                                            tuple.get(senderMember.profileImgUrl)
+                                    );
+                                },
+                                (existing, replacement) -> existing
+                        ));
+            }
                     
-            case COMMENT_LIKE_CREATED -> queryFactory
-                    .select(com.querydsl.core.types.Projections.constructor(
-                            MemberResponseDto.UserInfo.class,
-                            senderMember.id,
-                            senderMember.name,
-                            senderMember.nickname,
-                            senderMember.profileImgUrl
-                    ))
-                    .from(commentLike)
-                    .leftJoin(commentLike.member, senderMember)
-                    .where(commentLike.comment.id.in(targetIds))
-                    .fetch()
-                    .stream()
-                    .collect(Collectors.toMap(
-                            MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo,
-                            (existing, replacement) -> existing
-                    ));
+            case COMMENT_LIKE_CREATED -> {
+                List<com.querydsl.core.Tuple> results = queryFactory
+                        .select(commentLike.comment.id,
+                               senderMember.id,
+                               senderMember.name,
+                               senderMember.nickname,
+                               senderMember.profileImgUrl)
+                        .from(commentLike)
+                        .leftJoin(commentLike.member, senderMember)
+                        .where(commentLike.comment.id.in(targetIds))
+                        .fetch();
+                yield results.stream()
+                        .collect(Collectors.toMap(
+                                tuple -> tuple.get(commentLike.comment.id),
+                                tuple -> {
+                                    Long memberId = tuple.get(senderMember.id);
+                                    if (memberId == null) return null;
+                                    return new MemberResponseDto.UserInfo(
+                                            memberId,
+                                            tuple.get(senderMember.name),
+                                            tuple.get(senderMember.nickname),
+                                            tuple.get(senderMember.profileImgUrl)
+                                    );
+                                },
+                                (existing, replacement) -> existing
+                        ));
+            }
                     
-            case RECOMMENT_LIKE_CREATED -> queryFactory
-                    .select(com.querydsl.core.types.Projections.constructor(
-                            MemberResponseDto.UserInfo.class,
-                            senderMember.id,
-                            senderMember.name,
-                            senderMember.nickname,
-                            senderMember.profileImgUrl
-                    ))
-                    .from(recommentLike)
-                    .leftJoin(recommentLike.member, senderMember)
-                    .where(recommentLike.recomment.id.in(targetIds))
-                    .fetch()
-                    .stream()
-                    .collect(Collectors.toMap(
-                            MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo,
-                            (existing, replacement) -> existing
-                    ));
+            case RECOMMENT_LIKE_CREATED -> {
+                List<com.querydsl.core.Tuple> results = queryFactory
+                        .select(recommentLike.recomment.id,
+                               senderMember.id,
+                               senderMember.name,
+                               senderMember.nickname,
+                               senderMember.profileImgUrl)
+                        .from(recommentLike)
+                        .leftJoin(recommentLike.member, senderMember)
+                        .where(recommentLike.recomment.id.in(targetIds))
+                        .fetch();
+                yield results.stream()
+                        .collect(Collectors.toMap(
+                                tuple -> tuple.get(recommentLike.recomment.id),
+                                tuple -> {
+                                    Long memberId = tuple.get(senderMember.id);
+                                    if (memberId == null) return null;
+                                    return new MemberResponseDto.UserInfo(
+                                            memberId,
+                                            tuple.get(senderMember.name),
+                                            tuple.get(senderMember.nickname),
+                                            tuple.get(senderMember.profileImgUrl)
+                                    );
+                                },
+                                (existing, replacement) -> existing
+                        ));
+            }
                     
             default -> Map.of();
         };
