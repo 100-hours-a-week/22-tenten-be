@@ -1,16 +1,14 @@
 package com.kakaobase.snsapp.domain.notification.error;
 
-import com.kakaobase.snsapp.global.error.code.BaseErrorCode;
-import com.kakaobase.snsapp.global.error.exception.CustomException;
+import lombok.Getter;
 
-public class NotificationException extends CustomException {
-    public NotificationException(BaseErrorCode errorCode) {
-        super(errorCode);
-    }
-    public NotificationException(BaseErrorCode errorCode, String field) {
-        super(errorCode, field);
-    }
-    public NotificationException(BaseErrorCode errorCode, String field, String additionalMessage) {
-        super(errorCode, field, additionalMessage);
+@Getter
+public class NotificationException extends RuntimeException {
+
+    private final transient NotificationErrorCode erorrCode;
+
+    public NotificationException(NotificationErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.erorrCode = errorCode;
     }
 }
