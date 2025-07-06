@@ -28,6 +28,7 @@ public class NotificationService {
         try{
             sendNotification(receiverId, targetId, content, userInfo, NotificationType.COMMENT_CREATED, postId);
         } catch (Exception e) {
+            commandService.sendNotificationError(NotificationErrorCode.NOTIFICATION_SEND_FAIL, receiverId);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
         }
     }
@@ -36,6 +37,7 @@ public class NotificationService {
         try{
             sendNotification(receiverId, targetId, content, userInfo, NotificationType.RECOMMENT_CREATED, postId);
         } catch (Exception e) {
+            commandService.sendNotificationError(NotificationErrorCode.NOTIFICATION_SEND_FAIL, receiverId);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
         }
     }
@@ -44,6 +46,7 @@ public class NotificationService {
         try{
             sendNotification(receiverId, targetId, content, userInfo, NotificationType.POST_LIKE_CREATED, postId);
         } catch (Exception e) {
+            commandService.sendNotificationError(NotificationErrorCode.NOTIFICATION_SEND_FAIL, receiverId);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
         }
     }
@@ -52,6 +55,7 @@ public class NotificationService {
         try{
             sendNotification(receiverId, targetId, content, userInfo, NotificationType.COMMENT_LIKE_CREATED, postId);
         } catch (Exception e) {
+            commandService.sendNotificationError(NotificationErrorCode.NOTIFICATION_SEND_FAIL, receiverId);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
         }
     }
@@ -60,6 +64,7 @@ public class NotificationService {
         try{
             sendNotification(receiverId, targetId, content, userInfo, NotificationType.RECOMMENT_LIKE_CREATED, postId);
         } catch (Exception e) {
+            commandService.sendNotificationError(NotificationErrorCode.NOTIFICATION_SEND_FAIL, receiverId);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
         }
     }
@@ -68,6 +73,7 @@ public class NotificationService {
         try{
             sendFollowNotification(receiverId, targetId, userInfo, NotificationType.FOLLOWING_CREATED);
         } catch (Exception e) {
+            commandService.sendNotificationError(NotificationErrorCode.NOTIFICATION_SEND_FAIL, receiverId);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
         }
     }
@@ -89,7 +95,7 @@ public class NotificationService {
             commandService.updateNotificationRead(packet.data.id());
             return notifConverter.toAckPacket(packet.data.id(), ResponseEnum.READ_SUCCESS);
         } catch (Exception e){
-            throw new NotificationException(NotificationErrorCode.NOTIFICATION_READ_FAIL);
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_READ_FAIL, packet.data.id() );
         }
     }
 
@@ -99,7 +105,7 @@ public class NotificationService {
             return notifConverter.toAckPacket(packet.data.id(), ResponseEnum.REMOVE_SUCCESS);
         } catch (Exception e){
             log.error("에러 삭제 처리중 예외 발생 알림id: {}, 에러: {}", packet.data.id(), e.getMessage());
-            throw new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL);
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL, packet.data.id());
         }
 
     }
@@ -131,6 +137,7 @@ public class NotificationService {
             log.info("사용자 {}의 모든 알림 전송 완료", userId);
         } catch (Exception e) {
             log.error("사용자 {}의 모든 알림 전송 중 오류 발생", userId, e);
+            commandService.sendNotificationError(NotificationErrorCode.NOTIFICATION_FETCH_FAIL, userId);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
         }
     }

@@ -13,6 +13,7 @@ import com.kakaobase.snsapp.domain.notification.repository.NotificationRepositor
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
+import com.kakaobase.snsapp.global.error.code.ErrorPacketData;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -131,5 +132,10 @@ public class NotificationCommandService {
             log.error("사용자 {}에게 알림 데이터 전송 실패", userId, e);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
         }
+    }
+
+    @Async void sendNotificationError(NotificationErrorCode errorCode, Long receiverId){
+        WebSocketPacketImpl<ErrorPacketData> errorPacket = notifConverter.toErrorPacket(errorCode);
+        simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), NOTIFY_SUBSCRIBE_PATH, errorPacket);
     }
 }

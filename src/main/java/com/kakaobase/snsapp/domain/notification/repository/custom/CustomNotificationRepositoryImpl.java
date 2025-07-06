@@ -206,18 +206,15 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                         .where(comment.id.in(targetIds))
                         .fetch();
                 yield results.stream()
+                        .filter(tuple -> tuple.get(senderMember.id) != null)
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(comment.id),
-                                tuple -> {
-                                    Long memberId = tuple.get(senderMember.id);
-                                    if (memberId == null) return null;
-                                    return new MemberResponseDto.UserInfo(
-                                            memberId,
-                                            tuple.get(senderMember.name),
-                                            tuple.get(senderMember.nickname),
-                                            tuple.get(senderMember.profileImgUrl)
-                                    );
-                                },
+                                tuple -> new MemberResponseDto.UserInfo(
+                                        tuple.get(senderMember.id),
+                                        tuple.get(senderMember.name),
+                                        tuple.get(senderMember.nickname),
+                                        tuple.get(senderMember.profileImgUrl)
+                                ),
                                 (existing, replacement) -> existing
                         ));
             }
@@ -234,18 +231,15 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                         .where(recomment.id.in(targetIds))
                         .fetch();
                 yield results.stream()
+                        .filter(tuple -> tuple.get(senderMember.id) != null)
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(recomment.id),
-                                tuple -> {
-                                    Long memberId = tuple.get(senderMember.id);
-                                    if (memberId == null) return null;
-                                    return new MemberResponseDto.UserInfo(
-                                            memberId,
-                                            tuple.get(senderMember.name),
-                                            tuple.get(senderMember.nickname),
-                                            tuple.get(senderMember.profileImgUrl)
-                                    );
-                                },
+                                tuple -> new MemberResponseDto.UserInfo(
+                                        tuple.get(senderMember.id),
+                                        tuple.get(senderMember.name),
+                                        tuple.get(senderMember.nickname),
+                                        tuple.get(senderMember.profileImgUrl)
+                                ),
                                 (existing, replacement) -> existing
                         ));
             }
@@ -262,18 +256,15 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                         .where(postLike.id.postId.in(targetIds))
                         .fetch();
                 yield results.stream()
+                        .filter(tuple -> tuple.get(senderMember.id) != null)
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(postLike.id.postId),
-                                tuple -> {
-                                    Long memberId = tuple.get(senderMember.id);
-                                    if (memberId == null) return null;
-                                    return new MemberResponseDto.UserInfo(
-                                            memberId,
-                                            tuple.get(senderMember.name),
-                                            tuple.get(senderMember.nickname),
-                                            tuple.get(senderMember.profileImgUrl)
-                                    );
-                                },
+                                tuple -> new MemberResponseDto.UserInfo(
+                                        tuple.get(senderMember.id),
+                                        tuple.get(senderMember.name),
+                                        tuple.get(senderMember.nickname),
+                                        tuple.get(senderMember.profileImgUrl)
+                                ),
                                 (existing, replacement) -> existing
                         ));
             }
@@ -290,18 +281,15 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                         .where(commentLike.comment.id.in(targetIds))
                         .fetch();
                 yield results.stream()
+                        .filter(tuple -> tuple.get(senderMember.id) != null)
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(commentLike.comment.id),
-                                tuple -> {
-                                    Long memberId = tuple.get(senderMember.id);
-                                    if (memberId == null) return null;
-                                    return new MemberResponseDto.UserInfo(
-                                            memberId,
-                                            tuple.get(senderMember.name),
-                                            tuple.get(senderMember.nickname),
-                                            tuple.get(senderMember.profileImgUrl)
-                                    );
-                                },
+                                tuple -> new MemberResponseDto.UserInfo(
+                                        tuple.get(senderMember.id),
+                                        tuple.get(senderMember.name),
+                                        tuple.get(senderMember.nickname),
+                                        tuple.get(senderMember.profileImgUrl)
+                                ),
                                 (existing, replacement) -> existing
                         ));
             }
@@ -318,18 +306,15 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                         .where(recommentLike.recomment.id.in(targetIds))
                         .fetch();
                 yield results.stream()
+                        .filter(tuple -> tuple.get(senderMember.id) != null)
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(recommentLike.recomment.id),
-                                tuple -> {
-                                    Long memberId = tuple.get(senderMember.id);
-                                    if (memberId == null) return null;
-                                    return new MemberResponseDto.UserInfo(
-                                            memberId,
-                                            tuple.get(senderMember.name),
-                                            tuple.get(senderMember.nickname),
-                                            tuple.get(senderMember.profileImgUrl)
-                                    );
-                                },
+                                tuple -> new MemberResponseDto.UserInfo(
+                                        tuple.get(senderMember.id),
+                                        tuple.get(senderMember.name),
+                                        tuple.get(senderMember.nickname),
+                                        tuple.get(senderMember.profileImgUrl)
+                                ),
                                 (existing, replacement) -> existing
                         ));
             }
