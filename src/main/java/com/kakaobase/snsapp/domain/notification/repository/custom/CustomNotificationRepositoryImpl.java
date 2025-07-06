@@ -115,7 +115,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                         com.querydsl.core.types.dsl.Expressions.constant(true)
                 ))
                 .from(follow)
-                .join(follow.followerUser, followerMember)
+                .leftJoin(follow.followerUser, followerMember)
                 .where(follow.id.in(followIds))
                 .fetch()
                 .stream()
@@ -203,7 +203,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                             senderMember.profileImgUrl
                     ))
                     .from(comment)
-                    .join(comment.member, senderMember)
+                    .leftJoin(comment.member, senderMember)
                     .where(comment.id.in(targetIds))
                     .fetch()
                     .stream()
@@ -222,7 +222,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                             senderMember.profileImgUrl
                     ))
                     .from(recomment)
-                    .join(recomment.member, senderMember)
+                    .leftJoin(recomment.member, senderMember)
                     .where(recomment.id.in(targetIds))
                     .fetch()
                     .stream()
@@ -241,7 +241,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                             senderMember.profileImgUrl
                     ))
                     .from(postLike)
-                    .join(postLike.member, senderMember)
+                    .leftJoin(postLike.member, senderMember)
                     .where(postLike.id.postId.in(targetIds))
                     .fetch()
                     .stream()
@@ -260,7 +260,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                             senderMember.profileImgUrl
                     ))
                     .from(commentLike)
-                    .join(commentLike.member, senderMember)
+                    .leftJoin(commentLike.member, senderMember)
                     .where(commentLike.comment.id.in(targetIds))
                     .fetch()
                     .stream()
@@ -279,7 +279,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                             senderMember.profileImgUrl
                     ))
                     .from(recommentLike)
-                    .join(recommentLike.member, senderMember)
+                    .leftJoin(recommentLike.member, senderMember)
                     .where(recommentLike.recomment.id.in(targetIds))
                     .fetch()
                     .stream()
@@ -334,7 +334,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
             default -> notifications.stream()
                     .collect(Collectors.toMap(
                             Notification::getTargetId,
-                            n -> (String) null
+                            n -> null
                     ));
         };
     }
@@ -438,9 +438,4 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                         notification -> targetToPostMap.get(notification.getTargetId())
                 ));
     }
-
-
-
-
-
 }
