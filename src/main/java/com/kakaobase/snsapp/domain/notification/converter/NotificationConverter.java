@@ -95,9 +95,19 @@ public class NotificationConverter {
         return new WebSocketPacketImpl<>(responseEnum.getEvent(), data);
     }
 
-    public WebSocketPacket<NotificationNackData> toNackData(NotificationErrorCode errorCode, Long notifId){
+    public WebSocketPacket<NotificationNackData> toNackPacket(NotificationErrorCode errorCode, Long notifId){
         var data = NotificationNackData.builder()
                 .id(notifId)
+                .error(errorCode.getError())
+                .message(errorCode.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new WebSocketPacketImpl<>(errorCode.getEvent(), data);
+    }
+
+    public WebSocketPacketImpl<ErrorPacketData> toErrorPacket(NotificationErrorCode errorCode){
+        var data = ErrorPacketData.builder()
                 .error(errorCode.getError())
                 .message(errorCode.getMessage())
                 .timestamp(LocalDateTime.now())

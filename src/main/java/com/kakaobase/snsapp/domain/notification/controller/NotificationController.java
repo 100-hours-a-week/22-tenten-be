@@ -42,6 +42,6 @@ public class NotificationController {
     public WebSocketPacket<NotificationNackData> handleBusinessException(NotificationException ex, Principal principal) {
         log.warn("비즈니스 에러 - 사용자: {}, 에러: {}", principal.getName(), ex.getMessage());
 
-        return notifConverter.toNackData(ex.getErorrCode(), ex.getNotificationId());
+        return notifConverter.toNackPacket(ex.getErorrCode(), ex.getNotificationId());
     }
 }
