@@ -25,27 +25,51 @@ public class NotificationService {
     private final NotificationConverter notifConverter;
 
     public void sendCommentCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
-        sendNotification(receiverId, targetId, content, userInfo, NotificationType.COMMENT_CREATED, postId);
+        try{
+            sendNotification(receiverId, targetId, content, userInfo, NotificationType.COMMENT_CREATED, postId);
+        } catch (Exception e) {
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
+        }
     }
 
     public void sendRecommentCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
-        sendNotification(receiverId, targetId, content, userInfo, NotificationType.RECOMMENT_CREATED, postId);
+        try{
+            sendNotification(receiverId, targetId, content, userInfo, NotificationType.RECOMMENT_CREATED, postId);
+        } catch (Exception e) {
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
+        }
     }
 
     public void sendPostLikeCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
-        sendNotification(receiverId, targetId, content, userInfo, NotificationType.POST_LIKE_CREATED, postId);
+        try{
+            sendNotification(receiverId, targetId, content, userInfo, NotificationType.POST_LIKE_CREATED, postId);
+        } catch (Exception e) {
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
+        }
     }
 
     public void sendCommentLikeCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
-        sendNotification(receiverId, targetId, content, userInfo, NotificationType.COMMENT_LIKE_CREATED, postId);
+        try{
+            sendNotification(receiverId, targetId, content, userInfo, NotificationType.COMMENT_LIKE_CREATED, postId);
+        } catch (Exception e) {
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
+        }
     }
 
     public void sendRecommentLikeCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
-        sendNotification(receiverId, targetId, content, userInfo, NotificationType.RECOMMENT_LIKE_CREATED, postId);
+        try{
+            sendNotification(receiverId, targetId, content, userInfo, NotificationType.RECOMMENT_LIKE_CREATED, postId);
+        } catch (Exception e) {
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
+        }
     }
 
     public void sendFollowingCreatedNotification(Long receiverId, Long targetId, MemberResponseDto.UserInfoWithFollowing userInfo) {
-        sendFollowNotification(receiverId, targetId, userInfo, NotificationType.FOLLOWING_CREATED);
+        try{
+            sendFollowNotification(receiverId, targetId, userInfo, NotificationType.FOLLOWING_CREATED);
+        } catch (Exception e) {
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_SEND_FAIL);
+        }
     }
 
     private void sendNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, NotificationType type, Long postId) {
@@ -107,6 +131,7 @@ public class NotificationService {
             log.info("사용자 {}의 모든 알림 전송 완료", userId);
         } catch (Exception e) {
             log.error("사용자 {}의 모든 알림 전송 중 오류 발생", userId, e);
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
         }
     }
 
