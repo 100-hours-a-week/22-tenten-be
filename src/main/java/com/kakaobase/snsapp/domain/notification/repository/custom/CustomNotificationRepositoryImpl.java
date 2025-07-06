@@ -207,6 +207,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .where(comment.id.in(targetIds))
                     .fetch()
                     .stream()
+                    .filter(userInfo -> userInfo != null && userInfo.id() != null)  // null 필터링
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
                             userInfo -> userInfo,
@@ -226,6 +227,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .where(recomment.id.in(targetIds))
                     .fetch()
                     .stream()
+                    .filter(userInfo -> userInfo != null && userInfo.id() != null)  // null 필터링
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
                             userInfo -> userInfo,
@@ -245,6 +247,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .where(postLike.id.postId.in(targetIds))
                     .fetch()
                     .stream()
+                    .filter(userInfo -> userInfo != null && userInfo.id() != null)  // null 필터링
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
                             userInfo -> userInfo,
@@ -264,6 +267,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .where(commentLike.comment.id.in(targetIds))
                     .fetch()
                     .stream()
+                    .filter(userInfo -> userInfo != null && userInfo.id() != null)  // null 필터링
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
                             userInfo -> userInfo,
@@ -283,6 +287,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .where(recommentLike.recomment.id.in(targetIds))
                     .fetch()
                     .stream()
+                    .filter(userInfo -> userInfo != null && userInfo.id() != null)  // null 필터링
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
                             userInfo -> userInfo,
