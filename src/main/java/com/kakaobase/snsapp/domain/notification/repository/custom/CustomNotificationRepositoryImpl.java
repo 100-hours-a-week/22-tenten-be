@@ -121,7 +121,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                 .stream()
                 .collect(Collectors.toMap(
                         MemberResponseDto.UserInfoWithFollowing::id,
-                        userInfo -> userInfo
+                        userInfo -> userInfo,
+                        (existing, replacement) -> existing
                 ));
         
         // 각 알림에 대해 패킷 생성
@@ -208,7 +209,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .stream()
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo
+                            userInfo -> userInfo,
+                            (existing, replacement) -> existing
                     ));
                     
             case RECOMMENT_CREATED -> queryFactory
@@ -226,7 +228,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .stream()
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo
+                            userInfo -> userInfo,
+                            (existing, replacement) -> existing
                     ));
                     
             case POST_LIKE_CREATED -> queryFactory
@@ -244,7 +247,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .stream()
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo
+                            userInfo -> userInfo,
+                            (existing, replacement) -> existing
                     ));
                     
             case COMMENT_LIKE_CREATED -> queryFactory
@@ -262,7 +266,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .stream()
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo
+                            userInfo -> userInfo,
+                            (existing, replacement) -> existing
                     ));
                     
             case RECOMMENT_LIKE_CREATED -> queryFactory
@@ -280,7 +285,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                     .stream()
                     .collect(Collectors.toMap(
                             MemberResponseDto.UserInfo::id,
-                            userInfo -> userInfo
+                            userInfo -> userInfo,
+                            (existing, replacement) -> existing
                     ));
                     
             default -> Map.of();

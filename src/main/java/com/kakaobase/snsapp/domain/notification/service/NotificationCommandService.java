@@ -47,7 +47,7 @@ public class NotificationCommandService {
     @Transactional
     public void updateNotificationRead(Long notifId) {
         Notification notification = notificationRepository.findById(notifId)
-                .orElseThrow(()-> new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL));
+                .orElseThrow(()-> new NotificationException(NotificationErrorCode.NOTIFICATION_NOT_FOUND));
 
         notification.markAsRead();
     }
@@ -55,7 +55,7 @@ public class NotificationCommandService {
     @Transactional
     public void deleteNotification(Long notifId) {
         Notification notification = notificationRepository.findById(notifId)
-                .orElseThrow(()-> new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL));
+                .orElseThrow(()-> new NotificationException(NotificationErrorCode.NOTIFICATION_NOT_FOUND));
 
         notifRepository.delete(notification);
     }
