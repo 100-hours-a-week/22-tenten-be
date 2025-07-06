@@ -1,9 +1,7 @@
 package com.kakaobase.snsapp.domain.notification.repository.custom;
 
 import com.kakaobase.snsapp.domain.comments.entity.QComment;
-import com.kakaobase.snsapp.domain.comments.entity.QCommentLike;
 import com.kakaobase.snsapp.domain.comments.entity.QRecomment;
-import com.kakaobase.snsapp.domain.comments.entity.QRecommentLike;
 import com.kakaobase.snsapp.domain.follow.entity.QFollow;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.QMember;
@@ -12,6 +10,8 @@ import com.kakaobase.snsapp.domain.notification.dto.records.NotificationData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationFollowingData;
 import com.kakaobase.snsapp.domain.notification.entity.Notification;
 import com.kakaobase.snsapp.domain.notification.entity.QNotification;
+import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
+import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.domain.posts.entity.QPostLike;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
@@ -153,15 +153,22 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
         }
         
         // 타입별 발신자 정보와 컨텐츠 일괄 조회
-        Map<Long, MemberResponseDto.UserInfo> senderMap = getSenderInfoBatch(notifications, type);
+        Map<Long, MemberResponseDto.UserInfo> senderMap = getSenderInfoBySenderId(notifications);
         Map<Long, String> contentMap = getContentBatch(notifications, type);
         Map<Long, Long> postIdMap = getPostIdBatch(notifications, type);
         
         // 각 알림에 대해 패킷 생성
         for (Notification notification : notifications) {
-            MemberResponseDto.UserInfo sender = senderMap.get(notification.getTargetId());
-            String content = contentMap.get(notification.getTargetId());
+            MemberResponseDto.UserInfo sender = senderMap.get(notification.getSenderId());
+            String content = contentMap.get(notification.getId());
             Long postId = postIdMap.get(notification.getId());
+            
+            // sender가 null인 경우 (삭제된 사용자) 해당 알림 스킵
+            if (sender == null) {
+                log.debug("발신자 정보가 없는 알림 스킵 - 알림 ID: {}, 타입: {}", 
+                         notification.getId(), notification.getNotificationType());
+                continue;
+            }
             
             WebSocketPacket<?> packet = notificationConverter.toPacket(
                     notification.getId(),
@@ -179,152 +186,36 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
     }
 
     /**
-     * 타입별 발신자 정보 일괄 조회
+     * senderId를 기반으로 발신자 정보 일괄 조회
      */
-    private Map<Long, MemberResponseDto.UserInfo> getSenderInfoBatch(List<Notification> notifications, NotificationType type) {
-        List<Long> targetIds = notifications.stream()
-                .map(Notification::getTargetId)
+    private Map<Long, MemberResponseDto.UserInfo> getSenderInfoBySenderId(List<Notification> notifications) {
+        List<Long> senderIds = notifications.stream()
+                .map(Notification::getSenderId)
+                .distinct()
                 .toList();
+
+        QMember member = QMember.member;
         
-        QMember senderMember = QMember.member;
-        QComment comment = QComment.comment;
-        QRecomment recomment = QRecomment.recomment;
-        QPostLike postLike = QPostLike.postLike;
-        QCommentLike commentLike = QCommentLike.commentLike;
-        QRecommentLike recommentLike = QRecommentLike.recommentLike;
+        List<com.querydsl.core.Tuple> results = queryFactory
+                .select(member.id, member.name, member.nickname, member.profileImgUrl)
+                .from(member)
+                .where(member.id.in(senderIds))
+                .fetch();
         
-        return switch (type) {
-            case COMMENT_CREATED -> {
-                List<com.querydsl.core.Tuple> results = queryFactory
-                        .select(comment.id, 
-                               senderMember.id,
-                               senderMember.name,
-                               senderMember.nickname,
-                               senderMember.profileImgUrl)
-                        .from(comment)
-                        .leftJoin(comment.member, senderMember)
-                        .where(comment.id.in(targetIds))
-                        .fetch();
-                yield results.stream()
-                        .filter(tuple -> tuple.get(senderMember.id) != null)
-                        .collect(Collectors.toMap(
-                                tuple -> tuple.get(comment.id),
-                                tuple -> new MemberResponseDto.UserInfo(
-                                        tuple.get(senderMember.id),
-                                        tuple.get(senderMember.name),
-                                        tuple.get(senderMember.nickname),
-                                        tuple.get(senderMember.profileImgUrl)
-                                ),
-                                (existing, replacement) -> existing
-                        ));
-            }
-                    
-            case RECOMMENT_CREATED -> {
-                List<com.querydsl.core.Tuple> results = queryFactory
-                        .select(recomment.id,
-                               senderMember.id,
-                               senderMember.name,
-                               senderMember.nickname,
-                               senderMember.profileImgUrl)
-                        .from(recomment)
-                        .leftJoin(recomment.member, senderMember)
-                        .where(recomment.id.in(targetIds))
-                        .fetch();
-                yield results.stream()
-                        .filter(tuple -> tuple.get(senderMember.id) != null)
-                        .collect(Collectors.toMap(
-                                tuple -> tuple.get(recomment.id),
-                                tuple -> new MemberResponseDto.UserInfo(
-                                        tuple.get(senderMember.id),
-                                        tuple.get(senderMember.name),
-                                        tuple.get(senderMember.nickname),
-                                        tuple.get(senderMember.profileImgUrl)
-                                ),
-                                (existing, replacement) -> existing
-                        ));
-            }
-                    
-            case POST_LIKE_CREATED -> {
-                List<com.querydsl.core.Tuple> results = queryFactory
-                        .select(postLike.id.postId,
-                               senderMember.id,
-                               senderMember.name,
-                               senderMember.nickname,
-                               senderMember.profileImgUrl)
-                        .from(postLike)
-                        .leftJoin(postLike.member, senderMember)
-                        .where(postLike.id.postId.in(targetIds))
-                        .fetch();
-                yield results.stream()
-                        .filter(tuple -> tuple.get(senderMember.id) != null)
-                        .collect(Collectors.toMap(
-                                tuple -> tuple.get(postLike.id.postId),
-                                tuple -> new MemberResponseDto.UserInfo(
-                                        tuple.get(senderMember.id),
-                                        tuple.get(senderMember.name),
-                                        tuple.get(senderMember.nickname),
-                                        tuple.get(senderMember.profileImgUrl)
-                                ),
-                                (existing, replacement) -> existing
-                        ));
-            }
-                    
-            case COMMENT_LIKE_CREATED -> {
-                List<com.querydsl.core.Tuple> results = queryFactory
-                        .select(commentLike.comment.id,
-                               senderMember.id,
-                               senderMember.name,
-                               senderMember.nickname,
-                               senderMember.profileImgUrl)
-                        .from(commentLike)
-                        .leftJoin(commentLike.member, senderMember)
-                        .where(commentLike.comment.id.in(targetIds))
-                        .fetch();
-                yield results.stream()
-                        .filter(tuple -> tuple.get(senderMember.id) != null)
-                        .collect(Collectors.toMap(
-                                tuple -> tuple.get(commentLike.comment.id),
-                                tuple -> new MemberResponseDto.UserInfo(
-                                        tuple.get(senderMember.id),
-                                        tuple.get(senderMember.name),
-                                        tuple.get(senderMember.nickname),
-                                        tuple.get(senderMember.profileImgUrl)
-                                ),
-                                (existing, replacement) -> existing
-                        ));
-            }
-                    
-            case RECOMMENT_LIKE_CREATED -> {
-                List<com.querydsl.core.Tuple> results = queryFactory
-                        .select(recommentLike.recomment.id,
-                               senderMember.id,
-                               senderMember.name,
-                               senderMember.nickname,
-                               senderMember.profileImgUrl)
-                        .from(recommentLike)
-                        .leftJoin(recommentLike.member, senderMember)
-                        .where(recommentLike.recomment.id.in(targetIds))
-                        .fetch();
-                yield results.stream()
-                        .filter(tuple -> tuple.get(senderMember.id) != null)
-                        .collect(Collectors.toMap(
-                                tuple -> tuple.get(recommentLike.recomment.id),
-                                tuple -> new MemberResponseDto.UserInfo(
-                                        tuple.get(senderMember.id),
-                                        tuple.get(senderMember.name),
-                                        tuple.get(senderMember.nickname),
-                                        tuple.get(senderMember.profileImgUrl)
-                                ),
-                                (existing, replacement) -> existing
-                        ));
-            }
-                    
-            default -> Map.of();
-        };
+        return results.stream()
+                .collect(Collectors.toMap(
+                        tuple -> tuple.get(member.id),
+                        tuple -> new MemberResponseDto.UserInfo(
+                                tuple.get(member.id),
+                                tuple.get(member.name),
+                                tuple.get(member.nickname),
+                                tuple.get(member.profileImgUrl)
+                        )
+                ));
     }
 
     /**
-     * 타입별 컨텐츠 일괄 조회
+     * 타입별 컨텐츠 일괄 조회 (notificationId -> content 매핑)
      */
     private Map<Long, String> getContentBatch(List<Notification> notifications, NotificationType type) {
         List<Long> targetIds = notifications.stream()
@@ -334,7 +225,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
         QComment comment = QComment.comment;
         QRecomment recomment = QRecomment.recomment;
         
-        return switch (type) {
+        // 먼저 targetId -> content 매핑을 구한 후, notificationId -> content로 변환
+        Map<Long, String> targetToContentMap = switch (type) {
             case COMMENT_CREATED -> {
                 List<com.querydsl.core.Tuple> results = queryFactory
                         .select(comment.id, comment.content)
@@ -344,7 +236,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                 yield results.stream()
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(comment.id),
-                                tuple -> tuple.get(comment.content)
+                                tuple -> tuple.get(comment.content),
+                                (existing, replacement) -> existing
                         ));
             }
             
@@ -357,16 +250,27 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                 yield results.stream()
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(recomment.id),
-                                tuple -> tuple.get(recomment.content)
+                                tuple -> tuple.get(recomment.content),
+                                (existing, replacement) -> existing
                         ));
             }
             
+            // 좋아요 알림들은 content가 필요 없음 (빈 문자열로 처리)
             default -> notifications.stream()
                     .collect(Collectors.toMap(
                             Notification::getTargetId,
-                            n -> null
+                            n -> "",  // 좋아요 알림은 content가 없음
+                            (existing, replacement) -> existing
                     ));
         };
+        
+        // notificationId -> content로 변환
+        return notifications.stream()
+                .collect(Collectors.toMap(
+                        Notification::getId,
+                        notification -> targetToContentMap.getOrDefault(notification.getTargetId(), ""),
+                        (existing, replacement) -> existing
+                ));
     }
 
     /**
@@ -390,7 +294,8 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                 yield results.stream()
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(comment.id),
-                                tuple -> tuple.get(comment.post.id)
+                                tuple -> tuple.get(comment.post.id),
+                                (existing, replacement) -> existing
                         ));
             }
 
@@ -407,57 +312,58 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                 yield results.stream()
                         .collect(Collectors.toMap(
                                 tuple -> tuple.get(recomment.id),
-                                tuple -> tuple.get(comment.post.id)
+                                tuple -> tuple.get(comment.post.id),
+                                (existing, replacement) -> existing
                         ));
             }
 
             case COMMENT_LIKE_CREATED -> {
-                List<Long> targetIds = notifications.stream()
+                List<Long> commentIds = notifications.stream()
                         .map(Notification::getTargetId)
                         .toList();
-                QCommentLike commentLike = QCommentLike.commentLike;
                 List<com.querydsl.core.Tuple> results = queryFactory
-                        .select(commentLike.comment.id, comment.post.id)
-                        .from(commentLike)
-                        .join(commentLike.comment, comment)
-                        .where(commentLike.comment.id.in(targetIds))
+                        .select(comment.id, comment.post.id)
+                        .from(comment)
+                        .where(comment.id.in(commentIds))
                         .fetch();
                 yield results.stream()
                         .collect(Collectors.toMap(
-                                tuple -> tuple.get(commentLike.comment.id),
-                                tuple -> tuple.get(comment.post.id)
+                                tuple -> tuple.get(comment.id),
+                                tuple -> tuple.get(comment.post.id),
+                                (existing, replacement) -> existing
                         ));
             }
 
             case RECOMMENT_LIKE_CREATED -> {
-                List<Long> targetIds = notifications.stream()
+                List<Long> recommentIds = notifications.stream()
                         .map(Notification::getTargetId)
                         .toList();
-                QRecommentLike recommentLike = QRecommentLike.recommentLike;
                 List<com.querydsl.core.Tuple> results = queryFactory
-                        .select(recommentLike.recomment.id, comment.post.id)
-                        .from(recommentLike)
-                        .join(recommentLike.recomment, recomment)
+                        .select(recomment.id, comment.post.id)
+                        .from(recomment)
                         .join(recomment.comment, comment)
-                        .where(recommentLike.recomment.id.in(targetIds))
+                        .where(recomment.id.in(recommentIds))
                         .fetch();
                 yield results.stream()
                         .collect(Collectors.toMap(
-                                tuple -> tuple.get(recommentLike.recomment.id),
-                                tuple -> tuple.get(comment.post.id)
+                                tuple -> tuple.get(recomment.id),
+                                tuple -> tuple.get(comment.post.id),
+                                (existing, replacement) -> existing
                         ));
             }
 
             case POST_LIKE_CREATED -> notifications.stream()
                     .collect(Collectors.toMap(
                             Notification::getTargetId,
-                            Notification::getTargetId
+                            Notification::getTargetId,
+                            (existing, replacement) -> existing
                     ));
 
             default -> notifications.stream()
                     .collect(Collectors.toMap(
                             Notification::getTargetId,
-                            Notification::getTargetId
+                            Notification::getTargetId,
+                            (existing, replacement) -> existing
                     ));
         };
         
@@ -465,7 +371,18 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
         return notifications.stream()
                 .collect(Collectors.toMap(
                         Notification::getId,
-                        notification -> targetToPostMap.get(notification.getTargetId())
+                        notification -> {
+                            Long postId = targetToPostMap.get(notification.getTargetId());
+                            if (postId != null) {
+                                return postId;
+                            }
+                            // null인 경우 타입별로 다르게 처리
+                            return switch (type) {
+                                case POST_LIKE_CREATED -> notification.getTargetId(); // targetId가 이미 postId
+                                default -> throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
+                            };
+                        },
+                        (existing, replacement) -> existing
                 ));
     }
 }

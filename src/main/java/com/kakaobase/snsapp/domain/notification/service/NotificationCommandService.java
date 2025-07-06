@@ -37,8 +37,8 @@ public class NotificationCommandService {
     private static final String NOTIFY_SUBSCRIBE_PATH = "/queue/notification";
 
     @Transactional
-    public Long createNotification(Long receiverId, NotificationType type, Long targetId) {
-        Notification notification = notifConverter.toEntity(receiverId, type, targetId);
+    public Long createNotification(Long receiverId, Long senderId, NotificationType type, Long targetId) {
+        Notification notification = notifConverter.toEntity(receiverId, senderId, type, targetId);
         notifRepository.save(notification);
         return notification.getId();
     }

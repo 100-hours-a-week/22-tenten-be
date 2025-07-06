@@ -24,6 +24,9 @@ public class Notification {
     @Column(name = "receiver_id", nullable = false, columnDefinition = "INT UNSIGNED")
     private Long receiverId;
 
+    @Column(name = "sender_id", nullable = false, columnDefinition = "INT UNSIGNED")
+    private Long senderId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 20)
     private NotificationType notificationType;
@@ -42,8 +45,9 @@ public class Notification {
     private LocalDateTime createdAt;
 
     @Builder
-    public Notification(Long receiverId, NotificationType type, Long targetId) {
+    public Notification(Long receiverId, Long senderId, NotificationType type, Long targetId) {
         this.receiverId = receiverId;
+        this.senderId = senderId;
         this.notificationType = type;
         this.targetType = type.getTargetType();
         this.targetId = targetId;

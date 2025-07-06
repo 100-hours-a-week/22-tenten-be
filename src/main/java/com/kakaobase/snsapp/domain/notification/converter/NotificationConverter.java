@@ -23,9 +23,10 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class NotificationConverter {
 
-    public Notification toEntity(Long receiverId, NotificationType type, Long targetId){
+    public Notification toEntity(Long receiverId, Long senderId, NotificationType type, Long targetId){
         return Notification.builder()
                 .receiverId(receiverId)
+                .senderId(senderId)
                 .type(type)
                 .targetId(targetId)
                 .build();
