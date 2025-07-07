@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
 import com.kakaobase.snsapp.domain.notification.dto.records.*;
 import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
 import com.kakaobase.snsapp.domain.notification.error.NotificationException;
+import com.kakaobase.snsapp.domain.notification.util.InvalidNotificationCacheUtil;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.domain.notification.util.ResponseEnum;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
@@ -23,6 +24,7 @@ public class NotificationService {
 
     private final NotificationCommandService commandService;
     private final NotificationConverter notifConverter;
+    private final InvalidNotificationCacheUtil invalidNotificationCacheUtil;
 
     public void sendCommentCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
         try{
@@ -147,8 +149,8 @@ public class NotificationService {
      */
     private NotificationFetchData filterNotifications(List<WebSocketPacket<?>> notifications) {
         List<WebSocketPacket<?>> validNotifications = new ArrayList<>();
-        List<Long> invalidNotificationIds = new ArrayList<>();
         int unreadCount = 0;
+        int invalidCount = 0;
         
         for (WebSocketPacket<?> packet : notifications) {
             boolean isValid = true;
@@ -179,13 +181,15 @@ public class NotificationService {
                     unreadCount++;
                 }
             } else if (notificationId != null) {
-                invalidNotificationIds.add(notificationId);
+                // Redis 캐시에 무효 알림 ID 추가 (스케줄러가 1시간마다 정리)
+                invalidNotificationCacheUtil.addInvalidNotificationId(notificationId);
+                invalidCount++;
             }
         }
 
-        // 무효한 알림들 비동기 삭제
-        if (!invalidNotificationIds.isEmpty()) {
-            commandService.deleteInvalidNotifications(invalidNotificationIds);
+        // 무효한 알림 개수 로깅 (기존 즉시 삭제 로직 제거)
+        if (invalidCount > 0) {
+            log.info("무효한 알림 {}개를 Redis 캐시에 추가, 스케줄러가 1시간마다 정리", invalidCount);
         }
 
         return new NotificationFetchData(unreadCount, validNotifications);

@@ -10,10 +10,8 @@ import com.kakaobase.snsapp.domain.notification.dto.records.NotificationData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationFollowingData;
 import com.kakaobase.snsapp.domain.notification.entity.Notification;
 import com.kakaobase.snsapp.domain.notification.entity.QNotification;
-import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
-import com.kakaobase.snsapp.domain.notification.error.NotificationException;
+import com.kakaobase.snsapp.domain.notification.util.InvalidNotificationCacheUtil;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
-import com.kakaobase.snsapp.domain.posts.entity.QPostLike;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +31,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
 
     private final JPAQueryFactory queryFactory;
     private final NotificationConverter notificationConverter;
+    private final InvalidNotificationCacheUtil invalidNotificationCacheUtil;
 
     @Override
     public List<WebSocketPacket<?>> findAllNotificationsByUserId(Long userId) {
@@ -146,6 +145,14 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
      * 일반 알림들을 일괄 처리 (댓글, 좋아요 등)
      */
     private List<WebSocketPacket<?>> processGeneralNotifications(List<Notification> notifications, NotificationType type) {
+        return processNotifications(notifications, type);
+    }
+    
+    /**
+     * 알림을 처리하여 유효한 알림만 WebSocketPacket으로 변환
+     * 무효한 알림은 즉시 필터링하고 스케줄러가 DB에서 정리하도록 함
+     */
+    private List<WebSocketPacket<?>> processNotifications(List<Notification> notifications, NotificationType type) {
         List<WebSocketPacket<?>> result = new ArrayList<>();
         
         if (notifications.isEmpty()) {
@@ -157,16 +164,15 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
         Map<Long, String> contentMap = getContentBatch(notifications, type);
         Map<Long, Long> postIdMap = getPostIdBatch(notifications, type);
         
-        // 각 알림에 대해 패킷 생성
+        // 각 알림에 대해 패킷 생성 (유효한 알림만 처리)
         for (Notification notification : notifications) {
             MemberResponseDto.UserInfo sender = senderMap.get(notification.getSenderId());
             String content = contentMap.get(notification.getId());
             Long postId = postIdMap.get(notification.getId());
             
-            // sender가 null인 경우 (삭제된 사용자) 해당 알림 스킵
-            if (sender == null) {
-                log.debug("발신자 정보가 없는 알림 스킵 - 알림 ID: {}, 타입: {}", 
-                         notification.getId(), notification.getNotificationType());
+            // 무효한 알림은 Redis 캐시에 추가하고 즉시 필터링 (스케줄러가 DB에서 정리)
+            if (sender == null || postId == null || postId.equals(-1L)) {
+                invalidNotificationCacheUtil.addInvalidNotificationId(notification.getId());
                 continue;
             }
             
@@ -376,11 +382,12 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                             if (postId != null) {
                                 return postId;
                             }
-                            // null인 경우 타입별로 다르게 처리
-                            return switch (type) {
-                                case POST_LIKE_CREATED -> notification.getTargetId(); // targetId가 이미 postId
-                                default -> throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
-                            };
+                            // POST_LIKE_CREATED의 경우 targetId가 이미 postId
+                            if (type == NotificationType.POST_LIKE_CREATED) {
+                                return notification.getTargetId();
+                            }
+                            // 삭제된 엔티티의 경우 -1L 반환 (null 대신)
+                            return -1L;
                         },
                         (existing, replacement) -> existing
                 ));
