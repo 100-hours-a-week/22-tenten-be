@@ -1,5 +1,7 @@
 package com.kakaobase.snsapp.domain.members.entity;
 
+import com.kakaobase.snsapp.domain.chat.entity.ChatMessage;
+import com.kakaobase.snsapp.domain.chat.entity.ChatRoomMember;
 import com.kakaobase.snsapp.domain.comments.entity.CommentLike;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
@@ -247,4 +249,12 @@ public class Member extends BaseSoftDeletableEntity {
     // 좋아요한 대댓글들 (1:N)
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private final Set<RecommentLike> recommentLikes = new HashSet<>();
+
+    // 참여한 채팅방들 - 중간 테이블을 통한 매핑 (1:N)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<ChatRoomMember> chatRoomMembers = new HashSet<>();
+
+    // 작성한 채팅 메시지들 (1:N)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final Set<ChatMessage> chatMessages = new HashSet<>();
 }
