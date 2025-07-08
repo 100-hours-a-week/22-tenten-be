@@ -4,10 +4,10 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.http.codec.LoggingCodecSupport;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -26,6 +26,9 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class WebClientConfig {
 
+    @Value("${ai.server.url}")
+    private String aiServerUrl;
+
     /**
      * WebClient 빈 생성
      *
@@ -33,7 +36,7 @@ public class WebClientConfig {
      *
      * @return 설정된 WebClient 인스턴스
      */
-    @Bean
+    @Bean("generalWebClient")
     public WebClient webClient() {
         // Exchange 전략 설정 (최대 메모리 사이즈 등)
         ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
@@ -87,5 +90,27 @@ public class WebClientConfig {
                     log.debug("Response Header: {}={}", name, value)));
             return Mono.just(clientResponse);
         });
+    }
+
+    /**
+     * AI 서버 SSE 통신 전용 WebClient
+     * 장시간 연결 유지 및 스트리밍에 최적화
+     */
+    @Bean("webFluxClient")
+    public WebClient aiServerWebClient() {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                .responseTimeout(Duration.ofMillis(30000))
+                .doOnConnected(connection ->
+                        connection.addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
+                                  .addHandlerLast(new WriteTimeoutHandler(10, TimeUnit.SECONDS)))
+                .keepAlive(true)
+                .compress(true);
+
+        return WebClient.builder()
+                .baseUrl(aiServerUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
+                .build();
     }
 }
