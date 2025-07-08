@@ -13,6 +13,7 @@ public enum ChatEventType {
     CHAT_TYPING("chat.typing"), 
     CHAT_STOP("chat.stop"),
     CHAT_STREAM_END_ACK("chat.stream.end.ack"),
+    CHAT_STREAM_END_NACK("chat.stream.end.nack"),
     
     // 서버 → 클라이언트 이벤트
     CHAT_MESSAGE_LOADING("chat.loading"),
