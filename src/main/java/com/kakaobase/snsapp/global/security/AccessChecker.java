@@ -14,8 +14,10 @@ import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -35,36 +37,43 @@ public class AccessChecker {
 
 
     /**
-     * @param postType  게시판 타입
-     * @param username  SpEL의 principal → 로그인된 사용자의 이름(이메일)
+     * postType 하나만 받고, 내부에서 Authentication을 꺼내 씁니다.
      */
-    public boolean hasAccessToBoard(String postType, String username) {
-        // 1) Member 엔티티로 로드
-        var member = memberRepository.findByEmail(username)
-                .orElseThrow(() -> new CustomException(GeneralErrorCode.RESOURCE_NOT_FOUND, "user"));
+    public boolean hasAccessToBoard(String postType) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        // 2) 관리자/봇 권한 체크
-        var roles = member.getRole(); // ROLE_ADMIN, ROLE_BACKEND_BOT 등
-        if ("ROLE_ADMIN".equals(roles) ||
-                "ROLE_BACKEND_BOT".equals(roles) ||
-                "ROLE_FRONTEND_BOT".equals(roles)) {
+        // 인증 안 된 상태이면 401 또는 403 처리
+        if (auth == null || !auth.isAuthenticated() ||
+                auth instanceof AnonymousAuthenticationToken) {
+            throw new CustomException(GeneralErrorCode.FORBIDDEN);
+        }
+
+        // principal이 CustomUserDetails여야만 처리
+        Object principal = auth.getPrincipal();
+        if (!(principal instanceof CustomUserDetails)) {
+            throw new CustomException(GeneralErrorCode.FORBIDDEN);
+        }
+        CustomUserDetails user = (CustomUserDetails) principal;
+
+        // 관리자/봇이면 무조건 통과
+        if (isAdminOrBot(user)) {
             return true;
         }
 
-        // 3) 'all' 게시판은 모두 OK
+        // 'all' 게시판은 모든 인증 사용자 OK
         if ("all".equalsIgnoreCase(postType)) {
             return true;
         }
 
-        // 4) 기수 비교
-        String className = member.getClassName();
+        // 기수 정보 검사
+        String className = user.getClassName();
         if (!StringUtils.hasText(className) ||
                 !className.equalsIgnoreCase(postType)) {
             throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
+
         return true;
     }
-
 
 
     /**
