@@ -35,29 +35,36 @@ public class AccessChecker {
 
 
     /**
-     * postType과 현재 Authentication을 받아서 내부에서 CustomUserDetails로 캐스트합니다.
+     * @param postType  게시판 타입
+     * @param username  SpEL의 principal → 로그인된 사용자의 이름(이메일)
      */
-    public boolean hasAccessToBoard(String postType, Authentication authentication) {
-        // Authentication에서 CustomUserDetails 꺼내기
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+    public boolean hasAccessToBoard(String postType, String username) {
+        // 1) Member 엔티티로 로드
+        var member = memberRepository.findByEmail(username)
+                .orElseThrow(() -> new CustomException(GeneralErrorCode.RESOURCE_NOT_FOUND, "user"));
 
-        // 기존 로직 그대로
-        if (isAdminOrBot(userDetails)) {
+        // 2) 관리자/봇 권한 체크
+        var roles = member.getRole(); // ROLE_ADMIN, ROLE_BACKEND_BOT 등
+        if ("ROLE_ADMIN".equals(roles) ||
+                "ROLE_BACKEND_BOT".equals(roles) ||
+                "ROLE_FRONTEND_BOT".equals(roles)) {
             return true;
         }
+
+        // 3) 'all' 게시판은 모두 OK
         if ("all".equalsIgnoreCase(postType)) {
             return true;
         }
-        String className = userDetails.getClassName();
-        if (!StringUtils.hasText(className)) {
-            log.warn("사용자 ID {}의 기수 정보 누락", userDetails.getId());
-            return false;
-        }
-        if (!className.equalsIgnoreCase(postType)) {
+
+        // 4) 기수 비교
+        String className = member.getClassName();
+        if (!StringUtils.hasText(className) ||
+                !className.equalsIgnoreCase(postType)) {
             throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
         return true;
     }
+
 
 
     /**
