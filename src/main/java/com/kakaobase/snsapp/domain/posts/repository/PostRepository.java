@@ -1,10 +1,12 @@
 package com.kakaobase.snsapp.domain.posts.repository;
 
 import com.kakaobase.snsapp.domain.posts.entity.Post;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -53,7 +55,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     /**
      * 특정 게시판 타입에서 cursor 기반으로 게시글 목록을 조회합니다.
      * 최신 게시글부터 내림차순으로 정렬되며, cursor보다 작은 id를 가진 게시글을 조회합니다.
-     */
+
     @Query("SELECT p FROM Post p " +
             "JOIN FETCH p.member " +  // JPA 연관관계 활용
             "WHERE p.boardType = :boardType " +
@@ -63,7 +65,27 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findByBoardTypeWithCursor(
             @Param("boardType") Post.BoardType boardType,
             @Param("cursor") Long cursor,
-            Pageable pageable);
+            Pageable pageable);*/
+
+    /**
+     * 특정 게시판 타입에서 cursor 기반으로 게시글 목록을 조회합니다.
+     * 최신 게시글부터 내림차순으로 정렬되며, cursor보다 작은 id를 가진 게시글을 조회합니다.
+     */
+    @QueryHints({
+            @QueryHint(name = "org.hibernate.readOnly",    value = "true"),
+            @QueryHint(name = "org.hibernate.fetchSize",   value = "100")
+    })
+    @Query("SELECT p FROM Post p " +
+            "JOIN FETCH p.member m " +
+            "WHERE p.boardType = :boardType " +
+            "  AND p.deletedAt IS NULL " +
+            "  AND (:cursor IS NULL OR p.id < :cursor) " +
+            "ORDER BY p.createdAt DESC, p.id DESC")
+    List<Post> findByBoardTypeWithCursor(
+            @Param("boardType") Post.BoardType boardType,
+            @Param("cursor") Long cursor,
+            Pageable pageable
+    );
 
     /**
      * 특정 회원의 게시글을 cursor 기반으로 조회합니다.
