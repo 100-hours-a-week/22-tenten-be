@@ -73,7 +73,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      */
     @QueryHints({
             @QueryHint(name = "org.hibernate.readOnly",    value = "true"),
-            @QueryHint(name = "org.hibernate.fetchSize",   value = "100")
+            @QueryHint(name = "org.hibernate.fetchSize",   value = "20")
     })
     @Query("SELECT p FROM Post p " +
             "JOIN FETCH p.member m " +
