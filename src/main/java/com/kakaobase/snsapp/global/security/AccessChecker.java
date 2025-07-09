@@ -40,7 +40,7 @@ public class AccessChecker {
     /**
      * postType 하나만 받고, 내부에서 Authentication을 꺼내 씁니다.
      */
-    public boolean hasAccessToBoard(String postType) {
+    public boolean hasAccessToBoardForTest(String postType) {
         // 1) 'all' 보드는 인증 없이도 허용
         if ("all".equalsIgnoreCase(postType)) {
             return true;
