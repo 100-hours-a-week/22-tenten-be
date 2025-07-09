@@ -35,22 +35,19 @@ public class AccessChecker {
 
 
     /**
-     * 수정된 hasAccessToBoard
-     * @param postType 게시판 타입
-     * @param auth    Spring Security Authentication 객체
+     * postType과 현재 Authentication을 받아서 내부에서 CustomUserDetails로 캐스트합니다.
      */
-    public boolean hasAccessToBoard(String postType, Authentication auth) {
-        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+    public boolean hasAccessToBoard(String postType, Authentication authentication) {
+        // Authentication에서 CustomUserDetails 꺼내기
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        // 관리자/봇이면 무조건 통과
+        // 기존 로직 그대로
         if (isAdminOrBot(userDetails)) {
             return true;
         }
-        // all 게시판은 모두 접근 가능
         if ("all".equalsIgnoreCase(postType)) {
             return true;
         }
-        // 사용자 기수 검사
         String className = userDetails.getClassName();
         if (!StringUtils.hasText(className)) {
             log.warn("사용자 ID {}의 기수 정보 누락", userDetails.getId());
@@ -61,6 +58,7 @@ public class AccessChecker {
         }
         return true;
     }
+
 
     /**
      * 사용자가 특정 게시판에 접근할 권한이 있는지 검증합니다.
