@@ -37,24 +37,26 @@ public class AccessChecker {
     private final MemberRepository memberRepository;
 
 
+    /**
+     * postType 하나만 받고, 내부에서 Authentication을 꺼내 씁니다.
+     */
     public boolean hasAccessToBoard(String postType) {
-        // 1) 'all' 보드는 항상 허용
+        // 1) 'all' 보드는 인증 없이도 허용
         if ("all".equalsIgnoreCase(postType)) {
             return true;
         }
 
         // 2) Authentication 꺼내기
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()
+        if (auth == null
+                || !auth.isAuthenticated()
                 || auth instanceof AnonymousAuthenticationToken) {
             throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
 
         // 3) username(이메일)만 꺼내기
-        String username = auth.getName();
-        if (username == null) {
-            throw new CustomException(GeneralErrorCode.FORBIDDEN);
-        }
+        String username = auth.getName();  // null일 일 없음
+        // (원한다면 null 체크 후 403 던져도 OK)
 
         // 4) DB에서 Member 조회
         Member member = memberRepository.findByEmail(username)
@@ -62,14 +64,14 @@ public class AccessChecker {
                         new CustomException(GeneralErrorCode.RESOURCE_NOT_FOUND, "user")
                 );
 
-        // 5) 관리자/봇 권한 체크
-        String role = member.getRole(); // ADMIN, BOT, USER
+        // 5) 관리자/봇 권한 체크 (role enum 값을 그대로 비교)
+        String role = member.getRole(); // "ADMIN"|"BOT"|"USER"
         if ("ADMIN".equals(role) || "BOT".equals(role)) {
             return true;
         }
 
         // 6) postType과 기수 비교
-        String actualClass = member.getClassName(); // ALL, PANGYO_1 등
+        String actualClass = member.getClassName(); // "PANGYO_1" 등
         if (!actualClass.equalsIgnoreCase(postType)) {
             throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
