@@ -11,6 +11,8 @@ import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.service.PostLikeService;
 import com.kakaobase.snsapp.domain.posts.service.PostService;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
+import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import com.kakaobase.snsapp.global.error.exception.CustomException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,9 +24,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,24 +48,49 @@ public class PostController {
     private final PostLikeService postLikeService;
 
     /**
-     * 게시글 목록을 조회합니다.
-     * 커서 기반 페이지네이션을 적용합니다.
+     * postType 하나만 받고, 내부에서 Authentication을 꺼내 씁니다.
      */
-    @GetMapping("/{postType}")
-    @Operation(summary = "게시글 목록 조회", description = "게시판 유형별로 게시글 목록을 조회합니다.")
-    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.name)")
-    public CustomResponse<List<PostResponseDto.PostDetails>> getPosts(
-            @Parameter(description = "게시판 유형") @PathVariable String postType,
-            @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
-            @Parameter(description = "마지막으로 조회한 게시글 ID") @RequestParam(required = false) Long cursor,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-            ) {
+    public boolean hasAccessToBoard(String postType) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        Long memberId = Long.valueOf(userDetails.getId());
+        // 인증 안 된 상태이면 401 또는 403 처리
+        if (auth == null || !auth.isAuthenticated() ||
+                auth instanceof AnonymousAuthenticationToken) {
+            throw new CustomException(GeneralErrorCode.FORBIDDEN);
+        }
 
-        List<PostResponseDto.PostDetails> response = postService.getPostList(postType, limit, cursor, memberId);
+        // principal이 CustomUserDetails여야만 처리
+        Object principal = auth.getPrincipal();
+        if (!(principal instanceof CustomUserDetails)) {
+            throw new CustomException(GeneralErrorCode.FORBIDDEN);
+        }
+        CustomUserDetails user = (CustomUserDetails) principal;
 
-        return CustomResponse.success("게시글을 불러오는데 성공하였습니다", response);
+        // 관리자/봇이면 무조건 통과
+        if (isAdminOrBot(user)) {
+            return true;
+        }
+
+        // 'all' 게시판은 모든 인증 사용자 OK
+        if ("all".equalsIgnoreCase(postType)) {
+            return true;
+        }
+
+        // 기수 정보 검사
+        String className = user.getClassName();
+        if (!StringUtils.hasText(className) ||
+                !className.equalsIgnoreCase(postType)) {
+            throw new CustomException(GeneralErrorCode.FORBIDDEN);
+        }
+
+        return true;
+    }
+
+    private boolean isAdminOrBot(CustomUserDetails user) {
+        return user.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                        || a.getAuthority().equals("ROLE_BACKEND_BOT")
+                        || a.getAuthority().equals("ROLE_FRONTEND_BOT"));
     }
 
     @GetMapping("/{postType}/{postId}")
