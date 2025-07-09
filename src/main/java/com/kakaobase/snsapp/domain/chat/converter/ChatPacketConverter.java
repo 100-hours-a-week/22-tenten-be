@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 @Component
-public class ChatWebSocketConverter {
+public class ChatPacketConverter {
 
     /**
      * Loading 상태 WebSocket 패킷 생성

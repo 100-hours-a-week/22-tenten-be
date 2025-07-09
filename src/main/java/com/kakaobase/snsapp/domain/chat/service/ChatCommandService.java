@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.chat.service;
 
 import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
+import com.kakaobase.snsapp.domain.chat.dto.ai.request.AiChatRequest;
 import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiStreamData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
 import com.kakaobase.snsapp.domain.chat.entity.ChatMessage;
@@ -15,11 +16,17 @@ import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +41,12 @@ public class ChatCommandService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatConverter chatConverter;
+    
+    @Qualifier("webFluxClient")
+    private final WebClient webClient;
+    
+    @Value("${ai.server.chat.endpoint:/api/ai/chat}")
+    private String aiChatEndpoint;
 
     // ====== 외부 API 호출 관련 메서드들 ======
 
@@ -42,14 +55,35 @@ public class ChatCommandService {
      */
     @Async
     public CompletableFuture<Flux<AiStreamData>> sendMessageToAiServer(Long userId, String message) {
-        // TODO: AI 서버로 메시지 전송 및 SSE 스트리밍 수신 로직
-        // - WebClient를 사용하여 AI 서버 호출
-        // - SSE(Server-Sent Events)로 실시간 응답 스트리밍 수신
-        // - 1초 버퍼링 적용하여 메시지 전송
-        // - 타임아웃 처리 (10초)
-        // - 연결 실패 시 재시도 로직
         log.info("AI 서버로 메시지 전송: userId={}, message={}", userId, message);
-        return CompletableFuture.completedFuture(null);
+        
+        try {
+            AiChatRequest request = AiChatRequest.builder()
+                    .userId(userId)
+                    .message(message)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+            
+            Flux<AiStreamData> streamFlux = webClient
+                    .post()
+                    .uri(aiChatEndpoint)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.TEXT_EVENT_STREAM)
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToFlux(String.class)
+                    .map(this::parseStreamData)
+                    .timeout(Duration.ofSeconds(BotConstants.AI_SERVER_TIMEOUT_SECONDS))
+                    .doOnNext(data -> log.debug("AI 스트림 데이터 수신: {}", data))
+                    .doOnError(error -> log.error("AI 서버 통신 오류: {}", error.getMessage()))
+                    .doOnComplete(() -> log.info("AI 스트림 완료: userId={}", userId));
+            
+            return CompletableFuture.completedFuture(streamFlux);
+            
+        } catch (Exception e) {
+            log.error("AI 서버 메시지 전송 실패: userId={}, error={}", userId, e.getMessage(), e);
+            return CompletableFuture.completedFuture(Flux.empty());
+        }
     }
 
     /**
@@ -57,12 +91,24 @@ public class ChatCommandService {
      */
     @Async
     public CompletableFuture<Boolean> checkAiServerHealth() {
-        // TODO: AI 서버 헬스체크 로직
-        // - AI 서버의 상태 확인 API 호출
-        // - 연결 가능 여부 반환
-        // - 장애 감지 시 알림 발송
         log.info("AI 서버 상태 확인 중...");
-        return CompletableFuture.completedFuture(true);
+        
+        try {
+            String response = webClient
+                    .get()
+                    .uri("/health")
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .timeout(Duration.ofSeconds(5))
+                    .block();
+            
+            log.info("AI 서버 상태 확인 성공: {}", response);
+            return CompletableFuture.completedFuture(true);
+            
+        } catch (Exception e) {
+            log.error("AI 서버 상태 확인 실패: {}", e.getMessage());
+            return CompletableFuture.completedFuture(false);
+        }
     }
 
     /**
@@ -70,11 +116,57 @@ public class ChatCommandService {
      */
     @Async
     public void processAiStreamData(Long userId, AiStreamData streamData) {
-        // TODO: AI 스트림 데이터 처리 로직
-        // - 받은 스트림 데이터를 WebSocket으로 클라이언트에 전달
-        // - 스트림 완료 시 전체 메시지 저장
-        // - 에러 발생 시 에러 메시지 전송
         log.info("AI 스트림 데이터 처리: userId={}, data={}", userId, streamData);
+        
+        try {
+            // TODO: WebSocket으로 클라이언트에 스트림 데이터 전송
+            // 스트림 완료 시 전체 메시지 저장 로직 추가 예정
+            
+        } catch (Exception e) {
+            log.error("AI 스트림 데이터 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * SSE 스트림 데이터 파싱
+     */
+    private AiStreamData parseStreamData(String rawData) {
+        try {
+            // SSE 데이터 형식: "data: {json}"
+            if (rawData.startsWith("data: ")) {
+                String jsonData = rawData.substring(6);
+                
+                // 스트림 완료 신호
+                if (jsonData.trim().equals("[DONE]")) {
+                    return AiStreamData.builder()
+                            .message("")
+                            .isComplete(true)
+                            .timestamp(LocalDateTime.now())
+                            .build();
+                }
+                
+                // 실제 메시지 데이터 파싱 (간단한 처리)
+                return AiStreamData.builder()
+                        .message(jsonData)
+                        .isComplete(false)
+                        .timestamp(LocalDateTime.now())
+                        .build();
+            }
+            
+            return AiStreamData.builder()
+                    .message(rawData)
+                    .isComplete(false)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+                    
+        } catch (Exception e) {
+            log.error("스트림 데이터 파싱 실패: rawData={}, error={}", rawData, e.getMessage());
+            return AiStreamData.builder()
+                    .message("데이터 파싱 오류")
+                    .isComplete(false)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+        }
     }
 
     // ====== 데이터베이스 트랜잭션 관련 메서드들 ======
