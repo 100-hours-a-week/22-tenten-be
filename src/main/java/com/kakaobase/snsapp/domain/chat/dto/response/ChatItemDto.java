@@ -6,6 +6,9 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
+/**
+ * 사용자가 http로 채팅 조회시 반환할 Item
+ */
 @Builder
 public record ChatItemDto(
         @JsonProperty("chat_id")
