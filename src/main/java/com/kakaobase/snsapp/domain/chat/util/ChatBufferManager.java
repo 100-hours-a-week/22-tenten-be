@@ -140,6 +140,6 @@ public class ChatBufferManager {
     private Sinks.Many<String> createNewSink() {
         return Sinks.many()
                 .multicast()
-                .onBackpressureBuffer(Queues.<String>small(), false);
+                .onBackpressureBuffer();
     }
 }

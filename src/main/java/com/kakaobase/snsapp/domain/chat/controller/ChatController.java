@@ -38,7 +38,7 @@ public class ChatController {
             @Parameter(description = "페이지네이션 커서 (이전 응답의 next_cursor)") @RequestParam(required = false) Long cursor,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ){
-        ChatList result = chatService.getChatingWithBot(userDetails);
+        ChatList result = chatService.getChatingWithBot(userDetails, limit, cursor);
 
         return CustomResponse.success("채팅 조회에 성공하였습니다.", result);
     }
