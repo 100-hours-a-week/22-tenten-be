@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 @Builder
-public record ChatData(
+public record ChatItemDto(
         @JsonProperty("chat_id")
         Long chatId,
         @JsonProperty("sender_id")
