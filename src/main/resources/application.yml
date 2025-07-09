@@ -8,7 +8,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 10          # 기존 10 (유지)
-      maximum-pool-size: 200    # 기존 10 → 120
+      maximum-pool-size: 10    # 기존 10 → 200
       connection-timeout: 30000 # 기본값 유지
       idle-timeout: 600000      # 기본값 유지
       max-lifetime: 1800000     # 기본값 유지
