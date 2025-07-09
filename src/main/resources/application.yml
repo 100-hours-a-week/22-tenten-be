@@ -8,7 +8,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 10          # 기존 10 (유지)
-      maximum-pool-size: 10    # 기존 10 → 120
+      maximum-pool-size: 200    # 기존 10 → 120
       connection-timeout: 30000 # 기본값 유지
       idle-timeout: 600000      # 기본값 유지
       max-lifetime: 1800000     # 기본값 유지
@@ -50,7 +50,10 @@ spring:
 
 server:
   forward-headers-strategy: framework
-  
+  tomcat:
+    mbeanregistry:
+          enabled: true
+
 app:
   jwt:
     secret: ${JWT_SECRET}
@@ -76,10 +79,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include:
+          - health
+          - metrics     # metrics 엔드포인트 노출
   endpoint:
     health:
       show-details: never
+  metrics:
+    enable:
+      tomcat: true    # Tomcat 스레드 메트릭 활성화
   health:
-    defaults:
+    mail:
       enabled: false
