@@ -37,43 +37,40 @@ public class AccessChecker {
     private final MemberRepository memberRepository;
 
 
-    /**
-     * postType 하나만 받고, 내부에서 Authentication을 꺼내 씁니다.
-     */
     public boolean hasAccessToBoard(String postType) {
-        // 1) 'all' 게시판은 인증 없이도 허용
+        // 1) 'all' 보드는 항상 허용
         if ("all".equalsIgnoreCase(postType)) {
             return true;
         }
 
-        // 2) Authentication 가져오기
+        // 2) Authentication 꺼내기
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()
                 || auth instanceof AnonymousAuthenticationToken) {
             throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
 
-        // 3) principal 검사
-        Object principal = auth.getPrincipal();
-        if (!(principal instanceof CustomUserDetails)) {
+        // 3) username(이메일)만 꺼내기
+        String username = auth.getName();
+        if (username == null) {
             throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
-        CustomUserDetails user = (CustomUserDetails) principal;
 
-        // 4) 관리자/봇 권한 체크
-        if (isAdminOrBot(user)) {
-            return true;
-        }
-
-        // 5) DB에서 실제 Member 엔티티 조회
-        Member member = memberRepository.findByEmail(user.getUsername())
+        // 4) DB에서 Member 조회
+        Member member = memberRepository.findByEmail(username)
                 .orElseThrow(() ->
                         new CustomException(GeneralErrorCode.RESOURCE_NOT_FOUND, "user")
                 );
 
-        // 6) 기수 정보 비교
-        String actualClassName = member.getClassName();  // enum → String
-        if (!actualClassName.equalsIgnoreCase(postType)) {
+        // 5) 관리자/봇 권한 체크
+        String role = member.getRole(); // ADMIN, BOT, USER
+        if ("ADMIN".equals(role) || "BOT".equals(role)) {
+            return true;
+        }
+
+        // 6) postType과 기수 비교
+        String actualClass = member.getClassName(); // ALL, PANGYO_1 등
+        if (!actualClass.equalsIgnoreCase(postType)) {
             throw new CustomException(GeneralErrorCode.FORBIDDEN);
         }
 
