@@ -57,7 +57,7 @@ public class PostController {
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
 
-        Long memberId = Long.valueOf(userDetails.getId());
+        Long memberId = 1L;
 
         List<PostResponseDto.PostDetails> response = postService.getPostList(postType, limit, cursor, memberId);
 
