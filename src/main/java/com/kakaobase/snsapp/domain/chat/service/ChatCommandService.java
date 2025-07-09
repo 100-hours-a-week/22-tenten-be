@@ -1,26 +1,39 @@
 package com.kakaobase.snsapp.domain.chat.service;
 
-import com.kakaobase.snsapp.domain.chat.dto.ai.request.AiChatRequest;
+import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
 import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiStreamData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
 import com.kakaobase.snsapp.domain.chat.entity.ChatMessage;
 import com.kakaobase.snsapp.domain.chat.entity.ChatRoom;
 import com.kakaobase.snsapp.domain.chat.entity.ChatRoomMember;
+import com.kakaobase.snsapp.domain.chat.repository.ChatMessageRepository;
+import com.kakaobase.snsapp.domain.chat.repository.ChatRoomMemberRepository;
+import com.kakaobase.snsapp.domain.chat.repository.ChatRoomRepository;
+import com.kakaobase.snsapp.domain.members.entity.Member;
+import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
+import com.kakaobase.snsapp.global.common.constant.BotConstants;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatCommandService {
+
+    private final EntityManager em;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final ChatConverter chatConverter;
 
     // ====== 외부 API 호출 관련 메서드들 ======
 
@@ -70,28 +83,41 @@ public class ChatCommandService {
      * 새 채팅방 생성
      */
     @Transactional
-    public ChatRoom createChatRoom(Long userId, String roomType) {
-        // TODO: 채팅방 생성 로직
-        // - 새로운 ChatRoom 엔티티 생성
-        // - 채팅방 타입 설정 (BOT, PRIVATE, GROUP)
-        // - 생성자를 ChatRoomMember로 추가
-        // - 봇 채팅방인 경우 봇도 멤버로 추가
-        log.info("채팅방 생성: userId={}, roomType={}", userId, roomType);
-        return null;
+    public Long createBotChatRoom(Long userId) {
+
+        // 새로운 채팅방 생성
+        ChatRoom newChatRoom = new ChatRoom(userId);
+        ChatRoom savedChatRoom = chatRoomRepository.save(newChatRoom);
+
+        // 사용자와 봇을 채팅방 멤버로 추가
+        Member proxyUser = em.getReference(Member.class, userId);
+        Member proxyBot = em.getReference(Member.class, BotConstants.BOT_MEMBER_ID);
+
+        // 채팅방 멤버 추가
+        ChatRoomMember userMember = new ChatRoomMember(proxyUser, savedChatRoom);
+        ChatRoomMember botRoomMember = new ChatRoomMember(proxyBot, savedChatRoom);
+
+        chatRoomMemberRepository.save(userMember);
+        chatRoomMemberRepository.save(botRoomMember);
+
+        return savedChatRoom.getId();
     }
 
     /**
      * 채팅 메시지 저장
      */
     @Transactional
-    public ChatMessage saveChatMessage(Long chatRoomId, Long senderId, String content, String messageType) {
-        // TODO: 채팅 메시지 저장 로직
-        // - ChatMessage 엔티티 생성 및 저장
-        // - 메시지 타입 설정 (USER, BOT)
-        // - 전송 시간 기록
-        // - 채팅방 마지막 메시지 정보 업데이트
-        log.info("채팅 메시지 저장: chatRoomId={}, senderId={}, messageType={}", chatRoomId, senderId, messageType);
-        return null;
+    public ChatMessage saveChatMessage(Long senderId, String content) {
+        // 사용자 조회
+        Member proxyUser = em.getReference(Member.class, senderId);
+
+        // 봇과의 채팅방 조회 또는 생성
+        ChatRoom chatRoom = em.getReference(ChatRoom.class, senderId);
+
+        // 메시지 엔티티 생성 및 저장
+        ChatMessage message = chatConverter.toChatMessage(content, proxyUser, chatRoom);
+        ChatMessage savedMessage = chatMessageRepository.save(message);
+        return savedMessage;
     }
 
     /**
@@ -108,55 +134,16 @@ public class ChatCommandService {
     }
 
     /**
-     * 채팅방 멤버 추가
-     */
-    @Transactional
-    public ChatRoomMember addChatRoomMember(Long chatRoomId, Long memberId, String memberType) {
-        // TODO: 채팅방 멤버 추가 로직
-        // - ChatRoomMember 엔티티 생성 및 저장
-        // - 멤버 타입 설정 (USER, BOT)
-        // - 중복 멤버 체크
-        // - 멤버 수 제한 확인
-        log.info("채팅방 멤버 추가: chatRoomId={}, memberId={}, memberType={}", chatRoomId, memberId, memberType);
-        return null;
-    }
-
-    /**
-     * 채팅방 멤버 제거
-     */
-    @Transactional
-    public void removeChatRoomMember(Long chatRoomId, Long memberId) {
-        // TODO: 채팅방 멤버 제거 로직
-        // - ChatRoomMember 엔티티 삭제 또는 소프트 삭제
-        // - 마지막 멤버인 경우 채팅방도 삭제 고려
-        // - 나가기 메시지 기록
-        log.info("채팅방 멤버 제거: chatRoomId={}, memberId={}", chatRoomId, memberId);
-    }
-
-    /**
      * 메시지 상태 업데이트 (읽음, 삭제 등)
      */
     @Transactional
-    public void updateMessageStatus(Long messageId, String status, Long userId) {
+    public void updateMessageStatus(Long chatId, Long userId) {
         // TODO: 메시지 상태 업데이트 로직
         // - 메시지 읽음 상태 변경
         // - 삭제 상태 변경 (소프트 삭제)
         // - 상태 변경 시간 기록
         // - 권한 확인 (본인 메시지 또는 채팅방 관리자)
-        log.info("메시지 상태 업데이트: messageId={}, status={}, userId={}", messageId, status, userId);
-    }
-
-    /**
-     * 채팅방 설정 업데이트
-     */
-    @Transactional
-    public void updateChatRoomSettings(Long chatRoomId, String settings) {
-        // TODO: 채팅방 설정 업데이트 로직
-        // - 채팅방 이름, 설명 변경
-        // - 알림 설정 변경
-        // - 채팅방 공개/비공개 설정
-        // - 설정 변경 권한 확인
-        log.info("채팅방 설정 업데이트: chatRoomId={}, settings={}", chatRoomId, settings);
+        log.info("메시지 상태 업데이트: messageId={}, userId={}", chatId, userId);
     }
 
     // ====== 복합 트랜잭션 처리 ======
@@ -203,49 +190,5 @@ public class ChatCommandService {
         // - 모든 작업이 성공해야 세션 활성화
         log.info("채팅 세션 초기화: userId={}", userId);
         return null;
-    }
-
-    // ====== 데이터 정리 및 유지보수 ======
-
-    /**
-     * 오래된 채팅 데이터 정리
-     */
-    @Transactional
-    @Async
-    public void cleanupOldChatData(int daysToKeep) {
-        // TODO: 오래된 채팅 데이터 정리 로직
-        // - 지정된 기간보다 오래된 메시지 삭제
-        // - 빈 채팅방 정리
-        // - 비활성 세션 정리
-        // - 정리 통계 로그 기록
-        log.info("오래된 채팅 데이터 정리 시작: daysToKeep={}", daysToKeep);
-    }
-
-    /**
-     * 채팅 데이터 백업
-     */
-    @Transactional(readOnly = true)
-    @Async
-    public void backupChatData(Long userId, String backupPath) {
-        // TODO: 채팅 데이터 백업 로직
-        // - 사용자의 모든 채팅 데이터 조회
-        // - JSON 또는 CSV 형태로 백업 파일 생성
-        // - S3 등 외부 스토리지에 저장
-        // - 백업 완료 알림 발송
-        log.info("채팅 데이터 백업: userId={}, backupPath={}", userId, backupPath);
-    }
-
-    /**
-     * 채팅 통계 업데이트
-     */
-    @Transactional
-    @Async
-    public void updateChatStatistics() {
-        // TODO: 채팅 통계 업데이트 로직
-        // - 일별/월별 채팅 사용량 통계 계산
-        // - 사용자별 활동 통계 업데이트
-        // - 봇 응답 시간 통계 갱신
-        // - 인기 채팅 시간대 분석
-        log.info("채팅 통계 업데이트 실행");
     }
 }
