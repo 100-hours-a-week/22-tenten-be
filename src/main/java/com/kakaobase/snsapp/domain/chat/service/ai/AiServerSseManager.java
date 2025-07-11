@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.domain.chat.service;
+package com.kakaobase.snsapp.domain.chat.service.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiStreamData;
@@ -7,6 +7,8 @@ import com.kakaobase.snsapp.domain.chat.util.AiServerHealthStatus;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.StreamErrorCode;
+import com.kakaobase.snsapp.domain.chat.service.communication.ChatWebSocketService;
+import com.kakaobase.snsapp.domain.chat.service.streaming.StreamingSessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -34,7 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 public class AiServerSseManager {
 
-    private final ChatCommandService chatCommandService;
+    private final ChatWebSocketService chatWebSocketService;
     @Value("${ai.server.url}")
     private String aiServerUrl;
     
@@ -161,9 +163,9 @@ public class AiServerSseManager {
                 }
             }
         } catch (StreamException e) {
-            chatCommandService.sendStreamErrorToUser(e.getUserId(), e.getErrorCode());
+            chatWebSocketService.sendStreamErrorToUser(e.getUserId(), e.getErrorCode());
         } catch (ChatException e) {
-            chatCommandService.sendErrorToUser(e.getUserId(), e.getErrorCode());
+            chatWebSocketService.sendChatErrorToUser(e.getUserId(), e.getErrorCode());
         }
         catch (Exception e) {
             log.error("SSE 데이터 파싱 실패: {}", sse.data(), e);
@@ -191,13 +193,13 @@ public class AiServerSseManager {
             // TODO: streamId를 AI 서버로 전송하여 응답에 포함되도록 구현
             log.info("AI 서버 메시지 전송 요청: streamId={}, userId={}", streamId, userId);
 
-            chatCommandService.sendLoadingToUser(userId);
+            chatWebSocketService.sendLoadingToUser(userId);
             
             return streamId;
             
         } catch (Exception e) {
             log.error("AI 서버 메시지 전송 실패: userId={}, error={}", userId, e.getMessage(), e);
-            chatCommandService.sendStreamErrorToUser(userId, StreamErrorCode.AI_SERVER_MESSAGE_SEND_FAIL);
+            chatWebSocketService.sendStreamErrorToUser(userId, StreamErrorCode.AI_SERVER_MESSAGE_SEND_FAIL);
             throw new ChatException(ChatErrorCode.AI_SERVER_CONNECTION_FAIL, userId);
         }
     }

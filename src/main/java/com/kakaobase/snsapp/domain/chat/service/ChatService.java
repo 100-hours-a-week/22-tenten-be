@@ -11,6 +11,10 @@ import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.repository.ChatMessageRepository;
 import com.kakaobase.snsapp.domain.chat.repository.ChatRoomMemberRepository;
 import com.kakaobase.snsapp.domain.chat.util.ChatBufferCacheUtil;
+import com.kakaobase.snsapp.domain.chat.service.ai.AiServerSseManager;
+import com.kakaobase.snsapp.domain.chat.service.streaming.StreamingSessionManager;
+import com.kakaobase.snsapp.domain.chat.service.streaming.ChatTimerManager;
+import com.kakaobase.snsapp.domain.chat.service.communication.ChatPersistenceService;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +31,7 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatConverter chatConverter;
-    private final ChatCommandService commandService;
+    private final ChatPersistenceService chatPersistenceService;
     private final ChatBufferCacheUtil cacheUtil;
     private final StreamingSessionManager streamingSessionManager;
     private final ChatTimerManager chatTimerManager;
@@ -46,7 +50,7 @@ public class ChatService {
 
         //기존 채팅방이 없다면 채팅방 생성후 빈 값 전송
         if(!chatRoomMemberRepository.existsByChatRoomIdAndMemberId(userId, BotConstants.BOT_MEMBER_ID)) {
-            commandService.createBotChatRoom(userId);
+            chatPersistenceService.createBotChatRoom(userId);
             return new ChatList(
                     null,
                     false
@@ -91,7 +95,7 @@ public class ChatService {
             }
 
             // DB에 사용자 메시지 저장
-            commandService.saveChatMessage(userId, message);
+            chatPersistenceService.saveChatMessage(userId, message);
             
             // AI 서버 상태 확인
             if (aiServerSseManager.getHealthStatus().isDisconnected()) {

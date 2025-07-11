@@ -1,13 +1,17 @@
-package com.kakaobase.snsapp.domain.chat.service;
+package com.kakaobase.snsapp.domain.chat.service.streaming;
 
 import com.kakaobase.snsapp.domain.chat.dto.ai.request.ChatBlockData;
+import com.kakaobase.snsapp.domain.chat.event.LoadingEvent;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
+import com.kakaobase.snsapp.domain.chat.service.ai.AiServerHttpClient;
+import com.kakaobase.snsapp.domain.chat.service.ai.AiServerSseManager;
 import com.kakaobase.snsapp.domain.chat.util.ChatBufferCacheUtil;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,9 +27,9 @@ public class ChatBufferManager {
     private final ChatBufferCacheUtil cacheUtil;
     private final StreamingSessionManager streamingSessionManager;
     private final AiServerHttpClient aiServerHttpClient;
-    private final ChatCommandService chatCommandService;
     private final MemberRepository memberRepository;
     private final AiServerSseManager aiServerSseManager;
+    private final ApplicationEventPublisher eventPublisher;
     
     /**
      * 채팅 버퍼를 AI 서버로 전송 (타이머에서 호출)
@@ -73,8 +77,8 @@ public class ChatBufferManager {
         // 7. AI 서버로 HTTP 전송
         aiServerHttpClient.sendChatBlock(chatBlockData);
         
-        // 8. 사용자에게 로딩 알림
-        chatCommandService.sendLoadingToUser(userId);
+        // 8. 사용자에게 로딩 알림 (이벤트 발행)
+        eventPublisher.publishEvent(new LoadingEvent(userId, streamId, bufferContent));
         
         log.info("AI 서버 자동 전송 완료: userId={}, streamId={}, contentLength={}", 
             userId, streamId, bufferContent.length());

@@ -1,9 +1,10 @@
-package com.kakaobase.snsapp.domain.chat.service;
+package com.kakaobase.snsapp.domain.chat.service.ai;
 
 import com.kakaobase.snsapp.domain.chat.dto.ai.request.ChatBlockData;
 import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiServerResponse;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
+import com.kakaobase.snsapp.domain.chat.service.streaming.StreamingSessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -32,7 +33,6 @@ public class AiServerHttpClient {
     private final WebClient webClient;
     
     private final StreamingSessionManager streamingSessionManager;
-    private final ChatCommandService chatCommandService;
     
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -63,11 +63,8 @@ public class AiServerHttpClient {
                     log.error("AI 서버 채팅 블록 전송 최종 실패: streamId={}, userId={}, error={}", 
                         chatBlockData.streamId(), userId, error.getMessage(), error);
                     
-                    // 사용자에게 에러 알림
-                    if (userId != null && userId > 0) {
-                        ChatErrorCode errorCode = determineErrorCode(error);
-                        chatCommandService.sendErrorToUser(userId, errorCode);
-                    }
+                    // TODO: 에러 이벤트 발행으로 대체 예정
+                    // 현재는 로깅만 수행하고 MessageExceptionHandler에서 처리
                 }
             );
     }

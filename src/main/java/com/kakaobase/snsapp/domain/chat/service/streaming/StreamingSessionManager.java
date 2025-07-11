@@ -1,9 +1,12 @@
-package com.kakaobase.snsapp.domain.chat.service;
+package com.kakaobase.snsapp.domain.chat.service.streaming;
 
 import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
+import com.kakaobase.snsapp.domain.chat.event.StreamStartEvent;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.StreamErrorCode;
 import com.kakaobase.snsapp.domain.chat.model.StreamingSession;
 import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiStreamData;
+import com.kakaobase.snsapp.domain.chat.service.communication.ChatPersistenceService;
+import com.kakaobase.snsapp.domain.chat.service.communication.ChatWebSocketService;
 import com.kakaobase.snsapp.domain.chat.util.ChatEventType;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
@@ -11,6 +14,7 @@ import com.kakaobase.snsapp.domain.chat.util.StreamIdGenerator;
 import com.kakaobase.snsapp.domain.chat.exception.StreamException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +34,10 @@ public class StreamingSessionManager {
     // StreamId 기반 세션 관리
     private final ConcurrentHashMap<String, StreamingSession> activeSessions = new ConcurrentHashMap<>();
     
-    private final ChatCommandService chatCommandService;
+    private final ChatPersistenceService chatPersistenceService;
+    private final ChatWebSocketService chatWebSocketService;
     private final ChatConverter chatConverter;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * StreamId로 userId 조회
@@ -84,13 +90,13 @@ public class StreamingSessionManager {
             session.appendResponse(streamData.message());
         }
         
-        // 첫 번째 데이터면 스트리밍 시작 알림
+        // 첫 번째 데이터면 스트리밍 시작 알림 (이벤트 발행)
         if (isFirstData && streamData.message() != null) {
-            chatCommandService.sendStratToUser(userId, streamId);
+            eventPublisher.publishEvent(new StreamStartEvent(userId, streamId, streamData.message()));
         }
         
         // 클라이언트에 실시간 전송
-        chatCommandService.sendStreamDataToUser(userId, streamData.message());
+        chatWebSocketService.sendStreamDataToUser(userId, streamData.message());
     }
     
     /**
@@ -112,11 +118,11 @@ public class StreamingSessionManager {
         // 완료 메시지 전송
 
         
-        // 스트리밍 완료 처리
+        // 스트리밍 완료 처리 - AI 응답 메시지 저장
         String finalResponse = session.getFinalResponse();
         if (finalResponse != null && !finalResponse.trim().isEmpty()) {
             try {
-                chatCommandService.saveChatMessage(session.getUserId(), finalResponse);
+                chatPersistenceService.saveBotMessage(session.getUserId(), finalResponse);
                 log.info("AI 응답 메시지 저장 완됨: streamId={}, userId={}", streamId, session.getUserId());
             } catch (Exception e) {
                 log.error("AI 응답 메시지 저장 실패: streamId={}, userId={}, error={}", streamId, session.getUserId(), e.getMessage(), e);
@@ -124,7 +130,8 @@ public class StreamingSessionManager {
             }
         }
 
-        chatCommandService.sendStreamDataToUser(userId, ChatEventType.CHAT_STREAM_END.getEvent(), streamData);
+        // 스트리밍 종료 알림
+        chatWebSocketService.sendStreamDataToUser(userId, ChatEventType.CHAT_STREAM_END.getEvent(), streamData);
 
         // 세션 삭제
         activeSessions.remove(streamId);
@@ -151,7 +158,7 @@ public class StreamingSessionManager {
         
         // 에러 메시지 전송
         log.debug("Ai Stream중 에러 발생: userId={}, error={}", userId, errorMessage);
-        chatCommandService.sendStreamErrorToUser(userId, StreamErrorCode.AI_SERVER_ERROR);
+        chatWebSocketService.sendStreamErrorToUser(userId, StreamErrorCode.AI_SERVER_ERROR);
         
         // 스트리밍 중단
         stopStreaming(streamId);

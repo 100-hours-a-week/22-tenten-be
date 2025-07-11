@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.domain.chat.service;
+package com.kakaobase.snsapp.domain.chat.service.streaming;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;

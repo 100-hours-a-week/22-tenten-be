@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
 import com.kakaobase.snsapp.domain.chat.dto.SimpTimeData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
+import com.kakaobase.snsapp.domain.chat.dto.request.StreamStopData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatErrorData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatList;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
@@ -12,7 +13,6 @@ import com.kakaobase.snsapp.domain.chat.exception.StreamException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.service.ChatService;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
-import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
 import com.kakaobase.snsapp.global.common.response.CustomResponse;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +53,7 @@ public class ChatController {
     public void handleChatSend(@Payload WebSocketPacket<?> packet, Principal principal) {
         String event = packet.event;
         Long userId;
-        if (!principal instanceof CustomUserDetails userDetails) {
+        if (!(principal instanceof CustomUserDetails userDetails)) {
             throw new ChatException(ChatErrorCode.CHAT_INVALID, null);
         }
         userId = Long.valueOf(userDetails.getId());
@@ -62,10 +62,10 @@ public class ChatController {
         
         switch (event) {
             case "chat.send" -> chatService.handleSendEvent(userId, (ChatData) packet.data);
-            case "chat.typing" -> handleChatTyping(userId, (SimpTimeData) packet.data);
-            case "chat.stop" -> handleChatStop(userId, (SimpTimeData) packet.data);
-            case "chat.stream.end.ack" -> handleChatStreamEndAck(userId);
-            case "chat.stream.end.nack" -> handleChatStreamEndNack(userId);
+            case "chat.typing" -> handleChatTyping((SimpTimeData) packet.data, userId);
+            case "chat.stop" -> handleChatStop(userId, (StreamStopData) packet.data);
+            case "chat.stream.end.ack" -> handleChatStreamEndAck(userId, (SimpTimeData) packet.data);
+            case "chat.stream.end.nack" -> handleChatStreamEndNack(userId, (SimpTimeData) packet.data);
             default -> {
                 log.warn("알 수 없는 채팅 이벤트: {}", event);
                 // TODO: 알 수 없는 이벤트 에러 처리 로직 추가
@@ -97,6 +97,49 @@ public class ChatController {
             
         } catch (Exception e) {
             log.error("타이핑 상태 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
+        }
+    }
+    
+    private void handleChatStop(Long userId, StreamStopData data) {
+        log.info("채팅 중지 처리: userId={}", userId);
+        
+        try {
+            // 채팅 중지 처리 로직
+            chatService.handleStopEvent(userId, data);
+            
+            log.debug("채팅 중지 처리 완료: userId={}", userId);
+            
+        } catch (Exception e) {
+            log.error("채팅 중지 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
+        }
+    }
+    
+    private void handleChatStreamEndAck(Long userId, SimpTimeData data) {
+        log.info("스트림 종료 ACK 처리: userId={}", userId);
+        
+        try {
+            // 스트림 종료 ACK 처리 로직
+            chatService.handleStreamEndAck(userId, data);
+            
+            log.debug("스트림 종료 ACK 처리 완료: userId={}", userId);
+            
+        } catch (Exception e) {
+            log.error("스트림 종료 ACK 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
+        }
+    }
+    
+    private void handleChatStreamEndNack(Long userId, SimpTimeData data) {
+        log.info("스트림 종료 NACK 처리: userId={}", userId);
+        
+        try {
+            // 스트림 종료 NACK 처리 로직
+            // TODO: ChatService에서 해당 메서드 public으로 변경 필요
+            log.debug("스트림 종료 NACK 처리 로직 구현 예정: userId={}", userId);
+            
+            log.debug("스트림 종료 NACK 처리 완료: userId={}", userId);
+            
+        } catch (Exception e) {
+            log.error("스트림 종료 NACK 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
         }
     }
 }
