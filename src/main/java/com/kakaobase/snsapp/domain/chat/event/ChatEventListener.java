@@ -47,4 +47,18 @@ public class ChatEventListener {
         // 사용자에게 스트림 시작 알림 전송
         chatWebSocketService.sendStreamStartToUser(event.getUserId(), event.getStreamId());
     }
+    
+    /**
+     * ChatErrorEvent 처리
+     * AI 서버 통신 에러 등 비동기 에러 발생 시 사용자에게 에러 알림
+     */
+    @Async
+    @EventListener
+    public void handleChatErrorEvent(ChatErrorEvent event) {
+        log.info("ChatErrorEvent 수신: userId={}, errorCode={}, requestId={}, message={}", 
+            event.getUserId(), event.getErrorCode(), event.getRequestId(), event.getErrorMessage());
+        
+        // 사용자에게 에러 알림 전송
+        chatWebSocketService.sendChatErrorToUser(event.getUserId(), event.getErrorCode());
+    }
 }

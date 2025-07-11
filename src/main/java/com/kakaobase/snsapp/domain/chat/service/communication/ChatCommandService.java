@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ChatPersistenceService {
+public class ChatCommandService {
     
     private final EntityManager em;
     private final ChatMessageRepository chatMessageRepository;

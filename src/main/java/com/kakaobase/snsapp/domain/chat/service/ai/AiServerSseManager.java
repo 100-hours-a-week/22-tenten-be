@@ -172,37 +172,6 @@ public class AiServerSseManager {
         }
     }
     
-    /**
-     * 메시지를 AI 서버로 전송
-     */
-    public String sendMessageToAiServer(Long userId, String message) {
-        log.info("AI 서버로 메시지 전송: userId={}, message={}", userId, message);
-        
-        if (healthStatus.get() != AiServerHealthStatus.CONNECTED) {
-            log.warn("AI 서버 연결 상태 불량: status={}", healthStatus.get());
-            retryConnection();
-            throw new ChatException(ChatErrorCode.AI_SERVER_CONNECTION_FAIL, userId);
-        }
-        
-        try {
-            // 스트리밍 세션 시작 및 StreamId 생성
-            String streamId = streamingSessionManager.startStreaming(userId);
-            
-            // AI 서버로 메시지 전송 (구현 필요)
-            // TODO: POST 요청으로 메시지 전송 로직 구현
-            // TODO: streamId를 AI 서버로 전송하여 응답에 포함되도록 구현
-            log.info("AI 서버 메시지 전송 요청: streamId={}, userId={}", streamId, userId);
-
-            chatWebSocketService.sendLoadingToUser(userId);
-            
-            return streamId;
-            
-        } catch (Exception e) {
-            log.error("AI 서버 메시지 전송 실패: userId={}, error={}", userId, e.getMessage(), e);
-            chatWebSocketService.sendStreamErrorToUser(userId, StreamErrorCode.AI_SERVER_MESSAGE_SEND_FAIL);
-            throw new ChatException(ChatErrorCode.AI_SERVER_CONNECTION_FAIL, userId);
-        }
-    }
     
     /**
      * SSE 연결 종료

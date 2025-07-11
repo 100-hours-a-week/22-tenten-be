@@ -5,7 +5,7 @@ import com.kakaobase.snsapp.domain.chat.event.StreamStartEvent;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.StreamErrorCode;
 import com.kakaobase.snsapp.domain.chat.model.StreamingSession;
 import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiStreamData;
-import com.kakaobase.snsapp.domain.chat.service.communication.ChatPersistenceService;
+import com.kakaobase.snsapp.domain.chat.service.communication.ChatCommandService;
 import com.kakaobase.snsapp.domain.chat.service.communication.ChatWebSocketService;
 import com.kakaobase.snsapp.domain.chat.util.ChatEventType;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
@@ -18,7 +18,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -34,7 +33,7 @@ public class StreamingSessionManager {
     // StreamId 기반 세션 관리
     private final ConcurrentHashMap<String, StreamingSession> activeSessions = new ConcurrentHashMap<>();
     
-    private final ChatPersistenceService chatPersistenceService;
+    private final ChatCommandService chatCommandService;
     private final ChatWebSocketService chatWebSocketService;
     private final ChatConverter chatConverter;
     private final ApplicationEventPublisher eventPublisher;
@@ -122,7 +121,7 @@ public class StreamingSessionManager {
         String finalResponse = session.getFinalResponse();
         if (finalResponse != null && !finalResponse.trim().isEmpty()) {
             try {
-                chatPersistenceService.saveBotMessage(session.getUserId(), finalResponse);
+                chatCommandService.saveBotMessage(session.getUserId(), finalResponse);
                 log.info("AI 응답 메시지 저장 완됨: streamId={}, userId={}", streamId, session.getUserId());
             } catch (Exception e) {
                 log.error("AI 응답 메시지 저장 실패: streamId={}, userId={}, error={}", streamId, session.getUserId(), e.getMessage(), e);

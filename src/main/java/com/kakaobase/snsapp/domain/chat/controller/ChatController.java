@@ -67,8 +67,8 @@ public class ChatController {
             case "chat.stream.end.ack" -> handleChatStreamEndAck(userId, (SimpTimeData) packet.data);
             case "chat.stream.end.nack" -> handleChatStreamEndNack(userId, (SimpTimeData) packet.data);
             default -> {
-                log.warn("알 수 없는 채팅 이벤트: {}", event);
-                // TODO: 알 수 없는 이벤트 에러 처리 로직 추가
+                log.warn("알 수 없는 채팅 이벤트: event={}, userId={}", event, userId);
+                throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
             }
         }
     }
@@ -133,8 +133,7 @@ public class ChatController {
         
         try {
             // 스트림 종료 NACK 처리 로직
-            // TODO: ChatService에서 해당 메서드 public으로 변경 필요
-            log.debug("스트림 종료 NACK 처리 로직 구현 예정: userId={}", userId);
+            chatService.handleStreamEndNack(userId, data);
             
             log.debug("스트림 종료 NACK 처리 완료: userId={}", userId);
             

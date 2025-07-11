@@ -12,16 +12,16 @@ import com.kakaobase.snsapp.domain.chat.repository.ChatMessageRepository;
 import com.kakaobase.snsapp.domain.chat.repository.ChatRoomMemberRepository;
 import com.kakaobase.snsapp.domain.chat.util.ChatBufferCacheUtil;
 import com.kakaobase.snsapp.domain.chat.service.ai.AiServerSseManager;
+import com.kakaobase.snsapp.domain.chat.service.ai.AiServerHttpClient;
 import com.kakaobase.snsapp.domain.chat.service.streaming.StreamingSessionManager;
 import com.kakaobase.snsapp.domain.chat.service.streaming.ChatTimerManager;
-import com.kakaobase.snsapp.domain.chat.service.communication.ChatPersistenceService;
+import com.kakaobase.snsapp.domain.chat.service.communication.ChatCommandService;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -31,11 +31,12 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatConverter chatConverter;
-    private final ChatPersistenceService chatPersistenceService;
+    private final ChatCommandService chatCommandService;
     private final ChatBufferCacheUtil cacheUtil;
     private final StreamingSessionManager streamingSessionManager;
     private final ChatTimerManager chatTimerManager;
     private final AiServerSseManager aiServerSseManager;
+    private final AiServerHttpClient aiServerHttpClient;
     private final EntityManager em;
 
     // ====== 채팅 조회 관련 메서드들 ======
@@ -50,7 +51,7 @@ public class ChatService {
 
         //기존 채팅방이 없다면 채팅방 생성후 빈 값 전송
         if(!chatRoomMemberRepository.existsByChatRoomIdAndMemberId(userId, BotConstants.BOT_MEMBER_ID)) {
-            chatPersistenceService.createBotChatRoom(userId);
+            chatCommandService.createBotChatRoom(userId);
             return new ChatList(
                     null,
                     false
@@ -95,7 +96,7 @@ public class ChatService {
             }
 
             // DB에 사용자 메시지 저장
-            chatPersistenceService.saveChatMessage(userId, message);
+            chatCommandService.saveChatMessage(userId, message);
             
             // AI 서버 상태 확인
             if (aiServerSseManager.getHealthStatus().isDisconnected()) {
@@ -130,8 +131,9 @@ public class ChatService {
             streamingSessionManager.cancelStreaming(streamId);
             log.info("스트리밍 세션 취소 완료: userId={}, streamId={}", userId, streamId);
             
-            // TODO: ChatCommandService를 통해 AI 서버에 중단 요청 전송 로직 구현
-            // StreamId 기반으로 AI 서버에 중단 요청을 보내어 추가 응답을 중단할 수 있음
+            // AI 서버에 스트리밍 중지 요청 전송
+            aiServerHttpClient.stopStream(userId);
+            log.info("AI 서버 스트리밍 중지 요청 전송 완료: userId={}", userId);
 
         } catch (Exception e) {
             log.error("채팅 중단 처리 실패: userId={}, streamId={}, error={}", userId, streamId, e.getMessage(), e);
@@ -151,7 +153,16 @@ public class ChatService {
         }
     }
 
-    private void handleStreamEndNack(Long userId, SimpTimeData data) {
+    public void handleStreamEndNack(Long userId, SimpTimeData data) {
         log.info("스트림 종료 NACK 처리: userId={}, Time: {}", userId, data.timestamp());
+        
+        try {
+            // 스트림 종료 NACK 처리 - 클라이언트가 스트림 종료를 확인하지 못했을 때의 처리
+            // TODO: 필요시 재전송 로직이나 추가 처리 구현
+            log.info("스트림 종료 NACK 처리 완료: userId={}", userId);
+            
+        } catch (Exception e) {
+            log.error("스트림 종료 NACK 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
+        }
     }
 }
