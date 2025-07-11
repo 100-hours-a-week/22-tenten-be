@@ -9,10 +9,8 @@ import java.time.LocalDateTime;
 @Builder
 //Ai서버에게 보낼 채팅 묶음 Dto
 public record ChatBlockData(
-        @JsonProperty("chat_id")
-        Long chatId,
-        @JsonProperty("sender_id")
-        Long senderId,
+        @JsonProperty("stream_id")
+        String streamId,
         @JsonProperty("nickname")
         String nickname,
         @JsonProperty("class_name")

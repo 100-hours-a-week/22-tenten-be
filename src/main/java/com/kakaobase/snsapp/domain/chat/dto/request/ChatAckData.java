@@ -1,4 +1,4 @@
-package com.kakaobase.snsapp.domain.chat.dto.websocket;
+package com.kakaobase.snsapp.domain.chat.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -6,8 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 /**
- * 채팅 ACK/NACK 데이터 통합 DTO
- * event: "chat.stream.end.ack", "chat.stream.end.nack" 모두 사용
+ * 채팅 Stream ACK/NACK 데이터 통합 DTO
  */
 public record ChatAckData(
         @JsonProperty("chat_id")

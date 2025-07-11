@@ -16,11 +16,12 @@ public enum ChatEventType {
     CHAT_STREAM_END_NACK("chat.stream.end.nack"),
     
     // 서버 → 클라이언트 이벤트
-    CHAT_MESSAGE_LOADING("chat.loading"),
-    CHAT_MESSAGE_STREAM_START("chat.stream.start"),
-    CHAT_MESSAGE_STREAM("chat.stream"),
-    CHAT_MESSAGE_STREAM_END("chat.stream.end"),
-    CHAT_MESSAGE_STREAM_ERROR("chat.stream.error");
+    CHAT_STREAM_LOADING("chat.loading"),
+    CHAT_STREAM_START("chat.stream.start"),
+    CHAT_STREAM("chat.stream"),
+    CHAT_STREAM_END("chat.stream.end"),
+    CHAT_STREAM_ERROR("chat.stream.error"),
+    CHAT_ERROR("chat.error");
     
     private final String event;
     

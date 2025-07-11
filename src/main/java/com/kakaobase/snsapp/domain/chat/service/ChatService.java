@@ -2,22 +2,21 @@ package com.kakaobase.snsapp.domain.chat.service;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
+import com.kakaobase.snsapp.domain.chat.dto.SimpTimeData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
+import com.kakaobase.snsapp.domain.chat.dto.request.StreamStopData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatList;
-import com.kakaobase.snsapp.domain.chat.entity.ChatMessage;
-import com.kakaobase.snsapp.domain.chat.entity.ChatRoom;
+import com.kakaobase.snsapp.domain.chat.exception.ChatException;
+import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.repository.ChatMessageRepository;
 import com.kakaobase.snsapp.domain.chat.repository.ChatRoomMemberRepository;
-import com.kakaobase.snsapp.domain.members.entity.Member;
+import com.kakaobase.snsapp.domain.chat.util.ChatBufferCacheUtil;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -29,15 +28,19 @@ public class ChatService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatConverter chatConverter;
     private final ChatCommandService commandService;
+    private final ChatBufferCacheUtil cacheUtil;
+    private final StreamingSessionManager streamingSessionManager;
+    private final ChatTimerManager chatTimerManager;
+    private final AiServerSseManager aiServerSseManager;
     private final EntityManager em;
 
     // ====== 채팅 조회 관련 메서드들 ======
 
     /**
-     * 봇과의 채팅 목록 조회 (기존 메서드)
+     * 봇과의 채팅 목록 조회
      */
     @Transactional(readOnly = true)
-    public ChatList getChatingWithBot(CustomUserDetails userDetails, Integer limit, Long cursor) {
+    public ChatList getChatMessages(CustomUserDetails userDetails, Integer limit, Long cursor) {
         Long userId = Long.valueOf(userDetails.getId());
         log.info("봇과의 채팅 목록 조회: userId={}", userId);
 
@@ -53,77 +56,98 @@ public class ChatService {
         return chatMessageRepository.findMessagesByChatRoomId(userId, limit, cursor);
     }
 
+    // ====== 타이핑 버퍼 메시지 처리 ======
+    
     /**
-     * 특정 채팅방의 메시지 목록 조회
+     * 타이핑 이벤트 처리
      */
-    @Transactional(readOnly = true)
-    public ChatList getChatMessages(Long chatRoomId, Integer limit, Long cursor) {
-        log.info("채팅 메시지 조회: chatRoomId={}, limit={}, cursor={}", chatRoomId, limit, cursor);
-        
-        return chatMessageRepository.findMessagesByChatRoomId(chatRoomId, limit, cursor);
-    }
+    public void handleTypingEvent(Long userId) {
+        log.info("타이핑 이벤트 처리: userId={}", userId);
 
-    // ====== 채팅 메시지 처리 관련 메서드들 ======
-
-    /**
-     * 사용자 채팅 메시지 저장
-     */
-    @Async
-    @Transactional
-    public CompletableFuture<Long> saveUserMessage(Long userId, ChatData chatData) {
-        log.info("사용자 메시지 저장: userId={}, content={}", userId, chatData.content());
-        
         try {
-            ChatMessage chatMessage = commandService.saveChatMessage(userId, chatData.content());
-            return CompletableFuture.completedFuture(chatMessage.getId());
+            // Redis TTL 연장
+            cacheUtil.extendTTL(userId);
             
+            // AI 서버 전송 타이머 리셋 (1초)
+            chatTimerManager.resetTimer(userId);
+            
+            log.debug("타이핑 이벤트 처리 완료: userId={}", userId);
+
         } catch (Exception e) {
-            log.error("사용자 메시지 저장 실패: userId={}, error={}", userId, e.getMessage(), e);
-            return CompletableFuture.completedFuture(null);
+            log.error("타이핑 이벤트 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
+            throw new ChatException(ChatErrorCode.CHAT_BUFFER_EXTEND_FAIL, userId);
         }
     }
 
-    /**
-     * AI 응답 메시지 저장
-     */
-    @Async
-    @Transactional
-    public CompletableFuture<Long> saveAiMessage(Long userId, String aiResponse, Long originalMessageId) {
-        log.info("AI 응답 메시지 저장: userId={}, originalMessageId={}", userId, originalMessageId);
-        
+    public void handleSendEvent(Long userId, ChatData chatData) {
+        log.debug("유저 채팅 송신 완료: userId={}, content={} time={}", userId, chatData.content(), chatData.timestamp());
+        String message = chatData.content();
+
         try {
 
-            //기본적으로 소셜봇과 유저의 ChatRoomId = userId
-            ChatRoom chatRoom = em.getReference(ChatRoom.class, userId);
-            Member botMember = em.getReference(Member.class, BotConstants.BOT_MEMBER_ID);
+            if (message == null || message.isBlank()) {
+                log.warn("빈 메시지 추가 시도: userId={}", userId);
+                throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
+            }
+
+            // DB에 사용자 메시지 저장
+            commandService.saveChatMessage(userId, message);
             
-            // AI 응답 메시지 생성 및 저장
-            ChatMessage aiMessage = chatConverter.createBotMessage(aiResponse, botMember, chatRoom);
-            ChatMessage savedMessage = chatMessageRepository.save(aiMessage);
+            // AI 서버 상태 확인
+            if (aiServerSseManager.getHealthStatus().isDisconnected()) {
+                log.warn("AI 서버 연결 상태 불량으로 메시지 처리 중단: userId={}, status={}", 
+                    userId, aiServerSseManager.getHealthStatus());
+                throw new ChatException(ChatErrorCode.AI_SERVER_CONNECTION_FAIL, userId);
+            }
+
+            // 버퍼에 메시지 추가
+            cacheUtil.appendMessage(userId, message);
             
-            return CompletableFuture.completedFuture(savedMessage.getId());
+            // AI 서버 전송 타이머 리셋 (1초)
+            chatTimerManager.resetTimer(userId);
             
-        } catch (Exception e) {
-            log.error("AI 응답 메시지 저장 실패: userId={}, error={}", userId, e.getMessage(), e);
-            return CompletableFuture.completedFuture(null);
+            log.debug("채팅 메시지 추가 완룀: userId={}", userId);
+
+        } catch (ChatException e) {
+            throw e;
+        }
+        catch (Exception e) {
+            log.error("타이핑 이벤트 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
+            throw new ChatException(ChatErrorCode.CHAT_BUFFER_ADD_FAIL, userId);
         }
     }
 
-    // ====== 메시지 읽음 상태 관리 ======
+    public void handleStopEvent(Long userId, StreamStopData data) {
+        String streamId = data.streamId();
+        log.info("채팅 중단 처리: userId={}, streamId={}", userId, streamId);
 
-    /**
-     * 메시지 읽음 처리 (소셜봇 채팅에서는 실시간이므로 별도 처리 불필요)
-     */
-    @Async
-    @Transactional
-    public void markMessagesAsRead(Long userId, Long chatRoomId, List<Long> messageIds) {
-        log.info("메시지 읽음 처리: userId={}, chatRoomId={}, messageCount={}", userId, chatRoomId, messageIds.size());
-        
         try {
-            // 소셜봇 채팅에서는 실시간 대화이므로 읽음 처리 로직 생략
-            log.info("메시지 읽음 처리 완료: userId={}, chatRoomId={}", userId, chatRoomId);
+            // AI 스트리밍 세션 취소 처리 (StreamId 직접 사용)
+            streamingSessionManager.cancelStreaming(streamId);
+            log.info("스트리밍 세션 취소 완료: userId={}, streamId={}", userId, streamId);
+            
+            // TODO: ChatCommandService를 통해 AI 서버에 중단 요청 전송 로직 구현
+            // StreamId 기반으로 AI 서버에 중단 요청을 보내어 추가 응답을 중단할 수 있음
+
         } catch (Exception e) {
-            log.error("메시지 읽음 처리 실패: userId={}, chatRoomId={}, error={}", userId, chatRoomId, e.getMessage(), e);
+            log.error("채팅 중단 처리 실패: userId={}, streamId={}, error={}", userId, streamId, e.getMessage(), e);
+            throw new ChatException(ChatErrorCode.AI_SERVER_CONNECTION_FAIL, userId);
         }
+    }
+
+    public void handleStreamEndAck(Long userId, SimpTimeData data) {
+        log.info("스트림 종료 ACK 처리: userId={}", userId);
+
+        try {
+            // TODO: 채팅방의 읽지 않은 메시지를 읽음 처리
+            log.info("스트림 종료 ACK 처리 완료: userId={}", userId);
+
+        } catch (Exception e) {
+            log.error("스트림 종료 ACK 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
+        }
+    }
+
+    private void handleStreamEndNack(Long userId, SimpTimeData data) {
+        log.info("스트림 종료 NACK 처리: userId={}, Time: {}", userId, data.timestamp());
     }
 }

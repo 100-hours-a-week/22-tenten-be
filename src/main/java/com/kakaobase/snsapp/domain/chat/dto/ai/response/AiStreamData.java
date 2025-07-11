@@ -12,12 +12,10 @@ import java.time.LocalDateTime;
  */
 @Builder
 public record AiStreamData(
-        @JsonProperty("user_id")
-        Long userId,
+        @JsonProperty("stream_id")
+        String streamId,
         @JsonProperty("message")
         String message,
-        @JsonProperty("is_complete")
-        boolean isComplete,
         @JsonProperty("timestamp")
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime timestamp
