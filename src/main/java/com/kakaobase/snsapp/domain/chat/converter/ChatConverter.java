@@ -7,6 +7,7 @@ import com.kakaobase.snsapp.domain.chat.entity.ChatMessage;
 import com.kakaobase.snsapp.domain.chat.entity.ChatRoom;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.StreamException;
+import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.StreamErrorCode;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
@@ -49,6 +50,8 @@ public class ChatConverter {
     }
 
     public ChatMessage toChatMessage(Long senderId, String content) {
+        validateContent(content, senderId);
+        
         ChatRoom chatRoom = em.getReference(ChatRoom.class, senderId);
         Member sender = em.getReference(Member.class, senderId);
 
@@ -64,6 +67,8 @@ public class ChatConverter {
      * AI 봇 메시지 생성을 위한 헬퍼 메서드
      */
     public ChatMessage toBotMessage(Long userId, String content) {
+        validateContent(content, userId);
+        
         ChatRoom chatRoom = em.getReference(ChatRoom.class, userId);
         Member botMember = em.getReference(Member.class, BotConstants.BOT_MEMBER_ID);
 
@@ -103,6 +108,19 @@ public class ChatConverter {
                 .build();
 
         return new WebSocketPacketImpl<>(errorEnum.getEvent(), errorData);
+    }
+
+    /**
+     * 메시지 내용 유효성 검증
+     * 
+     * @param content 검증할 메시지 내용
+     * @param userId 사용자 ID (예외 발생 시 사용)
+     * @throws ChatException content가 null이거나 비어있을 때
+     */
+    private void validateContent(String content, Long userId) {
+        if (content == null || content.trim().isEmpty()) {
+            throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
+        }
     }
 
 }

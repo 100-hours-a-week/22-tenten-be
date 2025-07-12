@@ -347,7 +347,7 @@ public abstract class AbstractFixture {
      * @param target 대상 객체
      * @param id 설정할 ID
      */
-    protected static void setId(Object target, Long id) {
+    public static void setId(Object target, Long id) {
         ReflectionTestUtils.setField(target, "id", id);
     }
 
@@ -368,7 +368,7 @@ public abstract class AbstractFixture {
      * @param target 대상 객체
      * @param createdAt 설정할 생성 시간
      */
-    protected static void setCreatedAt(Object target, LocalDateTime createdAt) {
+    public static void setCreatedAt(Object target, LocalDateTime createdAt) {
         ReflectionTestUtils.setField(target, "createdAt", createdAt);
     }
 
