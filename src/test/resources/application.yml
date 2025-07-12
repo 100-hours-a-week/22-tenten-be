@@ -38,14 +38,21 @@ spring:
     console:
       enabled: false
 
-# Redis 설정
+# Redis 설정 (TestRedisConfig에서 동적 관리)
   data:
     redis:
       repositories:
         enabled: true  # 테스트에서는 Redis Repository 활성화
-      host: localhost
-      port: 16379  # Embedded Redis 포트
       timeout: 1000ms  # 테스트용 짧은 타임아웃
+      # host, port는 TestRedisConfig에서 동적 설정됨
+
+# Embedded Redis 설정 (테스트 전용)
+redis:
+  embedded:
+    enabled: true  # 테스트에서 Embedded Redis 활성화
+    port: 0  # 자동 포트 할당 (충돌 방지)
+  fallback:
+    enabled: true  # Fallback 활성화
 
   # 메일 설정 (Mock으로 처리)
   mail:

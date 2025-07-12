@@ -134,8 +134,90 @@ public class NotificationCommandService {
         }
     }
 
-    @Async void sendNotificationError(NotificationErrorCode errorCode, Long receiverId){
+    @Async 
+    void sendNotificationError(NotificationErrorCode errorCode, Long receiverId){
         WebSocketPacketImpl<ErrorPacketData> errorPacket = notifConverter.toErrorPacket(errorCode);
         simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), NOTIFY_SUBSCRIBE_PATH, errorPacket);
+    }
+
+    // ====== 채팅 관련 알림 메서드들 ======
+
+    /**
+     * 채팅 메시지 전송 시 알림 생성
+     * 봇과의 채팅이므로 특별한 알림 생성이 필요한지 판단 후 처리
+     */
+    @Async
+    @Transactional
+    public void createChatMessageNotification(Long userId, String message) {
+        // TODO: 채팅 메시지 전송 시 알림 생성 로직
+        // - 봇과의 채팅이므로 일반적인 알림과 다른 처리 필요
+        // - 채팅 히스토리 저장을 위한 알림인지 판단
+        // - 필요시 ChatMessage 엔티티와 연계하여 알림 생성
+        log.info("채팅 메시지 알림 생성: userId={}, message={}", userId, message);
+    }
+
+    /**
+     * 채팅 메시지 수신 완료 시 알림 업데이트
+     * AI 서버로부터 응답이 완료되었을 때 호출
+     */
+    @Async
+    @Transactional
+    public void updateChatMessageStatus(Long userId, Long chatId, boolean success) {
+        // TODO: 채팅 메시지 상태 업데이트 로직
+        // - AI 서버 응답 성공/실패에 따른 상태 업데이트
+        // - 필요시 사용자에게 처리 완료 알림 전송
+        // - 채팅 히스토리 상태 변경
+        log.info("채팅 메시지 상태 업데이트: userId={}, chatId={}, success={}", userId, chatId, success);
+    }
+
+    /**
+     * 채팅 오류 발생 시 사용자에게 오류 알림 전송
+     */
+    @Async
+    public void sendChatErrorNotification(Long userId, String errorMessage) {
+        // TODO: 채팅 오류 알림 전송 로직
+        // - AI 서버 연결 실패, 타임아웃 등의 오류 상황 처리
+        // - 사용자에게 적절한 오류 메시지 전송
+        // - 재시도 가능 여부 안내
+        log.error("채팅 오류 알림 전송: userId={}, error={}", userId, errorMessage);
+    }
+
+    /**
+     * 채팅 세션 시작 시 알림
+     * 사용자가 새로운 채팅을 시작할 때 호출
+     */
+    @Async
+    public void notifyChatSessionStart(Long userId) {
+        // TODO: 채팅 세션 시작 알림 로직
+        // - 새로운 채팅 세션 시작을 기록
+        // - 필요시 사용자에게 환영 메시지 전송
+        // - 채팅 룸 생성 및 초기화
+        log.info("채팅 세션 시작 알림: userId={}", userId);
+    }
+
+    /**
+     * 채팅 세션 종료 시 알림
+     * 사용자가 채팅을 종료하거나 타임아웃 발생 시 호출
+     */
+    @Async
+    public void notifyChatSessionEnd(Long userId, String reason) {
+        // TODO: 채팅 세션 종료 알림 로직
+        // - 채팅 세션 종료 이유 기록 (정상 종료, 타임아웃, 오류 등)
+        // - 필요시 사용자에게 세션 종료 안내
+        // - 채팅 룸 정리 및 리소스 해제
+        log.info("채팅 세션 종료 알림: userId={}, reason={}", userId, reason);
+    }
+
+    /**
+     * 채팅 타이핑 상태 변경 알림
+     * 사용자의 타이핑 상태가 변경될 때 호출 (필요시)
+     */
+    @Async
+    public void notifyChatTypingStatus(Long userId, boolean isTyping) {
+        // TODO: 채팅 타이핑 상태 알림 로직
+        // - 봇과의 채팅에서는 일반적으로 불필요하지만, 
+        // - 사용자 활동 로깅이나 분석을 위해 사용 가능
+        // - 실시간 상태 업데이트가 필요한 경우 구현
+        log.debug("채팅 타이핑 상태 알림: userId={}, isTyping={}", userId, isTyping);
     }
 }

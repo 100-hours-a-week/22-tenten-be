@@ -75,6 +75,33 @@ app:
 ai:
   server:
     url: ${AI_SERVER_URL}
+    connection-timeout: 5000
+    read-timeout: 30000
+    write-timeout: 10000
+    stream-endpoint: "/chat/stream"
+    health-endpoint: "/health"
+
+chat:
+  message:
+    timeout: 10  # seconds
+  typing:
+    inactivity-threshold: 1  # seconds
+  buffer:
+    max-size: 1000
+  connection:
+    retry-attempts: 3
+    retry-delay: 2  # seconds
+  websocket:
+    topics:
+      typing: "/topic/chat.typing"
+      send: "/topic/chat.send" 
+      loading: "/topic/chat.message.loading"
+      chunk: "/topic/chat.chunk.send"
+      error: "/topic/chat.error"
+    destinations:
+      send: "/app/chat.send"
+      typing: "/app/chat.typing"
+      cancel: "/app/chat.cancel"
 
 management:
   endpoints:
