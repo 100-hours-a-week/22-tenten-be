@@ -10,6 +10,7 @@ import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
 import com.kakaobase.snsapp.global.error.handler.WebClientErrorHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
@@ -26,7 +27,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class YouTubeSummaryService {
 
     private final WebClient webClient;
@@ -34,6 +34,12 @@ public class YouTubeSummaryService {
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
+
+    public YouTubeSummaryService(@Qualifier("generalWebClient") WebClient webClient,
+                                                       PostRepository postRepository) {
+        this.webClient = webClient;
+        this.postRepository = postRepository;
+    }
 
     @Async
     @Transactional

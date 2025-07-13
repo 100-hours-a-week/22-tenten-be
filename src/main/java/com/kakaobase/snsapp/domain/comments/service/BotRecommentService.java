@@ -14,6 +14,7 @@ import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,6 @@ import java.util.Objects;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class BotRecommentService {
 
     private final RecommentRepository recommentRepository;
@@ -35,6 +35,18 @@ public class BotRecommentService {
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
+
+    public BotRecommentService(@Qualifier("generalWebClient") WebClient webClient,
+                               MemberRepository memberRepository,
+                               RecommentRepository recommentRepository,
+                               CommentCacheService commentCacheService,
+                               BotRecommentConverter botRecommentConverter){
+        this.webClient = webClient;
+        this.memberRepository = memberRepository;
+        this.recommentRepository = recommentRepository;
+        this.commentCacheService = commentCacheService;
+        this.botRecommentConverter = botRecommentConverter;
+    }
 
     @Transactional
     public void handle(Post post, Comment comment) {

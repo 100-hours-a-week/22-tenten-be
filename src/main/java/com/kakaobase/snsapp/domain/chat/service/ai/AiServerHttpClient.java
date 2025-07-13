@@ -6,6 +6,7 @@ import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.service.streaming.StreamingSessionManager;
 import com.kakaobase.snsapp.domain.chat.event.ChatErrorEvent;
+import com.kakaobase.snsapp.global.config.WebClientConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -29,12 +30,11 @@ import java.util.concurrent.TimeoutException;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AiServerHttpClient {
     
     @Qualifier("webFluxClient")
     private final WebClient webClient;
-    
+
     private final StreamingSessionManager streamingSessionManager;
     private final ApplicationEventPublisher eventPublisher;
     
@@ -48,6 +48,14 @@ public class AiServerHttpClient {
     private static final Duration CONNECTION_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration WRITE_TIMEOUT = Duration.ofSeconds(5);
+
+    public AiServerHttpClient(@Qualifier("webFluxClient")WebClient webClient,
+                              StreamingSessionManager streamingSessionManager,
+                              ApplicationEventPublisher eventPublisher) {
+        this.webClient = webClient;
+        this.streamingSessionManager = streamingSessionManager;
+        this.eventPublisher = eventPublisher;
+    }
     
     /**
      * AI 서버로 채팅 블록 데이터 비동기 전송 (공개 메서드)
