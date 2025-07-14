@@ -21,7 +21,8 @@ public class StreamIdGenerator {
     public String generate() {
         long time = System.nanoTime();
         long rand = ThreadLocalRandom.current().nextLong();
-        String streamId = time + "-" + Long.toHexString(rand);
+        // Math.abs를 사용하여 항상 양수 hex 값 생성
+        String streamId = time + "-" + Long.toHexString(Math.abs(rand));
         
         log.debug("새로운 StreamId 생성: {}", streamId);
         return streamId;
@@ -47,8 +48,14 @@ public class StreamIdGenerator {
             // nanoTime 부분 검증 (숫자)
             Long.parseLong(parts[0]);
             
-            // random 부분 검증 (16진수)
-            Long.parseLong(parts[1], 16);
+            // random 부분 검증 (16진수) - 음수 hex도 처리
+            String hexPart = parts[1];
+            if (hexPart.startsWith("-")) {
+                // 음수 hex의 경우 '-' 제거 후 검증
+                Long.parseLong(hexPart.substring(1), 16);
+            } else {
+                Long.parseLong(hexPart, 16);
+            }
             
             return true;
         } catch (NumberFormatException e) {

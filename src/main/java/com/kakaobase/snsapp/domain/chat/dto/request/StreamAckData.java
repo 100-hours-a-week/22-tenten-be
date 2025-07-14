@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 /**
  * 채팅 Stream ACK/NACK 데이터 통합 DTO
  */
-public record ChatAckData(
+public record StreamAckData(
         @JsonProperty("chat_id")
         Long chatId,
         @JsonProperty("message")

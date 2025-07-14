@@ -4,6 +4,7 @@ import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
 import com.kakaobase.snsapp.domain.chat.dto.SimpTimeData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
+import com.kakaobase.snsapp.domain.chat.dto.request.StreamAckData;
 import com.kakaobase.snsapp.domain.chat.dto.request.StreamStopData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatList;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
@@ -23,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,14 +33,12 @@ public class ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
-    private final ChatConverter chatConverter;
     private final ChatCommandService chatCommandService;
     private final ChatBufferCacheUtil cacheUtil;
     private final StreamingSessionManager streamingSessionManager;
     private final ChatTimerManager chatTimerManager;
     private final AiServerSseManager aiServerSseManager;
     private final AiServerHttpClient aiServerHttpClient;
-    private final EntityManager em;
 
     // ====== 채팅 조회 관련 메서드들 ======
 
@@ -53,7 +54,7 @@ public class ChatService {
         if(!chatRoomMemberRepository.existsByChatRoomIdAndMemberId(userId, BotConstants.BOT_MEMBER_ID)) {
             chatCommandService.createBotChatRoom(userId);
             return new ChatList(
-                    null,
+                    List.of(),
                     false
             );
         }
@@ -132,8 +133,8 @@ public class ChatService {
             log.info("스트리밍 세션 취소 완료: userId={}, streamId={}", userId, streamId);
             
             // AI 서버에 스트리밍 중지 요청 전송
-            aiServerHttpClient.stopStream(userId);
-            log.info("AI 서버 스트리밍 중지 요청 전송 완료: userId={}", userId);
+            aiServerHttpClient.stopStream(streamId);
+            log.info("AI 서버 스트리밍 중지 요청 전송 완료: streamId={}, userId={}", streamId, userId);
 
         } catch (Exception e) {
             log.error("채팅 중단 처리 실패: userId={}, streamId={}, error={}", userId, streamId, e.getMessage(), e);
@@ -141,11 +142,11 @@ public class ChatService {
         }
     }
 
-    public void handleStreamEndAck(Long userId, SimpTimeData data) {
+    public void handleStreamEndAck(Long userId, StreamAckData data) {
         log.info("스트림 종료 ACK 처리: userId={}", userId);
 
         try {
-            // TODO: 채팅방의 읽지 않은 메시지를 읽음 처리
+            chatCommandService.updateMessageStatus(data.chatId(), userId);
             log.info("스트림 종료 ACK 처리 완료: userId={}", userId);
 
         } catch (Exception e) {
@@ -153,16 +154,7 @@ public class ChatService {
         }
     }
 
-    public void handleStreamEndNack(Long userId, SimpTimeData data) {
-        log.info("스트림 종료 NACK 처리: userId={}, Time: {}", userId, data.timestamp());
-        
-        try {
-            // 스트림 종료 NACK 처리 - 클라이언트가 스트림 종료를 확인하지 못했을 때의 처리
-            // TODO: 필요시 재전송 로직이나 추가 처리 구현
-            log.info("스트림 종료 NACK 처리 완료: userId={}", userId);
-            
-        } catch (Exception e) {
-            log.error("스트림 종료 NACK 처리 실패: userId={}, error={}", userId, e.getMessage(), e);
-        }
+    public void handleStreamEndNack(Long userId, StreamAckData data) {
+        log.info("스트림 종료 후 NACK응답 확인: userId={}, chatId={}, Time: {}", userId, data.chatId(), data.timestamp());
     }
 }

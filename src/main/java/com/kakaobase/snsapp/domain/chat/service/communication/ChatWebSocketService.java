@@ -4,6 +4,7 @@ import com.kakaobase.snsapp.domain.chat.dto.SimpTimeData;
 import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiStreamData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatErrorData;
 import com.kakaobase.snsapp.domain.chat.dto.response.StreamData;
+import com.kakaobase.snsapp.domain.chat.dto.response.StreamEndData;
 import com.kakaobase.snsapp.domain.chat.dto.response.StreamStartData;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.StreamErrorCode;
@@ -77,10 +78,10 @@ public class ChatWebSocketService {
      * 사용자에게 커스텀 이벤트로 스트림 패킷 전송
      */
     @Async
-    public void sendStreamDataToUser(Long userId, String eventType, AiStreamData streamData) {
-        log.debug("사용자 커스텀 스트림 데이터 전송: userId={}, eventType={}", userId, eventType);
+    public void sendStreamEndDataToUser(Long userId, StreamEndData streamEndData) {
+        log.debug("Stream종료 데이터 전송: userId={}", userId);
         
-        WebSocketPacketImpl<AiStreamData> packet = new WebSocketPacketImpl<>(eventType, streamData);
+        WebSocketPacketImpl<StreamEndData> packet = new WebSocketPacketImpl<>(ChatEventType.CHAT_STREAM_END.getEvent(), streamEndData);
         messagingTemplate.convertAndSendToUser(userId.toString(), CHAT_QUEUE_DESTINATION, packet);
     }
     
