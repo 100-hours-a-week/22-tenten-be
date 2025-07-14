@@ -1,6 +1,7 @@
 package com.kakaobase.snsapp.domain.chat.service.streaming;
 
 import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
+import com.kakaobase.snsapp.domain.chat.dto.response.StreamEndData;
 import com.kakaobase.snsapp.domain.chat.event.StreamStartEvent;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.StreamErrorCode;
 import com.kakaobase.snsapp.domain.chat.model.StreamingSession;
@@ -18,6 +19,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -110,30 +112,25 @@ public class StreamingSessionManager {
             log.warn("완료 처리 실패 - 세션 없음: streamId={}", streamId);
             return;
         }
-        
         Long userId = session.getUserId();
         log.debug("스트리밍 완료 처리: streamId={}, userId={}", streamId, userId);
-        
-        // 완료 메시지 전송
 
         
         // 스트리밍 완료 처리 - AI 응답 메시지 저장
         String finalResponse = session.getFinalResponse();
-        if (finalResponse != null && !finalResponse.trim().isEmpty()) {
+        if (finalResponse != null && !finalResponse.isBlank()) {
             try {
-                chatCommandService.saveBotMessage(session.getUserId(), finalResponse);
+                Long botChatId = chatCommandService.saveBotMessage(session.getUserId(), finalResponse);
+                StreamEndData endData = new StreamEndData(botChatId, LocalDateTime.now());
+                chatWebSocketService.sendStreamEndDataToUser(userId , endData);
                 log.info("AI 응답 메시지 저장 완됨: streamId={}, userId={}", streamId, session.getUserId());
+                activeSessions.remove(streamId);
             } catch (Exception e) {
                 log.error("AI 응답 메시지 저장 실패: streamId={}, userId={}, error={}", streamId, session.getUserId(), e.getMessage(), e);
+                chatWebSocketService.sendStreamErrorToUser(userId, StreamErrorCode.STREAM_END_EVENT_FAIL);
                 throw new ChatException(ChatErrorCode.MESSAGE_SAVE_FAIL, session.getUserId());
             }
         }
-
-        // 스트리밍 종료 알림
-        chatWebSocketService.sendStreamDataToUser(userId, ChatEventType.CHAT_STREAM_END.getEvent(), streamData);
-
-        // 세션 삭제
-        activeSessions.remove(streamId);
     }
     
     /**
