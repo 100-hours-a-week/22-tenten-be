@@ -36,13 +36,22 @@ public class ChatWebSocketService {
      */
     @Async
     public void sendLoadingToUser(Long userId) {
-        log.debug("사용자 로딩 알림 전송: userId={}", userId);
+        log.info("사용자 로딩 알림 전송 시작: userId={}, 전송 시간={}, 스레드={}", 
+            userId, System.currentTimeMillis(), Thread.currentThread().getName());
         
-        SimpTimeData data = new SimpTimeData(LocalDateTime.now());
-        WebSocketPacketImpl<SimpTimeData> packet = new WebSocketPacketImpl<>(
-            ChatEventType.CHAT_STREAM_LOADING.getEvent(), data);
-        
-        messagingTemplate.convertAndSendToUser(userId.toString(), CHAT_QUEUE_DESTINATION, packet);
+        try {
+            SimpTimeData data = new SimpTimeData(LocalDateTime.now());
+            WebSocketPacketImpl<SimpTimeData> packet = new WebSocketPacketImpl<>(
+                ChatEventType.CHAT_STREAM_LOADING.getEvent(), data);
+            
+            log.info("WebSocket 패킷 생성 완료: userId={}, event={}, destination={}", 
+                userId, ChatEventType.CHAT_STREAM_LOADING.getEvent(), CHAT_QUEUE_DESTINATION);
+            
+            messagingTemplate.convertAndSendToUser(userId.toString(), CHAT_QUEUE_DESTINATION, packet);
+            log.info("사용자 로딩 알림 전송 완료: userId={}, 완료 시간={}", userId, System.currentTimeMillis());
+        } catch (Exception e) {
+            log.error("사용자 로딩 알림 전송 실패: userId={}, error={}", userId, e.getMessage(), e);
+        }
     }
     
     /**
@@ -50,13 +59,23 @@ public class ChatWebSocketService {
      */
     @Async
     public void sendStreamStartToUser(Long userId, String streamId) {
-        log.debug("사용자 스트림 시작 알림 전송: userId={}, streamId={}", userId, streamId);
+        log.info("사용자 스트림 시작 알림 전송: userId={}, streamId={}, 전송 시간={}", 
+            userId, streamId, System.currentTimeMillis());
         
-        StreamStartData data = new StreamStartData(streamId, LocalDateTime.now());
-        WebSocketPacketImpl<StreamStartData> packet = new WebSocketPacketImpl<>(
-            ChatEventType.CHAT_STREAM_START.getEvent(), data);
-        
-        messagingTemplate.convertAndSendToUser(userId.toString(), CHAT_QUEUE_DESTINATION, packet);
+        try {
+            StreamStartData data = new StreamStartData(streamId, LocalDateTime.now());
+            WebSocketPacketImpl<StreamStartData> packet = new WebSocketPacketImpl<>(
+                ChatEventType.CHAT_STREAM_START.getEvent(), data);
+            
+            log.info("스트림 시작 패킷 생성 완료: userId={}, streamId={}, event={}", 
+                userId, streamId, ChatEventType.CHAT_STREAM_START.getEvent());
+            
+            messagingTemplate.convertAndSendToUser(userId.toString(), CHAT_QUEUE_DESTINATION, packet);
+            log.info("사용자 스트림 시작 알림 전송 완료: userId={}, streamId={}", userId, streamId);
+        } catch (Exception e) {
+            log.error("사용자 스트림 시작 알림 전송 실패: userId={}, streamId={}, error={}", 
+                userId, streamId, e.getMessage(), e);
+        }
     }
     
     /**
@@ -64,14 +83,24 @@ public class ChatWebSocketService {
      */
     @Async
     public void sendStreamDataToUser(Long userId, String content) {
-        log.debug("사용자 스트림 데이터 전송: userId={}, contentLength={}", 
-            userId, content != null ? content.length() : 0);
+        log.info("사용자 스트림 데이터 전송: userId={}, contentLength={}, 전송 시간={}", 
+            userId, content != null ? content.length() : 0, System.currentTimeMillis());
         
-        StreamData streamData = new StreamData(content, LocalDateTime.now());
-        WebSocketPacketImpl<StreamData> packet = new WebSocketPacketImpl<>(
-            ChatEventType.CHAT_STREAM.getEvent(), streamData);
-        
-        messagingTemplate.convertAndSendToUser(userId.toString(), CHAT_QUEUE_DESTINATION, packet);
+        try {
+            StreamData streamData = new StreamData(content, LocalDateTime.now());
+            WebSocketPacketImpl<StreamData> packet = new WebSocketPacketImpl<>(
+                ChatEventType.CHAT_STREAM.getEvent(), streamData);
+            
+            log.info("스트림 데이터 패킷 생성 완료: userId={}, event={}", 
+                userId, ChatEventType.CHAT_STREAM.getEvent());
+            
+            messagingTemplate.convertAndSendToUser(userId.toString(), CHAT_QUEUE_DESTINATION, packet);
+            log.info("사용자 스트림 데이터 전송 완료: userId={}, contentLength={}", 
+                userId, content != null ? content.length() : 0);
+        } catch (Exception e) {
+            log.error("사용자 스트림 데이터 전송 실패: userId={}, contentLength={}, error={}", 
+                userId, content != null ? content.length() : 0, e.getMessage(), e);
+        }
     }
     
     /**

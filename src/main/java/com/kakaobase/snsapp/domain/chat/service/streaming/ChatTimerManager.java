@@ -63,13 +63,13 @@ public class ChatTimerManager {
      * 사용자별 타이머 리셋 (1초 후 자동 전송)
      */
     public void resetTimer(Long userId) {
-        log.debug("타이머 리셋: userId={}", userId);
+        log.info("타이머 리셋 시작: userId={}, 현재 활성 타이머 수={}", userId, userTimers.size());
         
         // 기존 타이머 취소
         ScheduledFuture<?> oldTimer = userTimers.get(userId);
         if (oldTimer != null && !oldTimer.isCancelled()) {
             oldTimer.cancel(false);
-            log.debug("기존 타이머 취소: userId={}", userId);
+            log.info("기존 타이머 취소 완료: userId={}", userId);
         }
         
         // 새 타이머 시작 (1초 후 실행)
@@ -80,19 +80,21 @@ public class ChatTimerManager {
         );
         
         userTimers.put(userId, newTimer);
-        log.debug("새 타이머 시작: userId={}, 1초 후 실행", userId);
+        log.info("새 타이머 시작 완료: userId={}, 1초 후 실행 예정, 총 활성 타이머 수={}", userId, userTimers.size());
     }
     
     /**
      * 사용자 타이머 취소
      */
     public void cancelTimer(Long userId) {
-        log.debug("타이머 취소: userId={}", userId);
+        log.info("타이머 취소 시작: userId={}, 현재 활성 타이머 수={}", userId, userTimers.size());
         
         ScheduledFuture<?> timer = userTimers.remove(userId);
         if (timer != null && !timer.isCancelled()) {
             timer.cancel(false);
-            log.debug("타이머 취소 완료: userId={}", userId);
+            log.info("타이머 취소 완료: userId={}, 남은 활성 타이머 수={}", userId, userTimers.size());
+        } else {
+            log.info("취소할 타이머 없음: userId={}", userId);
         }
     }
     
@@ -100,14 +102,18 @@ public class ChatTimerManager {
      * 안전한 버퍼 전송 트리거 (예외 처리 포함)
      */
     private void triggerBufferSendSafely(Long userId) {
+        log.info("타이머 트리거 실행 시작: userId={}, 실행 시간={}", userId, System.currentTimeMillis());
+        
         try {
             chatBufferManager.sendBufferToAiServer(userId);
+            log.info("타이머 트리거 버퍼 전송 완료: userId={}", userId);
         } catch (Exception e) {
             log.error("타이머 트리거 버퍼 전송 실패: userId={}, error={}", userId, e.getMessage(), e);
             // 타이머에서 실행되므로 예외를 먹어서 스레드가 죽지 않도록 함
         } finally {
             // 타이머 완료 후 정리
             userTimers.remove(userId);
+            log.info("타이머 정리 완료: userId={}, 남은 활성 타이머 수={}", userId, userTimers.size());
         }
     }
 }

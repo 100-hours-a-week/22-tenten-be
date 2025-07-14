@@ -25,12 +25,21 @@ public class ChatEventListener {
     @Async
     @EventListener
     public void handleLoadingEvent(LoadingEvent event) {
-        log.info("LoadingEvent 수신: userId={}, streamId={}, messageLength={}", 
+        log.info("LoadingEvent 수신 시작: userId={}, streamId={}, messageLength={}, 수신 시간={}, 스레드={}", 
             event.getUserId(), event.getStreamId(), 
-            event.getMessageContent() != null ? event.getMessageContent().length() : 0);
+            event.getMessageContent() != null ? event.getMessageContent().length() : 0,
+            System.currentTimeMillis(), Thread.currentThread().getName());
         
-        // 사용자에게 로딩 상태 알림 전송
-        chatWebSocketService.sendLoadingToUser(event.getUserId());
+        try {
+            // 사용자에게 로딩 상태 알림 전송
+            log.info("로딩 알림 전송 시작: userId={}, streamId={}", event.getUserId(), event.getStreamId());
+            chatWebSocketService.sendLoadingToUser(event.getUserId());
+            log.info("로딩 알림 전송 완료: userId={}, streamId={}, 완료 시간={}", 
+                event.getUserId(), event.getStreamId(), System.currentTimeMillis());
+        } catch (Exception e) {
+            log.error("LoadingEvent 처리 실패: userId={}, streamId={}, error={}", 
+                event.getUserId(), event.getStreamId(), e.getMessage(), e);
+        }
     }
     
     /**
@@ -40,12 +49,20 @@ public class ChatEventListener {
     @Async
     @EventListener
     public void handleStreamStartEvent(StreamStartEvent event) {
-        log.info("StreamStartEvent 수신: userId={}, streamId={}, firstDataLength={}", 
+        log.info("StreamStartEvent 수신: userId={}, streamId={}, firstDataLength={}, 수신 시간={}, 스레드={}", 
             event.getUserId(), event.getStreamId(), 
-            event.getFirstStreamData() != null ? event.getFirstStreamData().length() : 0);
+            event.getFirstStreamData() != null ? event.getFirstStreamData().length() : 0,
+            System.currentTimeMillis(), Thread.currentThread().getName());
         
-        // 사용자에게 스트림 시작 알림 전송
-        chatWebSocketService.sendStreamStartToUser(event.getUserId(), event.getStreamId());
+        try {
+            // 사용자에게 스트림 시작 알림 전송
+            log.info("스트림 시작 알림 전송: userId={}, streamId={}", event.getUserId(), event.getStreamId());
+            chatWebSocketService.sendStreamStartToUser(event.getUserId(), event.getStreamId());
+            log.info("스트림 시작 알림 전송 완료: userId={}, streamId={}", event.getUserId(), event.getStreamId());
+        } catch (Exception e) {
+            log.error("StreamStartEvent 처리 실패: userId={}, streamId={}, error={}", 
+                event.getUserId(), event.getStreamId(), e.getMessage(), e);
+        }
     }
     
     /**
@@ -55,10 +72,18 @@ public class ChatEventListener {
     @Async
     @EventListener
     public void handleChatErrorEvent(ChatErrorEvent event) {
-        log.info("ChatErrorEvent 수신: userId={}, errorCode={}, requestId={}, message={}", 
-            event.getUserId(), event.getErrorCode(), event.getRequestId(), event.getErrorMessage());
+        log.info("ChatErrorEvent 수신: userId={}, errorCode={}, requestId={}, message={}, 수신 시간={}, 스레드={}", 
+            event.getUserId(), event.getErrorCode(), event.getRequestId(), event.getErrorMessage(),
+            System.currentTimeMillis(), Thread.currentThread().getName());
         
-        // 사용자에게 에러 알림 전송
-        chatWebSocketService.sendChatErrorToUser(event.getUserId(), event.getErrorCode());
+        try {
+            // 사용자에게 에러 알림 전송
+            log.info("에러 알림 전송: userId={}, errorCode={}", event.getUserId(), event.getErrorCode());
+            chatWebSocketService.sendChatErrorToUser(event.getUserId(), event.getErrorCode());
+            log.info("에러 알림 전송 완료: userId={}, errorCode={}", event.getUserId(), event.getErrorCode());
+        } catch (Exception e) {
+            log.error("ChatErrorEvent 처리 실패: userId={}, errorCode={}, error={}", 
+                event.getUserId(), event.getErrorCode(), e.getMessage(), e);
+        }
     }
 }

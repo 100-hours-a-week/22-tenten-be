@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 public record ChatBlockData(
         @JsonProperty("stream_id")
         String streamId,
+        @JsonProperty("user_id")
+        Long userId,
         @JsonProperty("nickname")
         String nickname,
         @JsonProperty("class_name")
