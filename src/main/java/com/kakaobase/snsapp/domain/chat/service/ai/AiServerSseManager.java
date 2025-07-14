@@ -33,8 +33,21 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AiServerSseManager {
+    
+    public AiServerSseManager(@Qualifier("webFluxClient") WebClient webFluxClient,
+                              @Qualifier("generalWebClient") WebClient generalWebClient,
+                              ChatWebSocketService chatWebSocketService,
+                              StreamingSessionManager streamingSessionManager,
+                              SimpMessagingTemplate messagingTemplate,
+                              ObjectMapper objectMapper) {
+        this.webFluxClient = webFluxClient;
+        this.generalWebClient = generalWebClient;
+        this.chatWebSocketService = chatWebSocketService;
+        this.streamingSessionManager = streamingSessionManager;
+        this.messagingTemplate = messagingTemplate;
+        this.objectMapper = objectMapper;
+    }
 
     private final ChatWebSocketService chatWebSocketService;
     @Value("${ai.server.url}")
@@ -45,6 +58,9 @@ public class AiServerSseManager {
     
     @Qualifier("webFluxClient")
     private final WebClient webFluxClient;
+    
+    @Qualifier("generalWebClient")
+    private final WebClient generalWebClient;
     
     private final StreamingSessionManager streamingSessionManager;
     private final SimpMessagingTemplate messagingTemplate;
@@ -71,24 +87,23 @@ public class AiServerSseManager {
      */
     @Scheduled(fixedRate = 30000)
     public void performHealthCheck() {
-        log.debug("AI 서버 헬스체크 시작");
+        log.info("AI 서버 헬스체크 시작");
         
-        webFluxClient.get()
-                .uri(healthEndpoint)
-                .retrieve()
-                .toBodilessEntity()
-                .timeout(Duration.ofSeconds(10))
-                .doOnSuccess(response -> {
-                    setHealthStatus(AiServerHealthStatus.CONNECTED);
-                    lastSuccessfulConnection = LocalDateTime.now();
-                    log.debug("AI 서버 헬스체크 성공");
-                })
-                .doOnError(error -> {
-                    setHealthStatus(AiServerHealthStatus.DISCONNECTED);
-                    log.warn("AI 서버 헬스체크 실패: {}", error.getMessage());
-                })
-                .onErrorResume(error -> Mono.empty())
-                .subscribe();
+        try {
+            generalWebClient.get()
+                    .uri(aiServerUrl + healthEndpoint)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .timeout(Duration.ofSeconds(10))
+                    .block();
+            
+            setHealthStatus(AiServerHealthStatus.CONNECTED);
+            lastSuccessfulConnection = LocalDateTime.now();
+            log.info("AI 서버 헬스체크 성공");
+        } catch (Exception error) {
+            setHealthStatus(AiServerHealthStatus.DISCONNECTED);
+            log.warn("AI 서버 헬스체크 실패: {}", error.getMessage());
+        }
         
         lastHealthCheck = LocalDateTime.now();
     }
