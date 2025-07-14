@@ -74,16 +74,17 @@ public class AiServerHttpClient {
     /**
      * AI 서버로 스트리밍 중지 요청 전송 (공개 메서드)
      */
-    public void stopStream(Long userId) {
-        log.info("AI 서버로 스트리밍 중지 요청 시작: userId={}", userId);
+    public void stopStream(String streamId) {
+        Long userId = streamingSessionManager.getUserIdByStreamId(streamId);
+        log.info("AI 서버로 스트리밍 중지 요청 시작: streamId={}, userId={}", streamId, userId);
         
         try {
-            String endpoint = "/chat/stream/" + userId;
-            AiServerResponse response = sendAiServerRequestSync(HttpMethod.DELETE, endpoint, null, userId.toString());
-            log.info("AI 서버 스트리밍 중지 성공: userId={}, message={}", 
-                userId, response.message());
+            String endpoint = "/chat/stream/" + streamId;
+            AiServerResponse response = sendAiServerRequestSync(HttpMethod.DELETE, endpoint, null, streamId);
+            log.info("AI 서버 스트리밍 중지 성공: streamId={}, userId={}, message={}", 
+                streamId, userId, response.message());
         } catch (Exception e) {
-            handleError(userId.toString(), userId, e);
+            handleError(streamId, userId, e);
         }
     }
     

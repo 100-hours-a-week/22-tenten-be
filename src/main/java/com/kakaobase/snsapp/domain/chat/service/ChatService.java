@@ -24,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -52,7 +54,7 @@ public class ChatService {
         if(!chatRoomMemberRepository.existsByChatRoomIdAndMemberId(userId, BotConstants.BOT_MEMBER_ID)) {
             chatCommandService.createBotChatRoom(userId);
             return new ChatList(
-                    null,
+                    List.of(),
                     false
             );
         }
@@ -131,8 +133,8 @@ public class ChatService {
             log.info("스트리밍 세션 취소 완료: userId={}, streamId={}", userId, streamId);
             
             // AI 서버에 스트리밍 중지 요청 전송
-            aiServerHttpClient.stopStream(userId);
-            log.info("AI 서버 스트리밍 중지 요청 전송 완료: userId={}", userId);
+            aiServerHttpClient.stopStream(streamId);
+            log.info("AI 서버 스트리밍 중지 요청 전송 완료: streamId={}, userId={}", streamId, userId);
 
         } catch (Exception e) {
             log.error("채팅 중단 처리 실패: userId={}, streamId={}, error={}", userId, streamId, e.getMessage(), e);
