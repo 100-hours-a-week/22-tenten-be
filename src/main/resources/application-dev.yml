@@ -17,5 +17,9 @@ logging:
     com.kakaobase.snsapp.global.security: DEBUG
     com.kakaobase.snsapp.domain.auth: DEBUG
     com.kakaobase.snsapp.domain.posts: DEBUG
+    com.kakaobase.snsapp.domain.chat: DEBUG
     org.springframework.security: DEBUG
+    org.springframework.messaging: DEBUG
+    org.springframework.web.socket: DEBUG
+    org.springframework.messaging.simp: DEBUG
     org.hibernate.SQL: debug

@@ -29,7 +29,7 @@ public class ChatWebSocketService {
     
     private final SimpMessagingTemplate messagingTemplate;
     
-    private static final String CHAT_QUEUE_DESTINATION = "/queue/chat";
+    private static final String CHAT_QUEUE_DESTINATION = "/queue/chatbot";
     
     /**
      * 사용자에게 로딩 상태 전송
