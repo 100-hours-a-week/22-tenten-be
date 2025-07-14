@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.chat.dto.ai.request.ChatBlockData;
 import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiStreamData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
 import com.kakaobase.snsapp.domain.chat.dto.request.StreamStopData;
+import com.kakaobase.snsapp.domain.chat.dto.response.ChatErrorData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatItemDto;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatList;
 import com.kakaobase.snsapp.domain.chat.entity.ChatMessage;
@@ -464,7 +465,6 @@ public class ChatFixture extends AbstractFixture {
             .collect(Collectors.joining(""));
     }
     
-    // === AbstractFixture 구현 ===
     
     @Override
     protected Object reset() {

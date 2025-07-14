@@ -432,8 +432,11 @@ class StreamingSessionManagerTest {
         
         for (int i = 0; i < userIds.length; i++) {
             streamIds[i] = ChatFixture.generateTestStreamId() + "-" + i;
-            given(streamIdGenerator.generate()).willReturn(streamIds[i]);
         }
+        
+        // Mock setup for sequential return values
+        given(streamIdGenerator.generate())
+            .willReturn(streamIds[0], streamIds[1], streamIds[2], streamIds[3], streamIds[4]);
         
         // when - 모든 사용자 세션 시작
         for (int i = 0; i < userIds.length; i++) {
