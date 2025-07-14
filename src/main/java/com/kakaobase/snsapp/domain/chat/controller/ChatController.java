@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
 import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
 import com.kakaobase.snsapp.domain.chat.dto.SimpTimeData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
+import com.kakaobase.snsapp.domain.chat.dto.request.StreamAckData;
 import com.kakaobase.snsapp.domain.chat.dto.request.StreamStopData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatErrorData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatList;
@@ -64,8 +65,8 @@ public class ChatController {
             case "chat.send" -> chatService.handleSendEvent(userId, (ChatData) packet.data);
             case "chat.typing" -> handleChatTyping((SimpTimeData) packet.data, userId);
             case "chat.stop" -> handleChatStop(userId, (StreamStopData) packet.data);
-            case "chat.stream.end.ack" -> handleChatStreamEndAck(userId, (SimpTimeData) packet.data);
-            case "chat.stream.end.nack" -> handleChatStreamEndNack(userId, (SimpTimeData) packet.data);
+            case "chat.stream.end.ack" -> handleChatStreamEndAck(userId, (StreamAckData) packet.data);
+            case "chat.stream.end.nack" -> handleChatStreamEndNack(userId, (StreamAckData) packet.data);
             default -> {
                 log.warn("알 수 없는 채팅 이벤트: event={}, userId={}", event, userId);
                 throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
@@ -87,7 +88,7 @@ public class ChatController {
     }
     
     private void handleChatTyping(SimpTimeData data, Long userId) {
-        log.info("타이핑 상태 처리: userId={}", userId);
+        log.info("타이핑 상태 처리: userId={}, timestamp={}", userId, data.timestamp());
         
         try {
             // 채팅 버퍼 활동 갱신 (TTL 연장)
@@ -114,7 +115,7 @@ public class ChatController {
         }
     }
     
-    private void handleChatStreamEndAck(Long userId, SimpTimeData data) {
+    private void handleChatStreamEndAck(Long userId, StreamAckData data) {
         log.info("스트림 종료 ACK 처리: userId={}", userId);
         
         try {
@@ -128,14 +129,12 @@ public class ChatController {
         }
     }
     
-    private void handleChatStreamEndNack(Long userId, SimpTimeData data) {
+    private void handleChatStreamEndNack(Long userId, StreamAckData data) {
         log.info("스트림 종료 NACK 처리: userId={}", userId);
         
         try {
             // 스트림 종료 NACK 처리 로직
             chatService.handleStreamEndNack(userId, data);
-            
-            log.debug("스트림 종료 NACK 처리 완료: userId={}", userId);
             
         } catch (Exception e) {
             log.error("스트림 종료 NACK 처리 실패: userId={}, error={}", userId, e.getMessage(), e);

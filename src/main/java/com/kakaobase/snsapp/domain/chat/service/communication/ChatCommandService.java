@@ -108,7 +108,7 @@ public class ChatCommandService {
      */
     @Async
     @Transactional
-    public void saveBotMessage(Long userId, String botResponse) {
+    public Long saveBotMessage(Long userId, String botResponse) {
         log.info("AI 응답 메시지 저장: userId={}, responseLength={}", 
             userId, botResponse != null ? botResponse.length() : 0);
         
@@ -118,6 +118,8 @@ public class ChatCommandService {
             ChatMessage savedMessage = chatMessageRepository.save(botMessage);
             
             log.info("AI 응답 메시지 저장 완료: userId={}, messageId={}", userId, savedMessage.getId());
+
+            return savedMessage.getId();
             
         } catch (Exception e) {
             log.error("AI 응답 메시지 저장 실패: userId={}, error={}", userId, e.getMessage(), e);
@@ -153,8 +155,8 @@ public class ChatCommandService {
     @Transactional
     public void updateMessageStatus(Long chatId, Long userId) {
         log.info("메시지 상태 업데이트: messageId={}, userId={}", chatId, userId);
-        
-        // TODO: 메시지 상태 읽음 업데이트 로직 구현
-        // 현재는 로깅만 수행
+        ChatMessage chat =  chatMessageRepository.findById(chatId)
+                .orElseThrow(()->new ChatException(ChatErrorCode.CHAT_NOT_FOUND, userId));
+        chat.markAsRead();
     }
 }
