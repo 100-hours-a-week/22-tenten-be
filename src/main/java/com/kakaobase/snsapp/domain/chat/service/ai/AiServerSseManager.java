@@ -5,11 +5,9 @@ import com.kakaobase.snsapp.domain.chat.dto.ai.response.AiStreamData;
 import com.kakaobase.snsapp.domain.chat.exception.StreamException;
 import com.kakaobase.snsapp.domain.chat.util.AiServerHealthStatus;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
-import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.StreamErrorCode;
 import com.kakaobase.snsapp.domain.chat.service.communication.ChatWebSocketService;
 import com.kakaobase.snsapp.domain.chat.service.streaming.StreamingSessionManager;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +20,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.Disposable;
-import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -39,13 +36,11 @@ public class AiServerSseManager {
                               @Qualifier("generalWebClient") WebClient generalWebClient,
                               ChatWebSocketService chatWebSocketService,
                               StreamingSessionManager streamingSessionManager,
-                              SimpMessagingTemplate messagingTemplate,
                               ObjectMapper objectMapper) {
         this.webFluxClient = webFluxClient;
         this.generalWebClient = generalWebClient;
         this.chatWebSocketService = chatWebSocketService;
         this.streamingSessionManager = streamingSessionManager;
-        this.messagingTemplate = messagingTemplate;
         this.objectMapper = objectMapper;
     }
 
@@ -63,7 +58,6 @@ public class AiServerSseManager {
     private final WebClient generalWebClient;
     
     private final StreamingSessionManager streamingSessionManager;
-    private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
     
     private final AtomicReference<AiServerHealthStatus> healthStatus = 
@@ -161,7 +155,7 @@ public class AiServerSseManager {
             AiStreamData streamData = objectMapper.readValue(jsonData, AiStreamData.class);
             
             // StreamId 유효성 검증
-            if (streamData.streamId() == null || streamData.streamId().trim().isEmpty()) {
+            if (streamData.streamId() == null || streamData.streamId().isBlank()) {
                 log.warn("SSE 응답에 StreamId가 없음: userId={}, event={}", streamingSessionManager.getUserIdByStreamId(streamData.streamId()), event);
                 throw new StreamException(StreamErrorCode.INVALID_STREAM_ID, streamingSessionManager.getUserIdByStreamId(streamData.streamId()));
             }
@@ -211,7 +205,7 @@ public class AiServerSseManager {
     /**
      * 헬스체크 상태 설정 (플래그 역할만)
      */
-private void setHealthStatus(AiServerHealthStatus status) {
+    private void setHealthStatus(AiServerHealthStatus status) {
         AiServerHealthStatus oldStatus = healthStatus.getAndSet(status);
         
         if (oldStatus != status) {

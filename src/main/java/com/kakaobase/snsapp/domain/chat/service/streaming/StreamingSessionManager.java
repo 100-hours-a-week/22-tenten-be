@@ -13,6 +13,7 @@ import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.util.StreamIdGenerator;
 import com.kakaobase.snsapp.domain.chat.exception.StreamException;
+import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;

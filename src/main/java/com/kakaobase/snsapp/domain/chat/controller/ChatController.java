@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ChatController {
 
-    private static final String CHAT_QUEUE_DESTINATION = "/queue/chat";
+    private static final String CHAT_QUEUE_DESTINATION = "/queue/chatbot";
     
     private final ChatService chatService;
     private final ChatConverter chatConveter;
