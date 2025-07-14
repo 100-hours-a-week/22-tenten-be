@@ -21,6 +21,7 @@ public enum ChatErrorCode {
     // 메시지 관련 에러
     MESSAGE_SAVE_FAIL("메시지 저장에 실패했습니다"),
     CHAT_INVALID("invalid_format", "채팅 형식이 올바르지 않습니다."),
+    CHAT_NOT_FOUND("chat_not_found", "채팅 형식이 올바르지 않습니다."),
     
     // 사용자 관련 에러
     USER_NOT_FOUND("resource_not_found", "사용자를 찾을 수 없습니다"),
@@ -46,7 +47,7 @@ public enum ChatErrorCode {
         this.message = message;
     }
 
-    ChatErrorCode(String message, String error) {
+    ChatErrorCode(String error, String message) {
         this.event = "chat.stream.error";
         this.error = error;
         this.message = message;
