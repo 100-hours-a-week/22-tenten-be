@@ -6,6 +6,7 @@ import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.service.ai.AiServerHttpClient;
 import com.kakaobase.snsapp.domain.chat.service.ai.AiServerSseManager;
+import com.kakaobase.snsapp.domain.chat.service.communication.ChatWebSocketService;
 import com.kakaobase.snsapp.domain.chat.util.ChatBufferCacheUtil;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
@@ -30,7 +31,8 @@ public class ChatBufferManager {
     private final MemberRepository memberRepository;
     private final AiServerSseManager aiServerSseManager;
     private final ApplicationEventPublisher eventPublisher;
-    
+    private final ChatWebSocketService chatWebSocketService;
+
     /**
      * 채팅 버퍼를 AI 서버로 전송 (타이머에서 호출)
      */
@@ -41,6 +43,7 @@ public class ChatBufferManager {
         if (aiServerSseManager.getHealthStatus().isDisconnected()) {
             log.warn("AI 서버 연결 상태 불량으로 자동 전송 중단: userId={}, status={}", 
                 userId, aiServerSseManager.getHealthStatus());
+            chatWebSocketService.sendChatErrorToUser(userId, ChatErrorCode.AI_SERVER_CONNECTION_FAIL);
             return;
         }
         log.info("AI 서버 헬스체크 통과: userId={}, status={}", userId, aiServerSseManager.getHealthStatus());
@@ -48,6 +51,7 @@ public class ChatBufferManager {
         // 2. 버퍼 존재 여부 확인
         if (!cacheUtil.hasBuffer(userId)) {
             log.info("버퍼가 없어서 전송 안함: userId={}", userId);
+            chatWebSocketService.sendChatErrorToUser(userId, ChatErrorCode.CHAT_BUFFER_NOT_FOUND);
             return;
         }
         log.info("버퍼 존재 확인: userId={}", userId);
@@ -56,6 +60,7 @@ public class ChatBufferManager {
         String bufferContent = cacheUtil.getAndDeleteBuffer(userId);
         if (bufferContent == null || bufferContent.trim().isEmpty()) {
             log.info("버퍼 내용이 비어서 전송 안함: userId={}", userId);
+            chatWebSocketService.sendChatErrorToUser(userId, ChatErrorCode.CHAT_BUFFER_INVALID);
             return;
         }
         log.info("버퍼 내용 가져오기 완료: userId={}, contentLength={}", userId, bufferContent.length());
