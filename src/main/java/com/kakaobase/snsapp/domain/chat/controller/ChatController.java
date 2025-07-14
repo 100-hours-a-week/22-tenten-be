@@ -81,7 +81,7 @@ public class ChatController {
         return chatConveter.toErrorPacket(e);
     }
 
-    @MessageExceptionHandler(ChatException.class)
+    @MessageExceptionHandler(StreamException.class)
     @SendToUser("/queue/chatbot")
     public WebSocketPacket<ChatErrorData> handleStreamException(StreamException e, Principal principal) {
         return chatConveter.toErrorPacket(e);

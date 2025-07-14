@@ -30,6 +30,8 @@ public enum ChatErrorCode {
 
     // 타이핑 세션 버퍼 관련 에러
     CHAT_BUFFER_ADD_FAIL("버퍼에 메세지를 추가하는데 실패했습니다."),
+    CHAT_BUFFER_NOT_FOUND("채팅 버퍼를 찾을 수 없습니다."),
+    CHAT_BUFFER_INVALID("채팅 버퍼의 값이 유효하지 않습니다"),
 
     // 타이핑 메시지 관련 에러
     TYPING_MESSAGE_ADD_FAIL("타이핑 메시지 추가에 실패했습니다"),
