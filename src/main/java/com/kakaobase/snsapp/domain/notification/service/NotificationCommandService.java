@@ -3,9 +3,9 @@ package com.kakaobase.snsapp.domain.notification.service;
 
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
-import com.kakaobase.snsapp.domain.notification.dto.records.NotificationData;
-import com.kakaobase.snsapp.domain.notification.dto.records.NotificationFetchData;
-import com.kakaobase.snsapp.domain.notification.dto.records.NotificationFollowingData;
+import com.kakaobase.snsapp.domain.notification.dto.records.ContentNotification;
+import com.kakaobase.snsapp.domain.notification.dto.records.FollowingNotificationData;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponse;
 import com.kakaobase.snsapp.domain.notification.entity.Notification;
 import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
 import com.kakaobase.snsapp.domain.notification.error.NotificationException;
@@ -78,27 +78,27 @@ public class NotificationCommandService {
 
     @Async
     public void sendNotification(Long receiverId, Long notifId, NotificationType type, String content, Long targetId, MemberResponseDto.UserInfo userInfo) {
-        WebSocketPacket<NotificationData> packet = notifConverter.toNewPacket(notifId, type, targetId, content, userInfo);
+        WebSocketPacket<ContentNotification> packet = notifConverter.toNewPacket(notifId, type, targetId, content, userInfo);
         simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), NOTIFY_SUBSCRIBE_PATH, packet);
     }
 
     @Async
     public void sendNotification(Long receiverId, Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo) {
-        WebSocketPacket<NotificationFollowingData> packet = notifConverter.toNewPacket(notifId, type, userInfo);
+        WebSocketPacket<FollowingNotificationData> packet = notifConverter.toNewPacket(notifId, type, userInfo);
         simpMessagingTemplate.convertAndSendToUser(receiverId.toString(), NOTIFY_SUBSCRIBE_PATH, packet);
     }
 
 
     @Transactional
-    public List<WebSocketPacket<?>> getAllNotificationsToUser(Long userId) {
-        log.info("사용자 {}의 모든 알림 조회 및 전송", userId);
+    public List<NotificationResponse> findNotificationsByUserId(Long userId, Integer limit) {
+        log.info("사용자 {}의 알림 조회 (limit: {})", userId, limit);
         
         try {
-            // 사용자의 모든 알림을 WebSocketPacket List로 조회
-            return notificationRepository.findAllNotificationsByUserId(userId);
+            // cursor 기반 페이지네이션으로 최신 알림 조회
+            return notificationRepository.findNotificationsByUserIdWithPagination(userId, limit, null);
 
         } catch (Exception e) {
-            log.error("사용자 {}의 모든 알림 전송 실패", userId, e);
+            log.error("사용자 {}의 알림 조회 실패", userId, e);
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
         }
     }
@@ -119,20 +119,6 @@ public class NotificationCommandService {
         }
     }
 
-    /**
-     * NotificationFetchData를 WebSocket으로 전송
-     */
-    @Async
-    public void sendNotificationFetchData(Long userId, WebSocketPacketImpl<NotificationFetchData> packet) {
-        try {
-            simpMessagingTemplate.convertAndSendToUser(userId.toString(), NOTIFY_SUBSCRIBE_PATH, packet);
-            log.info("사용자 {}에게 알림 데이터 전송 완료 (총 {}개, 읽지 않은 {}개)", 
-                    userId, packet.data.notifications().size(), packet.data.unread_count());
-        } catch (Exception e) {
-            log.error("사용자 {}에게 알림 데이터 전송 실패", userId, e);
-            throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
-        }
-    }
 
     @Async 
     void sendNotificationError(NotificationErrorCode errorCode, Long receiverId){

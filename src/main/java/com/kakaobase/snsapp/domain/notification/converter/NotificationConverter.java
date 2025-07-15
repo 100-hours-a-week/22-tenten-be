@@ -2,9 +2,10 @@ package com.kakaobase.snsapp.domain.notification.converter;
 
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationAckData;
-import com.kakaobase.snsapp.domain.notification.dto.records.NotificationData;
-import com.kakaobase.snsapp.domain.notification.dto.records.NotificationFollowingData;
+import com.kakaobase.snsapp.domain.notification.dto.records.ContentNotification;
+import com.kakaobase.snsapp.domain.notification.dto.records.FollowingNotificationData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationNackData;
+import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponse;
 import com.kakaobase.snsapp.domain.notification.entity.Notification;
 import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
@@ -32,9 +33,9 @@ public class NotificationConverter {
                 .build();
     }
 
-    public WebSocketPacket<NotificationData> toNewPacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfo userInfo){
+    public WebSocketPacket<ContentNotification> toNewPacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfo userInfo){
 
-        var data = NotificationData.builder()
+        var data = ContentNotification.builder()
                 .id(notifId)
                 .sender(userInfo)
                 .content(content)
@@ -46,9 +47,9 @@ public class NotificationConverter {
         return new WebSocketPacketImpl<>(type.getEvent(), data);
     }
 
-    public WebSocketPacket<NotificationFollowingData> toNewPacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo){
+    public WebSocketPacket<FollowingNotificationData> toNewPacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo){
 
-        var data = NotificationFollowingData.builder()
+        var data = FollowingNotificationData.builder()
                 .id(notifId)
                 .sender(userInfo)
                 .isRead(false)
@@ -59,9 +60,9 @@ public class NotificationConverter {
     }
 
     //기존 Notification을 Dto로 변환
-    public WebSocketPacket<NotificationFollowingData> toPacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo, LocalDateTime timestamp, Boolean isRead){
+    public WebSocketPacket<FollowingNotificationData> toPacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo, LocalDateTime timestamp, Boolean isRead){
 
-        var data = NotificationFollowingData.builder()
+        var data = FollowingNotificationData.builder()
                 .id(notifId)
                 .sender(userInfo)
                 .timestamp(timestamp)
@@ -72,9 +73,9 @@ public class NotificationConverter {
     }
 
 
-    public WebSocketPacket<NotificationData> toPacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfo userInfo, LocalDateTime timestamp, Boolean isRead){
+    public WebSocketPacket<ContentNotification> toPacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfo userInfo, LocalDateTime timestamp, Boolean isRead){
 
-        var data = NotificationData.builder()
+        var data = ContentNotification.builder()
                 .id(notifId)
                 .sender(userInfo)
                 .content(content)
@@ -84,6 +85,32 @@ public class NotificationConverter {
                 .build();
 
         return new WebSocketPacketImpl<>(type.getEvent(), data);
+    }
+
+    // NotificationResponse 타입으로 반환하는 메서드 
+    public WebSocketPacket<NotificationResponse> toNotificationResponsePacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfo userInfo, LocalDateTime timestamp, Boolean isRead){
+        var data = ContentNotification.builder()
+                .id(notifId)
+                .sender(userInfo)
+                .content(content)
+                .timestamp(timestamp)
+                .target_id(targetId)
+                .isRead(isRead)
+                .build();
+
+        return new WebSocketPacketImpl<>(type.getEvent(), (NotificationResponse) data);
+    }
+
+    // 팔로우 알림용 메서드 추가
+    public WebSocketPacket<NotificationResponse> toFollowingResponsePacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo, LocalDateTime timestamp, Boolean isRead){
+        var data = FollowingNotificationData.builder()
+                .id(notifId)
+                .sender(userInfo)
+                .timestamp(timestamp)
+                .isRead(isRead)
+                .build();
+
+        return new WebSocketPacketImpl<>(type.getEvent(), (NotificationResponse) data);
     }
 
     public WebSocketPacketImpl<NotificationAckData> toAckPacket(Long notifId, ResponseEnum responseEnum){

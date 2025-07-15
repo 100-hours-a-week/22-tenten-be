@@ -3,6 +3,7 @@ package com.kakaobase.snsapp.domain.notification.service;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
 import com.kakaobase.snsapp.domain.notification.dto.records.*;
+import com.kakaobase.snsapp.domain.notification.dto.response.NotificationFetchResponse;
 import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
 import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.util.InvalidNotificationCacheUtil;
@@ -10,6 +11,8 @@ import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.domain.notification.util.ResponseEnum;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
+import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
+import com.kakaobase.snsapp.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,53 @@ public class NotificationService {
     private final NotificationCommandService commandService;
     private final NotificationConverter notifConverter;
     private final InvalidNotificationCacheUtil invalidNotificationCacheUtil;
+
+    public NotificationFetchResponse getNotifList(Long memberId, int limit, Long cursor) {
+        if (limit < 1) {
+            throw new CustomException(GeneralErrorCode.INVALID_QUERY_PARAMETER, "limit", "limit는 1 이상이어야 합니다.");
+        }
+
+        try {
+            // 1. limit+10개 알림 조회 (hasNext 판단을 위해)
+            List<NotificationResponse> allNotifications = commandService.findNotificationsByUserId(memberId, limit + 10);
+            
+            // 2. cursor 기반 필터링 (cursor보다 작은 ID만)
+            List<NotificationResponse> filteredNotifications = allNotifications.stream()
+                .filter(notification -> cursor == null || notification.id() < cursor)
+                .toList();
+            
+            // 3. hasNext 판단 (limit+1개가 있는지 확인)
+            boolean hasNext = filteredNotifications.size() > limit;
+            
+            // 4. limit만큼 자르기
+            List<NotificationResponse> finalNotifications = filteredNotifications.stream()
+                .limit(limit)
+                .toList();
+            
+            // 5. unreadCount 계산 (최종 반환될 알림 중에서)
+            int unreadCount = (int) finalNotifications.stream()
+                .filter(notification -> !notification.isRead())
+                .count();
+            
+            // 6. NotificationFetchResponse 생성
+            NotificationFetchResponse response = NotificationFetchResponse.builder()
+                .event("notification.fetch")
+                .unreadCount(unreadCount)
+                .hasNext(hasNext)
+                .data(finalNotifications)
+                .build();
+                
+            log.info("사용자 {}의 알림 {}개 조회됨 (반환: {}개, 읽지 않은: {}개, hasNext: {})",
+                    memberId, allNotifications.size(), finalNotifications.size(), unreadCount, hasNext);
+                    
+            return response;
+
+        } catch (Exception e) {
+            log.error("사용자 {}의 알림 조회 중 오류 발생", memberId, e);
+            throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
+        }
+    }
+
 
     public void sendCommentCreatedNotification(Long receiverId, Long targetId, String content, MemberResponseDto.UserInfo userInfo, Long postId) {
         try{
@@ -109,89 +159,5 @@ public class NotificationService {
             log.error("에러 삭제 처리중 예외 발생 알림id: {}, 에러: {}", packet.data.id(), e.getMessage());
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL, packet.data.id());
         }
-
-    }
-
-    /**
-     * 사용자의 모든 알림을 WebSocket으로 전송
-     */
-    public void sendAllNotifications(Long userId) {
-        log.info("사용자 {}의 모든 알림 전송 시작", userId);
-        
-        try {
-            // 1. 알림 목록 조회
-            List<WebSocketPacket<?>> allNotifications = commandService.getAllNotificationsToUser(userId);
-
-            // 2. 필터링해서 NotificationFetchData 생성
-            NotificationFetchData fetchData = filterNotifications(allNotifications);
-
-            log.info("사용자 {}의 알림 {}개 조회됨 (유효한 알림: {}개, 읽지 않은 알림: {}개)",
-                    userId, allNotifications.size(),
-                    fetchData.notifications().size(),
-                    fetchData.unread_count());
-
-            WebSocketPacketImpl<NotificationFetchData> packet =
-                    new WebSocketPacketImpl<>(NotificationType.NOTIFICATION_FETCH.getEvent(), fetchData);
-
-            // 3. NotificationFetchData를 WebSocket으로 전송
-            commandService.sendNotificationFetchData(userId, packet);
-            
-            log.info("사용자 {}의 모든 알림 전송 완료", userId);
-        } catch (Exception e) {
-            log.error("사용자 {}의 모든 알림 전송 중 오류 발생", userId, e);
-            commandService.sendNotificationError(NotificationErrorCode.NOTIFICATION_FETCH_FAIL, userId);
-            throw new NotificationException(NotificationErrorCode.NOTIFICATION_FETCH_FAIL);
-        }
-    }
-
-    /**
-     * 알림 목록을 필터링하여 NotificationFetchData 생성
-     */
-    private NotificationFetchData filterNotifications(List<WebSocketPacket<?>> notifications) {
-        List<WebSocketPacket<?>> validNotifications = new ArrayList<>();
-        int unreadCount = 0;
-        int invalidCount = 0;
-        
-        for (WebSocketPacket<?> packet : notifications) {
-            boolean isValid = true;
-            Long notificationId = null;
-            boolean isRead = false;
-            
-            // sender가 null인 알림 필터링
-            if (packet.data instanceof NotificationData notificationData) {
-                notificationId = notificationData.id();
-                isRead = notificationData.isRead();
-                if (notificationData.sender() == null) {
-                    log.warn("무효한 알림 감지 - ID: {}, sender null", notificationId);
-                    isValid = false;
-                }
-            } else if (packet.data instanceof NotificationFollowingData followingData) {
-                notificationId = followingData.id();
-                isRead = followingData.isRead();
-                if (followingData.sender() == null) {
-                    log.warn("무효한 팔로우 알림 감지 - ID: {}, sender null", notificationId);
-                    isValid = false;
-                }
-            }
-            
-            if (isValid) {
-                validNotifications.add(packet);
-                // 읽지 않은 알림 개수 증가
-                if (!isRead) {
-                    unreadCount++;
-                }
-            } else if (notificationId != null) {
-                // Redis 캐시에 무효 알림 ID 추가 (스케줄러가 1시간마다 정리)
-                invalidNotificationCacheUtil.addInvalidNotificationId(notificationId);
-                invalidCount++;
-            }
-        }
-
-        // 무효한 알림 개수 로깅 (기존 즉시 삭제 로직 제거)
-        if (invalidCount > 0) {
-            log.info("무효한 알림 {}개를 Redis 캐시에 추가, 스케줄러가 1시간마다 정리", invalidCount);
-        }
-
-        return new NotificationFetchData(unreadCount, validNotifications);
     }
 }
