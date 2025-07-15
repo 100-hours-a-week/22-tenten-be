@@ -75,40 +75,42 @@ public class CommentService {
 
         // 대댓글인 경우
         if (request.parent_id() != null) {
-            // 1) 부모 댓글 존재 확인 및 전체 로드
-            Comment parentComment = commentRepository.findById(request.parent_id())
-                    .orElseThrow(() -> new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "parentId"));
 
-            // 2) 대댓글 엔티티 생성·저장
-            Recomment recomment = commentConverter.toRecommentEntity(parentComment, proxyMember, request);
+            // 1) 존재 여부 확인
+            if (!commentRepository.existsById(request.parent_id())) {
+                throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "parentId");
+            }
+            // 2) 프록시 로드
+            Comment proxyComment = em.getReference(Comment.class, request.parent_id());
+
+
+            // 3) INSERT 수행
+            Recomment recomment = commentConverter.toRecommentEntity(proxyComment, proxyMember, request);
             Recomment savedRecomment = recommentRepository.save(recomment);
 
-            //부모 댓글 대댓글 카운트 증가
-            try{
+            // 4) 예외 상황에서만 부모 댓글 카운트 직접 증가 (DML)
+            try {
                 commentCacheService.incrementCommentCount(request.parent_id());
-            } catch (CacheException e){
-                log.error(e.getMessage());
-                Comment comment = em.getReference(Comment.class, request.parent_id());
-                comment.increaseRecommentCount();
+            } catch (CacheException e) {
+                proxyComment.increaseRecommentCount();
             }
-
-            // 4) 원댓글 작성자에게 알림
-            if (!parentComment.getMember().getId().equals(memberId)) {
+            // 5) 알림
+            if (!proxyComment.getMember().getId().equals(memberId)) {
                 MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
                 notifService.sendRecommentCreatedNotification(
-                        parentComment.getMember().getId(),
+                        proxyComment.getMember().getId(),
                         savedRecomment.getId(),
                         request.content(),
                         userInfo,
-                        parentComment.getPost().getId()
+                        proxyComment.getPost().getId()
                 );
             }
 
-            // 5) BOT 후속 대댓글 트리거
-            Post post = parentComment.getPost();
-            if (post.getMember().getRole().equals("BOT")) {
-                log.info("🤖 [Trigger] BOT 작성 게시글에 유저 대댓글 → BOT 후속 대댓글 생성");
-                commentAsyncService.triggerAsync(post, parentComment);
+            // 6) BOT 트리거
+            Post post = proxyComment.getPost();
+            if (post.getMember().getRole().equals(Member.Role.BOT)) {
+                log.info("🤖 [Trigger] BOT 작성 게시글에 유저 대댓글 → BOT 후속 대댓글");
+                commentAsyncService.triggerAsync(post, proxyComment);
             }
 
             // 6) 응답 DTO 반환 (대댓글)
