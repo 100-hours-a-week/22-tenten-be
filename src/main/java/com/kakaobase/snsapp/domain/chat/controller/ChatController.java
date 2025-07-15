@@ -60,17 +60,44 @@ public class ChatController {
         userId = Long.valueOf(userDetails.getId());
         
         log.info("채팅 이벤트 수신: event={}, userId={}", event, userId);
+        log.debug("패킷 데이터 타입 확인: packet.data.class={}, packet.data={}", 
+            packet.data != null ? packet.data.getClass().getName() : "null", packet.data);
         
-        switch (event) {
-            case "chat.send" -> chatService.handleSendEvent(userId, (ChatData) packet.data);
-            case "chat.typing" -> handleChatTyping((SimpTimeData) packet.data, userId);
-            case "chat.stop" -> handleChatStop(userId, (StreamStopData) packet.data);
-            case "chat.stream.end.ack" -> handleChatStreamEndAck(userId, (StreamAckData) packet.data);
-            case "chat.stream.end.nack" -> handleChatStreamEndNack(userId, (StreamAckData) packet.data);
-            default -> {
-                log.warn("알 수 없는 채팅 이벤트: event={}, userId={}", event, userId);
-                throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
+        try {
+            switch (event) {
+                case "chat.send" -> {
+                    log.debug("chat.send 이벤트 처리 시작: userId={}", userId);
+                    chatService.handleSendEvent(userId, (ChatData) packet.data);
+                }
+                case "chat.typing" -> {
+                    log.debug("chat.typing 이벤트 처리 시작: userId={}, data={}", userId, packet.data);
+                    handleChatTyping((SimpTimeData) packet.data, userId);
+                }
+                case "chat.stop" -> {
+                    log.debug("chat.stop 이벤트 처리 시작: userId={}", userId);
+                    handleChatStop(userId, (StreamStopData) packet.data);
+                }
+                case "chat.stream.end.ack" -> {
+                    log.debug("chat.stream.end.ack 이벤트 처리 시작: userId={}", userId);
+                    handleChatStreamEndAck(userId, (StreamAckData) packet.data);
+                }
+                case "chat.stream.end.nack" -> {
+                    log.debug("chat.stream.end.nack 이벤트 처리 시작: userId={}", userId);
+                    handleChatStreamEndNack(userId, (StreamAckData) packet.data);
+                }
+                default -> {
+                    log.warn("알 수 없는 채팅 이벤트: event={}, userId={}", event, userId);
+                    throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
+                }
             }
+        } catch (ClassCastException e) {
+            log.error("타입 캐스팅 실패: event={}, userId={}, expectedType={}, actualType={}, error={}", 
+                event, userId, event,
+                packet.data != null ? packet.data.getClass().getName() : "null", e.getMessage(), e);
+            throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
+        } catch (Exception e) {
+            log.error("이벤트 처리 중 예외 발생: event={}, userId={}, error={}", event, userId, e.getMessage(), e);
+            throw e;
         }
     }
 
