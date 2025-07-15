@@ -23,7 +23,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api")
+@RequestMapping("")
 @Tag(name = "댓글 API", description = "게시글 댓글 관련 API")
 public class CommentController {
 
