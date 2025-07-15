@@ -36,6 +36,7 @@ public class NotificationConverter {
     public WebSocketPacket<ContentNotification> toNewPacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfo userInfo){
 
         var data = ContentNotification.builder()
+                .event(type.getEvent())
                 .id(notifId)
                 .sender(userInfo)
                 .content(content)
@@ -50,6 +51,7 @@ public class NotificationConverter {
     public WebSocketPacket<FollowingNotificationData> toNewPacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo){
 
         var data = FollowingNotificationData.builder()
+                .event(type.getEvent())
                 .id(notifId)
                 .sender(userInfo)
                 .isRead(false)
@@ -63,6 +65,7 @@ public class NotificationConverter {
     public WebSocketPacket<FollowingNotificationData> toPacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo, LocalDateTime timestamp, Boolean isRead){
 
         var data = FollowingNotificationData.builder()
+                .event(type.getEvent())
                 .id(notifId)
                 .sender(userInfo)
                 .timestamp(timestamp)
@@ -76,6 +79,7 @@ public class NotificationConverter {
     public WebSocketPacket<ContentNotification> toPacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfo userInfo, LocalDateTime timestamp, Boolean isRead){
 
         var data = ContentNotification.builder()
+                .event(type.getEvent())
                 .id(notifId)
                 .sender(userInfo)
                 .content(content)
@@ -90,6 +94,7 @@ public class NotificationConverter {
     // NotificationResponse 타입으로 반환하는 메서드 
     public WebSocketPacket<NotificationResponse> toNotificationResponsePacket(Long notifId, NotificationType type, Long targetId, String content, MemberResponseDto.UserInfo userInfo, LocalDateTime timestamp, Boolean isRead){
         var data = ContentNotification.builder()
+                .event(type.getEvent())
                 .id(notifId)
                 .sender(userInfo)
                 .content(content)
@@ -104,6 +109,7 @@ public class NotificationConverter {
     // 팔로우 알림용 메서드 추가
     public WebSocketPacket<NotificationResponse> toFollowingResponsePacket(Long notifId, NotificationType type, MemberResponseDto.UserInfoWithFollowing userInfo, LocalDateTime timestamp, Boolean isRead){
         var data = FollowingNotificationData.builder()
+                .event(type.getEvent())
                 .id(notifId)
                 .sender(userInfo)
                 .timestamp(timestamp)

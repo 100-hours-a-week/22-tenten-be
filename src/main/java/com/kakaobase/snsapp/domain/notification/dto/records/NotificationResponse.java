@@ -10,7 +10,9 @@ import java.time.LocalDateTime;
  */
 public sealed interface NotificationResponse 
     permits ContentNotification, FollowingNotificationData {
-    
+
+    String event();
+
     /**
      * 알림 고유 ID
      */

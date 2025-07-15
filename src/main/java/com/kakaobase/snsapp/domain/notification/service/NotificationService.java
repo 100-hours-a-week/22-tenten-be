@@ -58,10 +58,9 @@ public class NotificationService {
             
             // 6. NotificationFetchResponse 생성
             NotificationFetchResponse response = NotificationFetchResponse.builder()
-                .event("notification.fetch")
                 .unreadCount(unreadCount)
                 .hasNext(hasNext)
-                .data(finalNotifications)
+                .notifications(finalNotifications)
                 .build();
                 
             log.info("사용자 {}의 알림 {}개 조회됨 (반환: {}개, 읽지 않은: {}개, hasNext: {})",
