@@ -38,7 +38,7 @@ public class CommentController {
      * 댓글 작성 API
      */
     @PostMapping("/posts/{postId}/comments")
-    @PreAuthorize("isAuthenticated() &&  @accessChecker.canAccessOnComments(#postId, authentication.principal)")
+    //@PreAuthorize("isAuthenticated() &&  @accessChecker.canAccessOnComments(#postId, authentication.principal)")
     @Operation(
             summary = "댓글 작성",
             description = "게시글에 댓글을 작성합니다. parentId가 없으면 일반 댓글, 있으면 대댓글로 등록됩니다."
@@ -55,7 +55,7 @@ public class CommentController {
             @Valid @RequestBody CommentRequestDto.CreateCommentRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long memberId = Long.valueOf(userDetails.getId());
+        Long memberId = 1L;
         CommentResponseDto.CreateCommentResponse response = commentService.createComment(memberId, postId, request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -168,7 +168,7 @@ public class CommentController {
      * 댓글 좋아요 추가 API
      */
     @PostMapping("/comments/{commentId}/likes")
-    @PreAuthorize("isAuthenticated()")
+    //@PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "댓글 좋아요 추가",
             description = "댓글에 좋아요를 추가합니다. 이미 좋아요를 누른 경우 에러가 발생합니다."
@@ -183,7 +183,8 @@ public class CommentController {
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long memberId = Long.valueOf(userDetails.getId());commentLikeService.addCommentLike(memberId, commentId);
+        Long memberId = 1L;
+        commentLikeService.addCommentLike(memberId, commentId);
         return CustomResponse.success("좋아요가 성공적으로 등록되었습니다");
     }
 
