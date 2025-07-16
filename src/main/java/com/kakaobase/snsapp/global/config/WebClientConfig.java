@@ -100,10 +100,11 @@ public class WebClientConfig {
     public WebClient aiServerWebClient() {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
-                .responseTimeout(Duration.ofMillis(30000))
+                .responseTimeout(Duration.ZERO)  // 무한 대기
                 .doOnConnected(connection ->
-                        connection.addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
-                                  .addHandlerLast(new WriteTimeoutHandler(10, TimeUnit.SECONDS)))
+                        connection.addHandlerLast(new WriteTimeoutHandler(10, TimeUnit.SECONDS))
+                        // ReadTimeoutHandler 제거 - SSE 스트림 무한 대기
+                )
                 .keepAlive(true)
                 .compress(true);
 
