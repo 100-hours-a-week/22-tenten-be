@@ -40,7 +40,7 @@ public class AiServerHttpClient {
     @Value("${ai.server.url}")
     private String aiServerUrl;
     
-    @Value("${ai.server.chat.endpoint:/api/ai/chat/stream}")
+    @Value("${ai.server.chat.endpoint:/chat}")
     private String aiChatEndpoint;
     
     // 타임아웃 설정
@@ -86,6 +86,7 @@ public class AiServerHttpClient {
         } catch (Exception e) {
             handleError(streamId, userId, e);
         }
+
     }
     
     /**
