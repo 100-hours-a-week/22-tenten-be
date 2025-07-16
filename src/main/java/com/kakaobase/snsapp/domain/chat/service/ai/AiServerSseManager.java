@@ -15,7 +15,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -112,7 +111,7 @@ public class AiServerSseManager {
         
         try {
             sseSubscription = webFluxClient.get()
-                    .uri(aiServerUrl + "/stream")
+                    .uri(aiServerUrl + "/chat/stream")
                     .accept(MediaType.TEXT_EVENT_STREAM)
                     .retrieve()
                     .bodyToFlux(ServerSentEvent.class)
