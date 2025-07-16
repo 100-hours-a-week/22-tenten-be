@@ -141,6 +141,11 @@ public class AiServerSseManager {
     private void processSseEvent(ServerSentEvent<String> sse) {
         try {
             String event = sse.event() != null ? sse.event() : "stream";
+            
+            // 데이터 타입 확인 로그 추가
+            Object rawData = sse.data();
+            log.info("SSE 데이터 타입 확인: type={}, data={}", rawData != null ? rawData.getClass().getName() : "null", rawData);
+            
             String jsonData = sse.data();
             
             if (jsonData == null || jsonData.trim().isEmpty()) {
@@ -150,8 +155,8 @@ public class AiServerSseManager {
             
             log.debug("SSE 이벤트 수신: event={}, data={}", event, jsonData);
             
-            // JSON → AiStreamData 자동 파싱
-            AiStreamData streamData = objectMapper.readValue(jsonData, AiStreamData.class);
+            // 타입에 따른 적응형 파싱
+            AiStreamData streamData = parseToAiStreamData(rawData);
             
             // StreamId 유효성 검증
             if (streamData.streamId() == null || streamData.streamId().isBlank()) {
@@ -180,6 +185,38 @@ public class AiServerSseManager {
         }
     }
     
+    
+    /**
+     * SSE 데이터를 AiStreamData로 파싱 (String과 Object 모두 지원)
+     */
+    private AiStreamData parseToAiStreamData(Object rawData) {
+        try {
+            if (rawData == null) {
+                throw new IllegalArgumentException("SSE 데이터가 null입니다");
+            }
+            
+            // String 타입인 경우 - JSON 파싱
+            if (rawData instanceof String jsonString) {
+                log.debug("JSON 문자열 파싱: {}", jsonString);
+                return objectMapper.readValue(jsonString, AiStreamData.class);
+            }
+            
+            // 이미 파싱된 객체인 경우 - 직접 변환
+            if (rawData instanceof java.util.Map<?, ?> dataMap) {
+                log.debug("Map 객체 직접 변환: {}", dataMap);
+                return objectMapper.convertValue(dataMap, AiStreamData.class);
+            }
+            
+            // 기타 타입인 경우 - 일반 객체 변환 시도
+            log.debug("기타 타입 변환 시도: type={}, data={}", rawData.getClass().getName(), rawData);
+            return objectMapper.convertValue(rawData, AiStreamData.class);
+            
+        } catch (Exception e) {
+            log.error("SSE 데이터 파싱 실패: type={}, data={}, error={}", 
+                rawData.getClass().getName(), rawData, e.getMessage(), e);
+            throw new RuntimeException("SSE 데이터 파싱 실패", e);
+        }
+    }
     
     /**
      * SSE 연결 종료
