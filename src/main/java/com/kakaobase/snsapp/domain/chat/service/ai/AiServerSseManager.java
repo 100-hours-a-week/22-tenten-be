@@ -47,7 +47,7 @@ public class AiServerSseManager {
     @Value("${ai.server.url}")
     private String aiServerUrl;
     
-    @Value("${ai.server.health-endpoint:/health}")
+    @Value("${ai.server.health-endpoint:/docs}")
     private String healthEndpoint;
     
     @Qualifier("webFluxClient")
