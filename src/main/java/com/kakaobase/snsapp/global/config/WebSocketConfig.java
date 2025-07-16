@@ -50,8 +50,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOrigins(
                         "https://*.kakaobase.com",
                         "https://localhost:3000")
-                .addInterceptors(jwtWebSocketHandshakeInterceptor)
-                .withSockJS()
-                .setSessionCookieNeeded(true);
+                .addInterceptors(jwtWebSocketHandshakeInterceptor);
+                //.withSockJS()
+                //.setSessionCookieNeeded(true);
     }
 }

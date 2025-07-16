@@ -1,8 +1,6 @@
 package com.kakaobase.snsapp.domain.chat.service;
 
 import com.kakaobase.snsapp.domain.auth.principal.CustomUserDetails;
-import com.kakaobase.snsapp.domain.chat.converter.ChatConverter;
-import com.kakaobase.snsapp.domain.chat.dto.SimpTimeData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
 import com.kakaobase.snsapp.domain.chat.dto.request.StreamAckData;
 import com.kakaobase.snsapp.domain.chat.dto.request.StreamStopData;
@@ -15,10 +13,9 @@ import com.kakaobase.snsapp.domain.chat.util.ChatBufferCacheUtil;
 import com.kakaobase.snsapp.domain.chat.service.ai.AiServerSseManager;
 import com.kakaobase.snsapp.domain.chat.service.ai.AiServerHttpClient;
 import com.kakaobase.snsapp.domain.chat.service.streaming.StreamingSessionManager;
-import com.kakaobase.snsapp.domain.chat.service.streaming.ChatTimerManager;
+import com.kakaobase.snsapp.domain.chat.service.streaming.ChatBufferManager;
 import com.kakaobase.snsapp.domain.chat.service.communication.ChatCommandService;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,7 +33,7 @@ public class ChatService {
     private final ChatCommandService chatCommandService;
     private final ChatBufferCacheUtil cacheUtil;
     private final StreamingSessionManager streamingSessionManager;
-    private final ChatTimerManager chatTimerManager;
+    private final ChatBufferManager chatBufferManager;
     private final AiServerSseManager aiServerSseManager;
     private final AiServerHttpClient aiServerHttpClient;
 
@@ -45,7 +42,7 @@ public class ChatService {
     /**
      * 봇과의 채팅 목록 조회
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public ChatList getChatMessages(CustomUserDetails userDetails, Integer limit, Long cursor) {
         Long userId = Long.valueOf(userDetails.getId());
         log.info("봇과의 채팅 목록 조회: userId={}", userId);
@@ -74,8 +71,8 @@ public class ChatService {
             // Redis TTL 연장
             cacheUtil.extendTTL(userId);
             
-            // AI 서버 전송 타이머 리셋 (1초)
-            chatTimerManager.resetTimer(userId);
+            // AI 서버 전송 타이머 리셋 (3초 + 1초)
+            chatBufferManager.resetTimerWithDelayedLoading(userId);
             
             log.debug("타이핑 이벤트 처리 완료: userId={}", userId);
 
@@ -98,19 +95,12 @@ public class ChatService {
 
             // DB에 사용자 메시지 저장
             chatCommandService.saveChatMessage(userId, message);
-            
-            // AI 서버 상태 확인
-            if (aiServerSseManager.getHealthStatus().isDisconnected()) {
-                log.warn("AI 서버 연결 상태 불량으로 메시지 처리 중단: userId={}, status={}", 
-                    userId, aiServerSseManager.getHealthStatus());
-                throw new ChatException(ChatErrorCode.AI_SERVER_CONNECTION_FAIL, userId);
-            }
 
             // 버퍼에 메시지 추가
             cacheUtil.appendMessage(userId, message);
             
-            // AI 서버 전송 타이머 리셋 (1초)
-            chatTimerManager.resetTimer(userId);
+            // AI 서버 전송 타이머 리셋 (3초 + 1초)
+            chatBufferManager.resetTimerWithDelayedLoading(userId);
             
             log.debug("채팅 메시지 추가 완룀: userId={}", userId);
 
