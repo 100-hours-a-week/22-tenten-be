@@ -79,7 +79,7 @@ ai:
     read-timeout: 30000
     write-timeout: 10000
     stream-endpoint: "/chat/stream"
-    health-endpoint: "/health"
+    health-endpoint: "/docs"
 
 chat:
   message:
