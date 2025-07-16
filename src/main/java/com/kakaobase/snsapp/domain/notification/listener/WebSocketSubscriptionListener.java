@@ -30,15 +30,9 @@ public class WebSocketSubscriptionListener {
         
         // 알림 큐 구독시 해당 사용자의 모든 알림 전송
         if (destination != null && destination.equals("/user/queue/notification")) {
-            log.info("알림 큐 구독 감지 - 모든 알림 전송 시작: 사용자 {}", userId);
-            
-            try {
-                // 사용자의 모든 알림 전송 (읽음/안읽음 상관없이)
-                notificationService.sendAllNotifications(Long.valueOf(userId));
-                log.info("모든 알림 전송 완료: 사용자 {}", userId);
-            } catch (Exception e) {
-                log.error("모든 알림 전송 실패: 사용자 {}, 에러: {}", userId, e.getMessage(), e);
-            }
+            log.info("알림 큐 구독 감지 - HTTP API로 대체됨: 사용자 {}", userId);
+            // TODO: WebSocket 기반 자동 알림 전송은 HTTP API로 대체되었습니다.
+            // 클라이언트는 GET /api/users/notifications 엔드포인트를 사용해야 합니다.
         }
     }
 }
