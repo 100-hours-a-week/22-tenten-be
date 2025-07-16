@@ -23,6 +23,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import java.security.Principal;
 import org.springframework.messaging.simp.annotation.SendToUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -49,56 +50,61 @@ public class ChatController {
         return CustomResponse.success("채팅 조회에 성공하였습니다.", result);
     }
 
+    /**
+     * Principal에서 userId 추출하는 공통 유틸 메서드
+     */
+    private Long extractUserId(Principal principal) {
+        if (principal instanceof UsernamePasswordAuthenticationToken token && 
+            token.getPrincipal() instanceof CustomUserDetails userDetails) {
+            return Long.valueOf(userDetails.getId());
+        } else {
+            throw new ChatException(ChatErrorCode.USER_NOT_FOUND, null);
+        }
+    }
 
-    @MessageMapping("/chat")
-    public void handleChatSend(@Payload WebSocketPacket<?> packet, Principal principal) {
-        String event = packet.event;
-        Long userId;
-        if (!(principal instanceof CustomUserDetails userDetails)) {
-            throw new ChatException(ChatErrorCode.CHAT_INVALID, null);
-        }
-        userId = Long.valueOf(userDetails.getId());
+    @MessageMapping("/chat.send")
+    public void handleChatSend(@Payload WebSocketPacket<ChatData> packet, Principal principal) {
+        Long userId = extractUserId(principal);
+        log.info("채팅 전송 이벤트 수신: userId={}", userId);
+        log.debug("chat.send 이벤트 처리 시작: userId={}, data={}", userId, packet.data);
         
-        log.info("채팅 이벤트 수신: event={}, userId={}", event, userId);
-        log.debug("패킷 데이터 타입 확인: packet.data.class={}, packet.data={}", 
-            packet.data != null ? packet.data.getClass().getName() : "null", packet.data);
+        chatService.handleSendEvent(userId, packet.data);
+    }
+
+    @MessageMapping("/chat.typing") 
+    public void handleChatTyping(@Payload WebSocketPacket<SimpTimeData> packet, Principal principal) {
+        Long userId = extractUserId(principal);
+        log.info("타이핑 이벤트 수신: userId={}", userId);
+        log.debug("chat.typing 이벤트 처리 시작: userId={}, data={}", userId, packet.data);
         
-        try {
-            switch (event) {
-                case "chat.send" -> {
-                    log.debug("chat.send 이벤트 처리 시작: userId={}", userId);
-                    chatService.handleSendEvent(userId, (ChatData) packet.data);
-                }
-                case "chat.typing" -> {
-                    log.debug("chat.typing 이벤트 처리 시작: userId={}, data={}", userId, packet.data);
-                    handleChatTyping((SimpTimeData) packet.data, userId);
-                }
-                case "chat.stop" -> {
-                    log.debug("chat.stop 이벤트 처리 시작: userId={}", userId);
-                    handleChatStop(userId, (StreamStopData) packet.data);
-                }
-                case "chat.stream.end.ack" -> {
-                    log.debug("chat.stream.end.ack 이벤트 처리 시작: userId={}", userId);
-                    handleChatStreamEndAck(userId, (StreamAckData) packet.data);
-                }
-                case "chat.stream.end.nack" -> {
-                    log.debug("chat.stream.end.nack 이벤트 처리 시작: userId={}", userId);
-                    handleChatStreamEndNack(userId, (StreamAckData) packet.data);
-                }
-                default -> {
-                    log.warn("알 수 없는 채팅 이벤트: event={}, userId={}", event, userId);
-                    throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
-                }
-            }
-        } catch (ClassCastException e) {
-            log.error("타입 캐스팅 실패: event={}, userId={}, expectedType={}, actualType={}, error={}", 
-                event, userId, event,
-                packet.data != null ? packet.data.getClass().getName() : "null", e.getMessage(), e);
-            throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
-        } catch (Exception e) {
-            log.error("이벤트 처리 중 예외 발생: event={}, userId={}, error={}", event, userId, e.getMessage(), e);
-            throw e;
-        }
+        handleChatTyping(packet.data, userId);
+    }
+
+    @MessageMapping("/chat.stop")
+    public void handleChatStop(@Payload WebSocketPacket<StreamStopData> packet, Principal principal) {
+        Long userId = extractUserId(principal);
+        log.info("채팅 중지 이벤트 수신: userId={}", userId);
+        log.debug("chat.stop 이벤트 처리 시작: userId={}, data={}", userId, packet.data);
+        
+        handleChatStop(userId, packet.data);
+    }
+
+    @MessageMapping("/chat.stream.end.ack")
+    public void handleStreamEndAck(@Payload WebSocketPacket<StreamAckData> packet, Principal principal) {
+        Long userId = extractUserId(principal);
+        log.info("스트림 종료 ACK 이벤트 수신: userId={}", userId);
+        log.debug("chat.stream.end.ack 이벤트 처리 시작: userId={}, data={}", userId, packet.data);
+        
+        handleChatStreamEndAck(userId, packet.data);
+    }
+
+    @MessageMapping("/chat.stream.end.nack")
+    public void handleStreamEndNack(@Payload WebSocketPacket<StreamAckData> packet, Principal principal) {
+        Long userId = extractUserId(principal);
+        log.info("스트림 종료 NACK 이벤트 수신: userId={}", userId);
+        log.debug("chat.stream.end.nack 이벤트 처리 시작: userId={}, data={}", userId, packet.data);
+        
+        handleChatStreamEndNack(userId, packet.data);
     }
 
 
