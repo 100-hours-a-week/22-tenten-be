@@ -17,10 +17,8 @@ public record ChatBlockData(
         String nickname,
         @JsonProperty("class_name")
         String className,
-        @JsonProperty("content")
-        String content,
+        @JsonProperty("message")
+        String message,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
-        LocalDateTime timestamp,
-        @JsonProperty("is_read")
-        Boolean isRead
+        LocalDateTime timestamp
 ) {}
