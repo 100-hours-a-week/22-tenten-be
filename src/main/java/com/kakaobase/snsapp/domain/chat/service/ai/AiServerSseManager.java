@@ -120,13 +120,27 @@ public class AiServerSseManager {
                         setHealthStatus(AiServerHealthStatus.CONNECTED);
                     })
                     .doOnError(error -> {
-                        log.error("AI 서버 SSE 연결 에러: {}", error.getMessage(), error);
-                        setHealthStatus(AiServerHealthStatus.DISCONNECTED);
-                        retryConnection();
+                        // 연결 성공 후 ReadTimeout은 정상 동작
+                        if (error instanceof java.util.concurrent.TimeoutException && 
+                            healthStatus.get() == AiServerHealthStatus.CONNECTED) {
+                            log.debug("SSE 연결 유지 중 Timeout (정상): {}", error.getMessage());
+                        } else {
+                            log.error("AI 서버 SSE 연결 에러: {}", error.getMessage(), error);
+                            setHealthStatus(AiServerHealthStatus.DISCONNECTED);
+                            retryConnection();
+                        }
                     })
                     .subscribe(
                         sse -> processSseEvent(sse),
-                        error -> handleConnectionError(error)
+                        error -> {
+                            // 연결 성공 후 ReadTimeout은 정상 동작
+                            if (error instanceof java.util.concurrent.TimeoutException && 
+                                healthStatus.get() == AiServerHealthStatus.CONNECTED) {
+                                log.debug("SSE 구독 중 Timeout (정상): {}", error.getMessage());
+                            } else {
+                                handleConnectionError(error);
+                            }
+                        }
                     );
         } catch (Exception e) {
             log.error("SSE 연결 설정 실패: {}", e.getMessage(), e);
@@ -146,16 +160,20 @@ public class AiServerSseManager {
             Object rawData = sse.data();
             log.info("SSE 데이터 타입 확인: type={}, data={}", rawData != null ? rawData.getClass().getName() : "null", rawData);
             
-            String jsonData = sse.data();
-            
-            if (jsonData == null || jsonData.trim().isEmpty()) {
+            if (rawData == null) {
                 log.warn("빈 SSE 데이터 수신: event={}", event);
                 return;
             }
             
-            log.debug("SSE 이벤트 수신: event={}, data={}", event, jsonData);
+            // 연결 확인 메시지 처리
+            if (isConnectionMessage(rawData)) {
+                handleConnectionMessage(rawData);
+                return;
+            }
             
-            // 타입에 따른 적응형 파싱
+            log.debug("SSE 이벤트 수신: event={}, data={}", event, rawData);
+            
+            // 스트림 데이터 파싱
             AiStreamData streamData = parseToAiStreamData(rawData);
             
             // StreamId 유효성 검증
@@ -185,6 +203,32 @@ public class AiServerSseManager {
         }
     }
     
+    
+    /**
+     * 연결 확인 메시지인지 판단
+     */
+    private boolean isConnectionMessage(Object rawData) {
+        if (rawData instanceof java.util.Map<?, ?> map) {
+            // message만 있고 stream_id가 없으면 연결 확인 메시지
+            return map.containsKey("message") && !map.containsKey("stream_id");
+        }
+        return false;
+    }
+    
+    /**
+     * 연결 확인 메시지 처리
+     */
+    private void handleConnectionMessage(Object rawData) {
+        if (rawData instanceof java.util.Map<?, ?> map) {
+            String message = (String) map.get("message");
+            log.info("SSE 연결 확인 메시지 수신: {}", message);
+            
+            // 연결이 완료되었음을 확인
+            if (healthStatus.get() != AiServerHealthStatus.CONNECTED) {
+                setHealthStatus(AiServerHealthStatus.CONNECTED);
+            }
+        }
+    }
     
     /**
      * SSE 데이터를 AiStreamData로 파싱 (String과 Object 모두 지원)
