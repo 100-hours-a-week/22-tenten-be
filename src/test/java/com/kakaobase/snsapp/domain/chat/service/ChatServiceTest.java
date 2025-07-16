@@ -9,7 +9,6 @@ import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
 import com.kakaobase.snsapp.domain.chat.dto.request.StreamStopData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatList;
 import com.kakaobase.snsapp.domain.chat.entity.ChatMessage;
-import com.kakaobase.snsapp.domain.chat.entity.ChatRoom;
 import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import com.kakaobase.snsapp.domain.chat.repository.ChatMessageRepository;
@@ -17,7 +16,7 @@ import com.kakaobase.snsapp.domain.chat.repository.ChatRoomMemberRepository;
 import com.kakaobase.snsapp.domain.chat.service.ai.AiServerHttpClient;
 import com.kakaobase.snsapp.domain.chat.service.ai.AiServerSseManager;
 import com.kakaobase.snsapp.domain.chat.service.communication.ChatCommandService;
-import com.kakaobase.snsapp.domain.chat.service.streaming.ChatTimerManager;
+import com.kakaobase.snsapp.domain.chat.service.streaming.ChatBufferManager;
 import com.kakaobase.snsapp.domain.chat.service.streaming.StreamingSessionManager;
 import com.kakaobase.snsapp.domain.chat.util.ChatBufferCacheUtil;
 import com.kakaobase.snsapp.domain.chat.util.AiServerHealthStatus;
@@ -78,7 +77,7 @@ class ChatServiceTest {
     private StreamingSessionManager streamingSessionManager;
     
     @Mock
-    private ChatTimerManager chatTimerManager;
+    private ChatBufferManager chatBufferManager;
     
     @Mock
     private AiServerSseManager aiServerSseManager;
@@ -176,14 +175,14 @@ class ChatServiceTest {
         Long userId = 1L;
         
         doNothing().when(cacheUtil).extendTTL(userId);
-        doNothing().when(chatTimerManager).resetTimer(userId);
+        doNothing().when(chatBufferManager).resetTimer(userId);
         
         // when & then
         assertThatCode(() -> chatService.handleTypingEvent(userId))
             .doesNotThrowAnyException();
         
         verify(cacheUtil).extendTTL(userId);
-        verify(chatTimerManager).resetTimer(userId);
+        verify(chatBufferManager).resetTimer(userId);
     }
     
     @Test
@@ -209,7 +208,7 @@ class ChatServiceTest {
         
         doNothing().when(cacheUtil).extendTTL(userId);
         doThrow(new RuntimeException("타이머 관리 실패"))
-            .when(chatTimerManager).resetTimer(userId);
+            .when(chatBufferManager).resetTimer(userId);
         
         // when & then
         assertThatThrownBy(() -> chatService.handleTypingEvent(userId))
@@ -230,7 +229,7 @@ class ChatServiceTest {
         doNothing().when(chatCommandService).saveChatMessage(userId, chatData.content());
         given(aiServerSseManager.getHealthStatus()).willReturn(healthStatus);
         doNothing().when(cacheUtil).appendMessage(userId, chatData.content());
-        doNothing().when(chatTimerManager).resetTimer(userId);
+        doNothing().when(chatBufferManager).resetTimer(userId);
         
         // when & then
         assertThatCode(() -> chatService.handleSendEvent(userId, chatData))
@@ -238,7 +237,7 @@ class ChatServiceTest {
         
         verify(chatCommandService).saveChatMessage(userId, chatData.content());
         verify(cacheUtil).appendMessage(userId, chatData.content());
-        verify(chatTimerManager).resetTimer(userId);
+        verify(chatBufferManager).resetTimer(userId);
     }
     
     @ParameterizedTest
@@ -426,7 +425,7 @@ class ChatServiceTest {
         doNothing().when(chatCommandService).saveChatMessage(userId, chatData.content());
         given(aiServerSseManager.getHealthStatus()).willReturn(healthStatus);
         doNothing().when(cacheUtil).appendMessage(userId, chatData.content());
-        doNothing().when(chatTimerManager).resetTimer(userId);
+        doNothing().when(chatBufferManager).resetTimer(userId);
         
         // when
         ChatList chatList = chatService.getChatMessages(userDetails, 40, null);

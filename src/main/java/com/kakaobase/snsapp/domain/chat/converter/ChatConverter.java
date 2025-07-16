@@ -1,5 +1,6 @@
 package com.kakaobase.snsapp.domain.chat.converter;
 
+import com.kakaobase.snsapp.domain.chat.dto.ai.request.ChatBlockData;
 import com.kakaobase.snsapp.domain.chat.dto.request.ChatData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatErrorData;
 import com.kakaobase.snsapp.domain.chat.dto.response.ChatItemDto;
@@ -37,20 +38,8 @@ public class ChatConverter {
                 .build();
     }
 
-    /**
-     * Request ChatData DTO를 ChatMessage Entity로 변환
-     */
-    public ChatMessage toChatMessage(ChatData requestData, Member sender, ChatRoom chatRoom) {
-        return ChatMessage.builder()
-                .content(requestData.content())
-                .isRead(false) // 새 메시지는 기본적으로 읽지 않음
-                .member(sender)
-                .chatRoom(chatRoom)
-                .build();
-    }
 
     public ChatMessage toChatMessage(Long senderId, String content) {
-        validateContent(content, senderId);
         
         ChatRoom chatRoom = em.getReference(ChatRoom.class, senderId);
         Member sender = em.getReference(Member.class, senderId);
@@ -67,7 +56,6 @@ public class ChatConverter {
      * AI 봇 메시지 생성을 위한 헬퍼 메서드
      */
     public ChatMessage toBotMessage(Long userId, String content) {
-        validateContent(content, userId);
         
         ChatRoom chatRoom = em.getReference(ChatRoom.class, userId);
         Member botMember = em.getReference(Member.class, BotConstants.BOT_MEMBER_ID);
@@ -110,17 +98,16 @@ public class ChatConverter {
         return new WebSocketPacketImpl<>(errorEnum.getEvent(), errorData);
     }
 
-    /**
-     * 메시지 내용 유효성 검증
-     * 
-     * @param content 검증할 메시지 내용
-     * @param userId 사용자 ID (예외 발생 시 사용)
-     * @throws ChatException content가 null이거나 비어있을 때
-     */
-    private void validateContent(String content, Long userId) {
-        if (content == null || content.trim().isEmpty()) {
-            throw new ChatException(ChatErrorCode.CHAT_INVALID, userId);
-        }
+    public ChatBlockData toChatBlockData(String streamId, String content, Member member) {
+        return ChatBlockData.builder()
+                .streamId(streamId)
+                .nickname(member.getNickname())
+                .userId(member.getId())
+                .className(member.getClassName())
+                .content(content)
+                .timestamp(LocalDateTime.now())
+                .isRead(false)
+                .build();
     }
 
 }

@@ -32,7 +32,7 @@ import org.mockito.ArgumentCaptor;
  */
 @ServiceTest
 @DisplayName("ChatTimerManager 단위 테스트")
-class ChatTimerManagerTest {
+class ChatBufferManagerTest {
     
     @Mock
     private ChatBufferManager chatBufferManager;
@@ -44,12 +44,12 @@ class ChatTimerManagerTest {
     private ScheduledFuture<Void> mockFuture;
     
     @InjectMocks
-    private ChatTimerManager chatTimerManager;
+    private ChatBufferManager chatBufferManager;
     
     @BeforeEach
     void setUp() {
         // Mock 스케줄러 주입
-        ReflectionTestUtils.setField(chatTimerManager, "scheduler", mockScheduler);
+        ReflectionTestUtils.setField(chatBufferManager, "scheduler", mockScheduler);
         
         // 기본 Mock 동작 설정 - 명시적 타입 캐스팅
         when(mockScheduler.schedule(any(Runnable.class), anyLong(), any(TimeUnit.class)))
@@ -66,7 +66,7 @@ class ChatTimerManagerTest {
         Long userId = 1L;
         
         // when
-        chatTimerManager.resetTimer(userId);
+        chatBufferManager.resetTimer(userId);
         
         // then
         verify(mockScheduler).schedule(any(Runnable.class), eq(1L), eq(TimeUnit.SECONDS));
@@ -86,10 +86,10 @@ class ChatTimerManagerTest {
         given(firstMockFuture.isCancelled()).willReturn(false);
         
         // when - 첫 번째 타이머 설정
-        chatTimerManager.resetTimer(userId);
+        chatBufferManager.resetTimer(userId);
         
         // when - 두 번째 타이머로 교체
-        chatTimerManager.resetTimer(userId);
+        chatBufferManager.resetTimer(userId);
         
         // then
         verify(mockScheduler, times(2)).schedule(any(Runnable.class), eq(1L), eq(TimeUnit.SECONDS));
@@ -101,7 +101,7 @@ class ChatTimerManagerTest {
     @DisplayName("다양한 사용자 ID로 타이머 리셋")
     void resetTimer_VariousUserIds(Long userId) {
         // when
-        chatTimerManager.resetTimer(userId);
+        chatBufferManager.resetTimer(userId);
         
         // then
         verify(mockScheduler).schedule(any(Runnable.class), eq(1L), eq(TimeUnit.SECONDS));
@@ -120,10 +120,10 @@ class ChatTimerManagerTest {
         given(activeFuture.isCancelled()).willReturn(false);
         
         // 타이머 먼저 설정
-        chatTimerManager.resetTimer(userId);
+        chatBufferManager.resetTimer(userId);
         
         // when
-        chatTimerManager.cancelTimer(userId);
+        chatBufferManager.cancelTimer(userId);
         
         // then
         verify(activeFuture).cancel(false);
@@ -136,7 +136,7 @@ class ChatTimerManagerTest {
         Long userId = 1L;
         
         // when & then - 예외 발생하지 않아야 함
-        chatTimerManager.cancelTimer(userId);
+        chatBufferManager.cancelTimer(userId);
         
         // 스케줄러 취소 호출 없음 확인
         verify(mockFuture, never()).cancel(anyBoolean());
@@ -153,10 +153,10 @@ class ChatTimerManagerTest {
         given(cancelledFuture.isCancelled()).willReturn(true); // 이미 취소됨
         
         // 타이머 설정
-        chatTimerManager.resetTimer(userId);
+        chatBufferManager.resetTimer(userId);
         
         // when & then - 예외 발생하지 않아야 함
-        chatTimerManager.cancelTimer(userId);
+        chatBufferManager.cancelTimer(userId);
         
         verify(cancelledFuture).cancel(false);
     }
@@ -171,7 +171,7 @@ class ChatTimerManagerTest {
         ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
         
         // when
-        chatTimerManager.resetTimer(userId);
+        chatBufferManager.resetTimer(userId);
         
         // then - 스케줄러 호출 검증 및 Runnable 캡처
         verify(mockScheduler).schedule(runnableCaptor.capture(), eq(1L), eq(TimeUnit.SECONDS));
@@ -181,7 +181,7 @@ class ChatTimerManagerTest {
         capturedRunnable.run();
         
         // 버퍼 매니저 호출 검증
-        verify(chatBufferManager).sendBufferToAiServer(userId);
+        verify(chatBufferManager).sendBufferToAiServerDirectly(userId);
     }
     
     @Test
@@ -191,10 +191,10 @@ class ChatTimerManagerTest {
         Long userId = 1L;
         ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
         doThrow(new RuntimeException("버퍼 전송 실패"))
-            .when(chatBufferManager).sendBufferToAiServer(userId);
+            .when(chatBufferManager).sendBufferToAiServerDirectly(userId);
         
         // when
-        chatTimerManager.resetTimer(userId);
+        chatBufferManager.resetTimer(userId);
         
         // then - 스케줄러 호출 검증 및 Runnable 캡처
         verify(mockScheduler).schedule(runnableCaptor.capture(), eq(1L), eq(TimeUnit.SECONDS));
@@ -204,7 +204,7 @@ class ChatTimerManagerTest {
         assertThatCode(() -> capturedRunnable.run()).doesNotThrowAnyException();
         
         // 버퍼 매니저 호출은 여전히 발생해야 함
-        verify(chatBufferManager).sendBufferToAiServer(userId);
+        verify(chatBufferManager).sendBufferToAiServerDirectly(userId);
     }
     
     // === 복합 시나리오 테스트 ===
@@ -217,12 +217,12 @@ class ChatTimerManagerTest {
         
         // when - 모든 사용자 타이머 설정
         for (Long userId : userIds) {
-            chatTimerManager.resetTimer(userId);
+            chatBufferManager.resetTimer(userId);
         }
         
         // when - 일부 타이머 취소
-        chatTimerManager.cancelTimer(userIds[0]);
-        chatTimerManager.cancelTimer(userIds[2]);
+        chatBufferManager.cancelTimer(userIds[0]);
+        chatBufferManager.cancelTimer(userIds[2]);
         
         // then
         verify(mockScheduler, times(userIds.length))
@@ -238,7 +238,7 @@ class ChatTimerManagerTest {
         
         // when - 빠른 연속 리셋
         for (int i = 0; i < resetCount; i++) {
-            chatTimerManager.resetTimer(userId);
+            chatBufferManager.resetTimer(userId);
         }
         
         // then - 매번 새로운 스케줄 호출
@@ -257,8 +257,8 @@ class ChatTimerManagerTest {
         given(testFuture.isCancelled()).willReturn(false);
         
         // when
-        chatTimerManager.resetTimer(userId);
-        chatTimerManager.cancelTimer(userId);
+        chatBufferManager.resetTimer(userId);
+        chatBufferManager.cancelTimer(userId);
         
         // then
         verify(mockScheduler).schedule(any(Runnable.class), eq(1L), eq(TimeUnit.SECONDS));
