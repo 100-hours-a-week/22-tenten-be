@@ -104,9 +104,8 @@ public class ChatConverter {
                 .nickname(member.getNickname())
                 .userId(member.getId())
                 .className(member.getClassName())
-                .content(content)
+                .message(content)
                 .timestamp(LocalDateTime.now())
-                .isRead(false)
                 .build();
     }
 
