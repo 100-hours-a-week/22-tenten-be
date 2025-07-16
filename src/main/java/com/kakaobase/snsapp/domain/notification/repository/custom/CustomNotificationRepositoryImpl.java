@@ -36,7 +36,7 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
     private final InvalidNotificationCacheUtil invalidNotificationCacheUtil;
 
     @Override
-    public List<NotificationResponse> findAllNotificationsByUserId(Long userId) {
+    public List<WebSocketPacket<NotificationResponse>> findAllNotificationsByUserId(Long userId) {
         QNotification notification = QNotification.notification;
 
         // 알림 기본 조회
@@ -75,10 +75,62 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                 })
                 .toList();
         
-        // WebSocketPacket에서 NotificationResponse만 추출
-        return sortedResult.stream()
-                .map(packet -> packet.data)
+        // WebSocketPacket 그대로 반환
+        return sortedResult;
+    }
+
+    @Override
+    public List<WebSocketPacket<NotificationResponse>> findNotificationsWithCursor(Long userId, Integer limit, Long cursor) {
+        QNotification notification = QNotification.notification;
+        BooleanBuilder whereClause = new BooleanBuilder();
+
+        // 기본 조건: 해당 사용자의 알림
+        whereClause.and(notification.receiverId.eq(userId));
+
+        // cursor 조건: cursor보다 작은 ID (오래된 알림)
+        if (cursor != null) {
+            whereClause.and(notification.id.lt(cursor));
+        }
+
+        // 알림 기본 조회 (cursor 기반 페이지네이션)
+        List<Notification> notifications = queryFactory
+                .selectFrom(notification)
+                .where(whereClause)
+                .orderBy(notification.createdAt.desc())
+                .limit(limit)
+                .fetch();
+
+        // NotificationType별로 그룹화
+        Map<NotificationType, List<Notification>> notificationsByType = notifications.stream()
+                .collect(Collectors.groupingBy(Notification::getNotificationType));
+
+        List<WebSocketPacket<NotificationResponse>> result = new ArrayList<>();
+
+        // 각 타입별로 일괄 조회 및 처리
+        for (Map.Entry<NotificationType, List<Notification>> entry : notificationsByType.entrySet()) {
+            NotificationType type = entry.getKey();
+            List<Notification> typeNotifications = entry.getValue();
+
+            if (type == NotificationType.FOLLOWING_CREATED) {
+                // 팔로우 알림 일괄 처리
+                result.addAll(processFollowingNotifications(typeNotifications));
+            } else {
+                // 일반 알림 일괄 처리 (댓글, 좋아요 등)
+                result.addAll(processGeneralNotifications(typeNotifications, type));
+            }
+        }
+
+        // 원래 시간 순서대로 재정렬 (timestamp만 비교)
+        List<WebSocketPacket<NotificationResponse>> sortedResult = result.stream()
+                .sorted((p1, p2) -> {
+                    LocalDateTime time1 = getTimestamp(p1.data);
+                    LocalDateTime time2 = getTimestamp(p2.data);
+                    return time2.compareTo(time1); // 최신순
+                })
                 .toList();
+
+        // WebSocketPacket 그대로 반환
+        return sortedResult;
     }
 
     /**
@@ -402,61 +454,5 @@ public class CustomNotificationRepositoryImpl implements CustomNotificationRepos
                         },
                         (existing, replacement) -> existing
                 ));
-    }
-
-    @Override
-    public List<NotificationResponse> findNotificationsByUserIdWithPagination(Long userId, Integer limit, Long cursor) {
-        QNotification notification = QNotification.notification;
-        BooleanBuilder whereClause = new BooleanBuilder();
-        
-        // 기본 조건: 해당 사용자의 알림
-        whereClause.and(notification.receiverId.eq(userId));
-        
-        // cursor 조건: cursor보다 작은 ID (오래된 알림)
-        if (cursor != null) {
-            whereClause.and(notification.id.lt(cursor));
-        }
-
-        // 알림 기본 조회 (cursor 기반 페이지네이션)
-        List<Notification> notifications = queryFactory
-                .selectFrom(notification)
-                .where(whereClause)
-                .orderBy(notification.createdAt.desc())
-                .limit(limit)
-                .fetch();
-
-        // NotificationType별로 그룹화
-        Map<NotificationType, List<Notification>> notificationsByType = notifications.stream()
-                .collect(Collectors.groupingBy(Notification::getNotificationType));
-
-        List<WebSocketPacket<NotificationResponse>> result = new ArrayList<>();
-        
-        // 각 타입별로 일괄 조회 및 처리
-        for (Map.Entry<NotificationType, List<Notification>> entry : notificationsByType.entrySet()) {
-            NotificationType type = entry.getKey();
-            List<Notification> typeNotifications = entry.getValue();
-            
-            if (type == NotificationType.FOLLOWING_CREATED) {
-                // 팔로우 알림 일괄 처리
-                result.addAll(processFollowingNotifications(typeNotifications));
-            } else {
-                // 일반 알림 일괄 처리 (댓글, 좋아요 등)
-                result.addAll(processGeneralNotifications(typeNotifications, type));
-            }
-        }
-        
-        // 원래 시간 순서대로 재정렬 (timestamp만 비교)
-        List<WebSocketPacket<NotificationResponse>> sortedResult = result.stream()
-                .sorted((p1, p2) -> {
-                    LocalDateTime time1 = getTimestamp(p1.data);
-                    LocalDateTime time2 = getTimestamp(p2.data);
-                    return time2.compareTo(time1); // 최신순
-                })
-                .toList();
-        
-        // WebSocketPacket에서 NotificationResponse만 추출
-        return sortedResult.stream()
-                .map(packet -> packet.data)
-                .toList();
     }
 }

@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 
 @Builder
 public record ContentNotification(
-        String event,
         Long id,
         MemberResponseDto.UserInfo sender,
         Long target_id,

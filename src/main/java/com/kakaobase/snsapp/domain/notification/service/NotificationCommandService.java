@@ -90,12 +90,12 @@ public class NotificationCommandService {
 
 
     @Transactional
-    public List<NotificationResponse> findNotificationsByUserId(Long userId, Integer limit) {
+    public List<WebSocketPacket<NotificationResponse>> findNotificationsByUserId(Long userId, Integer limit) {
         log.info("사용자 {}의 알림 조회 (limit: {})", userId, limit);
         
         try {
             // cursor 기반 페이지네이션으로 최신 알림 조회
-            return notificationRepository.findNotificationsByUserIdWithPagination(userId, limit, null);
+            return notificationRepository.findNotificationsWithCursor(userId, limit, null);
 
         } catch (Exception e) {
             log.error("사용자 {}의 알림 조회 실패", userId, e);

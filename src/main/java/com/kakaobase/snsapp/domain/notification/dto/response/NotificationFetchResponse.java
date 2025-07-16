@@ -2,6 +2,7 @@ package com.kakaobase.snsapp.domain.notification.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationResponse;
+import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import lombok.Builder;
 
 import java.util.List;
@@ -16,5 +17,5 @@ public record NotificationFetchResponse(
         Integer unreadCount,
         @JsonProperty("has_next")
         Boolean hasNext,
-        List<NotificationResponse> notifications
+        List<WebSocketPacket<NotificationResponse>> notifications
 ) {}

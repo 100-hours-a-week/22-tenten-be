@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 
 @Builder
 public record FollowingNotificationData(
-        String event,
         Long id,
         MemberResponseDto.UserInfoWithFollowing sender,
         @JsonProperty("is_read")

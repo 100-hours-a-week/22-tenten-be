@@ -36,24 +36,24 @@ public class NotificationService {
 
         try {
             // 1. limit+10개 알림 조회 (hasNext 판단을 위해)
-            List<NotificationResponse> allNotifications = commandService.findNotificationsByUserId(memberId, limit + 10);
+            List<WebSocketPacket<NotificationResponse>> allNotifications = commandService.findNotificationsByUserId(memberId, limit + 10);
             
             // 2. cursor 기반 필터링 (cursor보다 작은 ID만)
-            List<NotificationResponse> filteredNotifications = allNotifications.stream()
-                .filter(notification -> cursor == null || notification.id() < cursor)
+            List<WebSocketPacket<NotificationResponse>> filteredNotifications = allNotifications.stream()
+                .filter(packet -> cursor == null || packet.data.id() < cursor)
                 .toList();
             
             // 3. hasNext 판단 (limit+1개가 있는지 확인)
             boolean hasNext = filteredNotifications.size() > limit;
             
             // 4. limit만큼 자르기
-            List<NotificationResponse> finalNotifications = filteredNotifications.stream()
+            List<WebSocketPacket<NotificationResponse>> finalNotifications = filteredNotifications.stream()
                 .limit(limit)
                 .toList();
             
             // 5. unreadCount 계산 (최종 반환될 알림 중에서)
             int unreadCount = (int) finalNotifications.stream()
-                .filter(notification -> !notification.isRead())
+                .filter(packet -> !packet.data.isRead())
                 .count();
             
             // 6. NotificationFetchResponse 생성
