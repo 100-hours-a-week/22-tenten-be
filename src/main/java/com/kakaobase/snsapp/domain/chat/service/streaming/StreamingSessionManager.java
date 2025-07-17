@@ -122,7 +122,7 @@ public class StreamingSessionManager {
         String finalResponse = session.getFinalResponse();
         if (finalResponse != null && !finalResponse.isBlank()) {
             try {
-                Long botChatId = chatCommandService.saveBotMessage(session.getUserId(), finalResponse);
+                Long botChatId = chatCommandService.saveBotMessageSync(session.getUserId(), finalResponse);
                 StreamEndData endData = new StreamEndData(botChatId, LocalDateTime.now());
                 chatWebSocketService.sendStreamEndDataToUser(userId , endData);
                 log.info("AI 응답 메시지 저장 완됨: streamId={}, userId={}", streamId, session.getUserId());
