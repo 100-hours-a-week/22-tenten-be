@@ -29,7 +29,7 @@ public class ChatMessageCustomRepositoryImpl implements ChatMessageCustomReposit
         whereClause.and(chatMessage.chatRoom.id.eq(chatRoomId));
         
         if (cursor != null) {
-            whereClause.and(chatMessage.id.gt(cursor));
+            whereClause.and(chatMessage.id.lt(cursor));
         }
 
         // DB에서 최신순으로 limit + 1 개 조회 (hasNext 판단용)

@@ -44,7 +44,14 @@ public class AiServerHttpClient {
     private String aiChatEndpoint;
     
     // 타임아웃 설정
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
+    @Value("${chat.message.timeout:10}")
+    private int messageTimeoutSeconds; // AI 서버 HTTP 요청 타임아웃 (초)
+    
+    @Value("${chat.connection.retry-attempts:2}")
+    private int retryAttempts; // AI 서버 재시도 횟수
+    
+    @Value("${chat.connection.retry-delay:1}")
+    private int retryDelaySeconds; // AI 서버 재시도 지연 시간 (초)
 
     public AiServerHttpClient(@Qualifier("generalWebClient") WebClient webClient,
                               StreamingSessionManager streamingSessionManager,
@@ -119,9 +126,9 @@ public class AiServerHttpClient {
                         .map(response -> new ChatException(ChatErrorCode.AI_SERVER_INTERNAL_ERROR, null))
                 )
                 .bodyToMono(AiServerResponse.class)
-                .timeout(READ_TIMEOUT)
+                .timeout(Duration.ofSeconds(messageTimeoutSeconds))
                 .retryWhen(
-                    Retry.fixedDelay(2, Duration.ofSeconds(1))
+                    Retry.fixedDelay(retryAttempts, Duration.ofSeconds(retryDelaySeconds))
                         .filter(this::isRetryableError)
                         .doBeforeRetry(retrySignal -> 
                             log.warn("AI 서버 요청 재시도: requestId={}, method={}, endpoint={}, attempt={}, error={}", 

@@ -4,6 +4,7 @@ import com.kakaobase.snsapp.domain.chat.exception.ChatException;
 import com.kakaobase.snsapp.domain.chat.exception.errorcode.ChatErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +19,9 @@ import java.util.concurrent.TimeUnit;
 public class ChatBufferCacheUtil {
     
     private static final String CACHE_PREFIX = "chatbuffer:";
-    private static final long TTL_SECONDS = 60; // 1분
+    
+    @Value("${chat.buffer.cache-ttl:60}")
+    private long ttlSeconds; // Redis 캐시 TTL (초)
     
     private final StringRedisTemplate stringRedisTemplate;
     
@@ -48,7 +51,7 @@ public class ChatBufferCacheUtil {
             }
             
             // Redis에 저장 및 TTL 설정
-            stringRedisTemplate.opsForValue().set(key, newValue, TTL_SECONDS, TimeUnit.SECONDS);
+            stringRedisTemplate.opsForValue().set(key, newValue, ttlSeconds, TimeUnit.SECONDS);
             
             log.debug("메시지 추가 완료: userId={}, message={}, totalLength={}", 
                      userId, message, newValue.length());
@@ -69,8 +72,8 @@ public class ChatBufferCacheUtil {
         try {
             // 키가 존재하는 경우에만 TTL 연장
             if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(key))) {
-                stringRedisTemplate.expire(key, TTL_SECONDS, TimeUnit.SECONDS);
-                log.debug("TTL 연장 완료: userId={}, ttl={}초", userId, TTL_SECONDS);
+                stringRedisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS);
+                log.debug("TTL 연장 완료: userId={}, ttl={}초", userId, ttlSeconds);
             } else {
                 log.debug("연장할 캐시가 존재하지 않음: userId={}", userId);
             }
