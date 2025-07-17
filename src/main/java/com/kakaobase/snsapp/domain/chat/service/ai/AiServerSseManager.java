@@ -51,6 +51,9 @@ public class AiServerSseManager {
     @Value("${ai.server.health-endpoint:/docs}")
     private String healthEndpoint;
     
+    @Value("${ai.server.stream-endpoint:/chat/stream}")
+    private String streamEndpoint;
+    
     @Qualifier("webFluxClient")
     private final WebClient webFluxClient;
     
@@ -136,13 +139,13 @@ public class AiServerSseManager {
      */
     private void sseConnection() {
         log.info("AI 서버 SSE 연결 수립 시도: {}", aiServerUrl);
-        log.debug("SSE 연결 URL: {}", aiServerUrl + "/chat/stream");
+        log.debug("SSE 연결 URL: {}", aiServerUrl + streamEndpoint);
         
         setHealthStatus(AiServerHealthStatus.CONNECTING);
         
         try {
             sseSubscription = webFluxClient.get()
-                    .uri(aiServerUrl + "/chat/stream")
+                    .uri(aiServerUrl + streamEndpoint)
                     .accept(MediaType.TEXT_EVENT_STREAM)
                     .retrieve()
                     .bodyToFlux(ServerSentEvent.class)
