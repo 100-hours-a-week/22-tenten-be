@@ -82,7 +82,7 @@ ai:
     stream-endpoint: "/chat/stream"
     health-endpoint: "/docs"
     sse:
-      write-timeout: 10000
+      write-timeout: 1000000
 
 chat:
   message:
@@ -91,9 +91,17 @@ chat:
     inactivity-threshold: 1  # seconds
   buffer:
     max-size: 1000
+    loading-delay: 3  # seconds - 로딩 패킷 전송 지연
+    send-delay: 1  # seconds - AI 서버 요청 지연
+    cache-ttl: 60  # seconds - Redis 캐시 TTL
+    shutdown-timeout: 5  # seconds - 스케줄러 종료 대기 시간
+  session:
+    timeout: 31  # seconds - 세션 타임아웃
+    long-timeout: 600  # seconds - 장기 세션 타임아웃 (10분)
+    check-interval: 30  # seconds - 세션 체크 간격
   connection:
-    retry-attempts: 3
-    retry-delay: 2  # seconds
+    retry-attempts: 2  # AI 서버 재시도 횟수
+    retry-delay: 1  # seconds - AI 서버 재시도 지연
   websocket:
     topics:
       typing: "/topic/chat.typing"

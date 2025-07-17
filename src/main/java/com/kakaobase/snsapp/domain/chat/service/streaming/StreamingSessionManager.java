@@ -16,6 +16,7 @@ import com.kakaobase.snsapp.domain.chat.exception.StreamException;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,16 @@ public class StreamingSessionManager {
     private final ChatWebSocketService chatWebSocketService;
     private final ChatConverter chatConverter;
     private final ApplicationEventPublisher eventPublisher;
+    
+    // 타임아웃 설정
+    @Value("${chat.session.timeout:31}")
+    private int sessionTimeoutSeconds;
+    
+    @Value("${chat.session.long-timeout:600}")
+    private int longSessionTimeoutSeconds;
+    
+    @Value("${chat.session.check-interval:30}")
+    private int checkIntervalSeconds;
 
     /**
      * StreamId로 userId 조회
@@ -190,10 +201,10 @@ public class StreamingSessionManager {
     }
     
     /**
-     * 30초마다 타임아웃 세션 체크 및 정리
-     * - 마지막 응답으로부터 31초 경과한 세션들을 자동 제거
+     * 설정된 간격마다 타임아웃 세션 체크 및 정리
+     * - 마지막 응답으로부터 설정된 시간 경과한 세션들을 자동 제거
      */
-    @Scheduled(fixedRate = 30000) // 30초
+    @Scheduled(fixedRateString = "${chat.session.check-interval:30}000") // 초를 밀리초로 변환
     public void checkTimeoutSessions() {
         LocalDateTime now = LocalDateTime.now();
         int initialSize = activeSessions.size();
@@ -206,7 +217,7 @@ public class StreamingSessionManager {
             // 마지막 응답으로부터 31초 경과 시 타임아웃 (1초 여유)
             long secondsSinceLastResponse = Duration.between(session.getLastResponseTime(), now).toSeconds();
             
-            if (secondsSinceLastResponse > 31) {
+            if (secondsSinceLastResponse > sessionTimeoutSeconds) {
                 log.warn("타임아웃 세션 제거: streamId={}, userId={}, 마지막응답={}초전", 
                     streamId, session.getUserId(), secondsSinceLastResponse);
                 
@@ -236,10 +247,10 @@ public class StreamingSessionManager {
     }
     
     /**
-     * 주기적으로 장기 실행 세션 정리 (10분마다)
-     * - 10분 이상 지속된 세션들을 자동 제거
+     * 주기적으로 장기 실행 세션 정리
+     * - 설정된 시간 이상 지속된 세션들을 자동 제거
      */
-    @Scheduled(fixedRate = 600000) // 10분
+    @Scheduled(fixedRateString = "${chat.session.long-timeout:600}000") // 초를 밀리초로 변환
     public void cleanupLongRunningSessions() {
         int initialSize = activeSessions.size();
         log.debug("장기 실행 세션 정리 시작, 현재 세션 수: {}", initialSize);
@@ -249,7 +260,7 @@ public class StreamingSessionManager {
             String streamId = entry.getKey();
             
             // 10분 이상 실행된 세션 제거
-            if (session.getDurationSeconds() > 600) {
+            if (session.getDurationSeconds() > longSessionTimeoutSeconds) {
                 log.warn("장기 실행 세션 제거: streamId={}, userId={}, duration={}초", 
                     streamId, session.getUserId(), session.getDurationSeconds());
                 return true;

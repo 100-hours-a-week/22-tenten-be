@@ -13,6 +13,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +42,16 @@ public class ChatBufferManager {
     private ScheduledExecutorService scheduler;
     private final ConcurrentHashMap<Long, ScheduledFuture<?>> userTimers = new ConcurrentHashMap<>();
     
+    // 타이머 설정
+    @Value("${chat.buffer.loading-delay:3}")
+    private int loadingDelaySeconds;
+    
+    @Value("${chat.buffer.send-delay:1}")
+    private int sendDelaySeconds;
+    
+    @Value("${chat.buffer.shutdown-timeout:5}")
+    private int shutdownTimeoutSeconds;
+    
     @PostConstruct
     public void init() {
         // CPU 코어 수 기반으로 타이머 풀 크기 설정
@@ -64,7 +75,7 @@ public class ChatBufferManager {
         // 스케줄러 종료
         scheduler.shutdown();
         try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+            if (!scheduler.awaitTermination(shutdownTimeoutSeconds, TimeUnit.SECONDS)) {
                 scheduler.shutdownNow();
             }
         } catch (InterruptedException e) {
@@ -108,7 +119,7 @@ public class ChatBufferManager {
             // 2. 3초 후 로딩 패킷 전송 및 AI 서버 요청 스케줄링
             ScheduledFuture<?> newTimer = scheduler.schedule(
                 () -> triggerLoadingAndScheduleAiRequest(userId), 
-                3, 
+                loadingDelaySeconds, 
                 TimeUnit.SECONDS
             );
             
@@ -163,7 +174,7 @@ public class ChatBufferManager {
             // 6. 1초 후 버퍼 전송 스케줄링 (버퍼 내용과 사용자 정보 전달)
             ScheduledFuture<?> aiRequestTimer = scheduler.schedule(
                 () -> triggerBufferSendSafely(userId, bufferContent, member, streamId), 
-                1, 
+                sendDelaySeconds, 
                 TimeUnit.SECONDS
             );
             

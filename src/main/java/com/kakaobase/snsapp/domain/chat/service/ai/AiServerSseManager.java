@@ -54,6 +54,9 @@ public class AiServerSseManager {
     @Value("${ai.server.stream-endpoint:/chat/stream}")
     private String streamEndpoint;
     
+    @Value("${chat.message.timeout:10}")
+    private int healthCheckTimeoutSeconds;
+    
     @Qualifier("webFluxClient")
     private final WebClient webFluxClient;
     
@@ -104,7 +107,7 @@ public class AiServerSseManager {
                     .uri(aiServerUrl + healthEndpoint)
                     .retrieve()
                     .toBodilessEntity()
-                    .timeout(Duration.ofSeconds(10))
+                    .timeout(Duration.ofSeconds(healthCheckTimeoutSeconds))
                     .block();
             
             log.info("헬스체크 성공, SSE 재연결 시도");
