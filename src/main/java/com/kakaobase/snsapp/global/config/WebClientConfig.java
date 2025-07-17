@@ -28,6 +28,21 @@ public class WebClientConfig {
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
+    
+    @Value("${ai.server.connection-timeout:5000}")
+    private int connectionTimeout;
+    
+    @Value("${ai.server.read-timeout:30000}")
+    private int readTimeout;
+    
+    @Value("${ai.server.write-timeout:30000}")
+    private int writeTimeout;
+    
+    @Value("${ai.server.youtube-summary-timeout:120000}")
+    private int youtubeSummaryTimeout;
+    
+    @Value("${ai.server.sse.write-timeout:10000}")
+    private int sseWriteTimeout;
 
     /**
      * WebClient 빈 생성
@@ -48,12 +63,12 @@ public class WebClientConfig {
 
         // HttpClient 설정
         HttpClient httpClient = HttpClient.create()
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000) // 연결 타임아웃 10초
-                .responseTimeout(Duration.ofSeconds(120)) // 응답 타임아웃 120초(2분)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectionTimeout)
+                .responseTimeout(Duration.ofMillis(youtubeSummaryTimeout))
                 .followRedirect(true)
                 .doOnConnected(conn ->
-                        conn.addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
-                                .addHandlerLast(new WriteTimeoutHandler(30, TimeUnit.SECONDS))
+                        conn.addHandlerLast(new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
+                                .addHandlerLast(new WriteTimeoutHandler(writeTimeout, TimeUnit.MILLISECONDS))
                 );
 
         return WebClient.builder()
@@ -99,10 +114,10 @@ public class WebClientConfig {
     @Bean("webFluxClient")
     public WebClient aiServerWebClient() {
         HttpClient httpClient = HttpClient.create()
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectionTimeout)
                 .responseTimeout(Duration.ZERO)  // 무한 대기
                 .doOnConnected(connection ->
-                        connection.addHandlerLast(new WriteTimeoutHandler(10, TimeUnit.SECONDS))
+                        connection.addHandlerLast(new WriteTimeoutHandler(sseWriteTimeout, TimeUnit.MILLISECONDS))
                         // ReadTimeoutHandler 제거 - SSE 스트림 무한 대기
                 )
                 .keepAlive(true)

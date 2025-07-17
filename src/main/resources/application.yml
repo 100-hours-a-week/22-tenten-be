@@ -77,9 +77,12 @@ ai:
     url: ${AI_SERVER_URL}
     connection-timeout: 5000
     read-timeout: 30000
-    write-timeout: 10000
+    write-timeout: 30000
+    youtube-summary-timeout: 120000
     stream-endpoint: "/chat/stream"
     health-endpoint: "/docs"
+    sse:
+      write-timeout: 10000
 
 chat:
   message:
