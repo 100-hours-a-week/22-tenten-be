@@ -20,6 +20,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -185,6 +186,52 @@ public class StreamingSessionManager {
         StreamingSession removedSession = activeSessions.remove(streamId);
         if (removedSession != null) {
             log.debug("세션 취소 삭제 완료: streamId={}, userId={}", streamId, removedSession.getUserId());
+        }
+    }
+    
+    /**
+     * 30초마다 타임아웃 세션 체크 및 정리
+     * - 마지막 응답으로부터 31초 경과한 세션들을 자동 제거
+     */
+    @Scheduled(fixedRate = 30000) // 30초
+    public void checkTimeoutSessions() {
+        LocalDateTime now = LocalDateTime.now();
+        int initialSize = activeSessions.size();
+        log.debug("타임아웃 세션 체크 시작, 현재 세션 수: {}", initialSize);
+        
+        boolean hasRemovals = activeSessions.entrySet().removeIf(entry -> {
+            String streamId = entry.getKey();
+            StreamingSession session = entry.getValue();
+            
+            // 마지막 응답으로부터 31초 경과 시 타임아웃 (1초 여유)
+            long secondsSinceLastResponse = Duration.between(session.getLastResponseTime(), now).toSeconds();
+            
+            if (secondsSinceLastResponse > 31) {
+                log.warn("타임아웃 세션 제거: streamId={}, userId={}, 마지막응답={}초전", 
+                    streamId, session.getUserId(), secondsSinceLastResponse);
+                
+                // 타임아웃 에러 전송
+                try {
+                    chatWebSocketService.sendStreamErrorToUser(session.getUserId(), StreamErrorCode.AI_SERVER_TIMEOUT);
+                    log.info("타임아웃 에러 전송 완료: streamId={}, userId={}", streamId, session.getUserId());
+                } catch (Exception e) {
+                    log.error("타임아웃 에러 전송 실패: streamId={}, userId={}, error={}", 
+                        streamId, session.getUserId(), e.getMessage());
+                }
+                
+                return true; // 세션 제거
+            }
+            
+            return false;
+        });
+        
+        int finalSize = activeSessions.size();
+        int timeoutCount = initialSize - finalSize;
+        
+        if (hasRemovals) {
+            log.info("타임아웃 세션 정리 완료: {}개 세션 제거, 남은 세션 수: {}", timeoutCount, finalSize);
+        } else {
+            log.debug("타임아웃 세션 정리 완료: 제거할 세션 없음, 현재 세션 수: {}", finalSize);
         }
     }
     
