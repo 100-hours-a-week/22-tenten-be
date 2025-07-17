@@ -113,9 +113,22 @@ public class AiServerSseManager {
             
         } catch (Exception error) {
             log.warn("헬스체크 실패, 30초 후 재시도: {}", error.getMessage());
+            log.debug("헬스체크 에러 타입: {}", error.getClass().getSimpleName());
             // DISCONNECTED 상태 유지하여 다음 주기에 재시도
             setHealthStatus(AiServerHealthStatus.DISCONNECTED);
         }
+    }
+    
+    /**
+     * SSE 연결 상태 체크 (디버깅용)
+     */
+    public void checkConnectionStatus() {
+        log.debug("SSE 연결 상태 체크 시작");
+        log.debug("Health Status: {}", healthStatus.get());
+        log.debug("SSE Subscription: {}", sseSubscription != null ? 
+            (sseSubscription.isDisposed() ? "DISPOSED" : "ACTIVE") : "NULL");
+        log.debug("Last Health Check: {}", lastHealthCheck);
+        log.debug("Last Successful Connection: {}", lastSuccessfulConnection);
     }
     
     /**
@@ -123,6 +136,7 @@ public class AiServerSseManager {
      */
     private void sseConnection() {
         log.info("AI 서버 SSE 연결 수립 시도: {}", aiServerUrl);
+        log.debug("SSE 연결 URL: {}", aiServerUrl + "/chat/stream");
         
         setHealthStatus(AiServerHealthStatus.CONNECTING);
         
@@ -134,7 +148,12 @@ public class AiServerSseManager {
                     .bodyToFlux(ServerSentEvent.class)
                     .doOnSubscribe(subscription -> {
                         log.info("AI 서버 SSE 연결 성공");
+                        log.debug("SSE 구독 정보: {}", subscription.toString());
                         setHealthStatus(AiServerHealthStatus.CONNECTED);
+                    })
+                    .doOnNext(sse -> {
+                        log.debug("SSE 데이터 수신됨: event={}, data={}", 
+                            sse.event(), sse.data());
                     })
                     .doOnError(error -> {
                         // 연결 성공 후 ReadTimeout은 정상 동작
@@ -331,6 +350,19 @@ public class AiServerSseManager {
     }
     
     /**
+     * 주기적 SSE 연결 상태 모니터링 (10초마다)
+     */
+    @Scheduled(fixedRate = 10000) // 10초
+    public void debugConnectionStatus() {
+        if (sseSubscription != null) {
+            log.debug("SSE 연결 상태: {}", 
+                sseSubscription.isDisposed() ? "끊어짐" : "활성");
+        } else {
+            log.debug("SSE 구독이 null 상태");
+        }
+    }
+    
+    /**
      * SSE 연결 에러 처리
      */
     private void handleConnectionError(Throwable error) {
@@ -341,6 +373,7 @@ public class AiServerSseManager {
             // 즉시 재시도 없음, 30초 후 스케줄러가 처리
         } else {
             log.warn("일시적 연결 에러, 연결 유지: {}", error.getMessage());
+            log.debug("에러 타입: {}", error.getClass().getSimpleName());
             // 연결 유지, 즉시 재시도 하지 않음
         }
     }
