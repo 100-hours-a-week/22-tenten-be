@@ -18,6 +18,7 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.Disposable;
 
 import java.time.Duration;
@@ -76,12 +77,25 @@ public class AiServerSseManager {
     }
     
     /**
-     * 30초마다 AI 서버 헬스체크 수행
+     * 30초마다 조건부 헬스체크 및 재연결 수행
+     * DISCONNECTED 상태일 때만 실행
      */
     @Scheduled(fixedRate = 30000)
     public void performHealthCheck() {
-        log.info("AI 서버 헬스체크 시작");
+        if (healthStatus.get() == AiServerHealthStatus.DISCONNECTED) {
+            log.info("연결 끊김 상태, 헬스체크 및 재연결 시도");
+            performHealthCheckAndReconnect();
+        } else {
+            log.debug("연결 유지 중 ({}), 헬스체크 스킵", healthStatus.get());
+        }
         
+        lastHealthCheck = LocalDateTime.now();
+    }
+    
+    /**
+     * 헬스체크 수행 후 성공 시 SSE 재연결 시도
+     */
+    private void performHealthCheckAndReconnect() {
         try {
             generalWebClient.get()
                     .uri(aiServerUrl + healthEndpoint)
@@ -90,15 +104,18 @@ public class AiServerSseManager {
                     .timeout(Duration.ofSeconds(10))
                     .block();
             
-            setHealthStatus(AiServerHealthStatus.CONNECTED);
+            log.info("헬스체크 성공, SSE 재연결 시도");
             lastSuccessfulConnection = LocalDateTime.now();
-            log.info("AI 서버 헬스체크 성공");
+            
+            // SSE 재연결 시도
+            setHealthStatus(AiServerHealthStatus.CONNECTING);
+            sseConnection();
+            
         } catch (Exception error) {
+            log.warn("헬스체크 실패, 30초 후 재시도: {}", error.getMessage());
+            // DISCONNECTED 상태 유지하여 다음 주기에 재시도
             setHealthStatus(AiServerHealthStatus.DISCONNECTED);
-            log.warn("AI 서버 헬스체크 실패: {}", error.getMessage());
         }
-        
-        lastHealthCheck = LocalDateTime.now();
     }
     
     /**
@@ -124,10 +141,12 @@ public class AiServerSseManager {
                         if (error instanceof java.util.concurrent.TimeoutException && 
                             healthStatus.get() == AiServerHealthStatus.CONNECTED) {
                             log.debug("SSE 연결 유지 중 Timeout (정상): {}", error.getMessage());
-                        } else {
-                            log.error("AI 서버 SSE 연결 에러: {}", error.getMessage(), error);
+                        } else if (isServerDownError(error)) {
+                            log.error("AI 서버 다운 감지, SSE 연결 종료: {}", error.getMessage());
                             setHealthStatus(AiServerHealthStatus.DISCONNECTED);
-                            retryConnection();
+                            closeSseConnection();
+                        } else {
+                            log.warn("SSE 에러 발생하지만 연결 유지: {}", error.getMessage());
                         }
                     })
                     .subscribe(
@@ -144,8 +163,7 @@ public class AiServerSseManager {
                     );
         } catch (Exception e) {
             log.error("SSE 연결 설정 실패: {}", e.getMessage(), e);
-            setHealthStatus(AiServerHealthStatus.DISCONNECTED);
-            retryConnection();
+            handleConnectionError(e);
         }
     }
     
@@ -295,40 +313,35 @@ public class AiServerSseManager {
 
     
     /**
-     * 연결 재시도 로직
+     * 서버 다운 에러 판별 (502, 503, 504, ConnectException만 서버 다운으로 처리)
      */
-    private void retryConnection() {
-        log.warn("AI 서버 연결 재시도 시작");
-        
-        // 기존 연결 정리
-        closeSseConnection();
-        
-        // 5초 후 재연결 시도 (간단한 재시도 로직)
-        try {
-            Thread.sleep(5000);
-            sseConnection();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("연결 재시도 중단");
+    private boolean isServerDownError(Throwable error) {
+        // ConnectException: 서버 접근 불가
+        if (error instanceof java.net.ConnectException) {
+            return true;
         }
+        
+        // WebClientResponseException: HTTP 에러 코드 확인
+        if (error instanceof WebClientResponseException webClientError) {
+            int statusCode = webClientError.getStatusCode().value();
+            return statusCode == 502 || statusCode == 503 || statusCode == 504;
+        }
+        
+        return false;
     }
     
     /**
      * SSE 연결 에러 처리
      */
     private void handleConnectionError(Throwable error) {
-        log.error("AI 서버 SSE 연결 에러: {}", error.getMessage(), error);
-        
-        setHealthStatus(AiServerHealthStatus.DISCONNECTED);
-        
-        // 에러 타입별 처리
-        if (error instanceof java.net.ConnectException) {
-            log.warn("AI 서버 연결 실패, 재시도 중...");
-        } else if (error instanceof java.util.concurrent.TimeoutException) {
-            log.warn("AI 서버 응답 타임아웃, 재시도 중...");
+        if (isServerDownError(error)) {
+            log.error("AI 서버 다운으로 인한 연결 에러: {}", error.getMessage());
+            setHealthStatus(AiServerHealthStatus.DISCONNECTED);
+            closeSseConnection();
+            // 즉시 재시도 없음, 30초 후 스케줄러가 처리
+        } else {
+            log.warn("일시적 연결 에러, 연결 유지: {}", error.getMessage());
+            // 연결 유지, 즉시 재시도 하지 않음
         }
-        
-        // 재연결 시도
-        retryConnection();
     }
 }
