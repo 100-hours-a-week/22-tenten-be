@@ -6,8 +6,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * AI 서버 HTTP 응답 구조체
  */
 public record AiServerResponse(
-    @JsonProperty("message") String message,
-    @JsonProperty("error") String error
+    @JsonProperty("message")
+    String message,
+    @JsonProperty("error")
+    String error
 ) {
     /**
      * 성공 응답인지 확인
