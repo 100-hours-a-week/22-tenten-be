@@ -55,7 +55,7 @@ public class AiServerSseManager {
     private String streamEndpoint;
     
     @Value("${chat.message.timeout:10}")
-    private int healthCheckTimeoutSeconds;
+    private int healthCheckTimeoutSeconds; // AI 서버 헬스체크 타임아웃 (초)
     
     @Qualifier("webFluxClient")
     private final WebClient webFluxClient;

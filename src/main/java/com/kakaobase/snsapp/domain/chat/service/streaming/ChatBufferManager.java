@@ -44,13 +44,13 @@ public class ChatBufferManager {
     
     // 타이머 설정
     @Value("${chat.buffer.loading-delay:3}")
-    private int loadingDelaySeconds;
+    private int loadingDelaySeconds; // 로딩 패킷 전송 지연 시간 (초)
     
     @Value("${chat.buffer.send-delay:1}")
-    private int sendDelaySeconds;
+    private int sendDelaySeconds; // AI 서버 요청 지연 시간 (초)
     
     @Value("${chat.buffer.shutdown-timeout:5}")
-    private int shutdownTimeoutSeconds;
+    private int shutdownTimeoutSeconds; // 스케줄러 종료 대기 시간 (초)
     
     @PostConstruct
     public void init() {

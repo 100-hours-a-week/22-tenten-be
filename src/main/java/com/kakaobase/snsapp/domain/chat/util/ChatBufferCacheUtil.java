@@ -21,7 +21,7 @@ public class ChatBufferCacheUtil {
     private static final String CACHE_PREFIX = "chatbuffer:";
     
     @Value("${chat.buffer.cache-ttl:60}")
-    private long ttlSeconds;
+    private long ttlSeconds; // Redis 캐시 TTL (초)
     
     private final StringRedisTemplate stringRedisTemplate;
     

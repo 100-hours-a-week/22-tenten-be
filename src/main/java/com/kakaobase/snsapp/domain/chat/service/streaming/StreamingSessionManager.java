@@ -45,13 +45,13 @@ public class StreamingSessionManager {
     
     // 타임아웃 설정
     @Value("${chat.session.timeout:31}")
-    private int sessionTimeoutSeconds;
+    private int sessionTimeoutSeconds; // AI 서버 응답 대기 타임아웃 (마지막 응답으로부터 초)
     
     @Value("${chat.session.long-timeout:600}")
-    private int longSessionTimeoutSeconds;
+    private int longSessionTimeoutSeconds; // 장기 실행 세션 타임아웃 (세션 시작으로부터 초)
     
     @Value("${chat.session.check-interval:30}")
-    private int checkIntervalSeconds;
+    private int checkIntervalSeconds; // 타임아웃 세션 정리 스케줄러 실행 간격 (초)
 
     /**
      * StreamId로 userId 조회

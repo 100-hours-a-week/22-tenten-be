@@ -45,13 +45,13 @@ public class AiServerHttpClient {
     
     // 타임아웃 설정
     @Value("${chat.message.timeout:10}")
-    private int messageTimeoutSeconds;
+    private int messageTimeoutSeconds; // AI 서버 HTTP 요청 타임아웃 (초)
     
     @Value("${chat.connection.retry-attempts:2}")
-    private int retryAttempts;
+    private int retryAttempts; // AI 서버 재시도 횟수
     
     @Value("${chat.connection.retry-delay:1}")
-    private int retryDelaySeconds;
+    private int retryDelaySeconds; // AI 서버 재시도 지연 시간 (초)
 
     public AiServerHttpClient(@Qualifier("generalWebClient") WebClient webClient,
                               StreamingSessionManager streamingSessionManager,
