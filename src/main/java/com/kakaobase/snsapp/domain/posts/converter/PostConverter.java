@@ -129,7 +129,6 @@ public class PostConverter {
     public List<PostResponseDto.PostDetails> updateWithCachedStats(
             List<PostResponseDto.PostDetails> postDetails) {
 
-
         try{
             Map<Long, CacheRecord.PostStatsCache> postStatsCache = postCacheService.findAllByItems(postDetails);
             if (postDetails == null || postDetails.isEmpty() || postStatsCache == null || postStatsCache.isEmpty()) {

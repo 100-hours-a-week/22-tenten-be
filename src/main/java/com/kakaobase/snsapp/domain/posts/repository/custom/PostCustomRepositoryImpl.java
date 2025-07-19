@@ -310,9 +310,9 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
 
                 // 현재 사용자의 좋아요 여부 확인 (likedByMemberId와 다른 경우만)
                 .leftJoin(currentUserLike).on(
-                        currentUserLike.post.eq(post)
-                                .and(currentMemberId != null && !currentMemberId.equals(likedByMemberId) ?
-                                        currentUserLike.id.memberId.eq(currentMemberId) : null)
+                        currentMemberId != null && !currentMemberId.equals(likedByMemberId) ?
+                                currentUserLike.post.eq(post).and(currentUserLike.id.memberId.eq(currentMemberId)) :
+                                null
                 )
 
                 // 현재 사용자가 게시글 작성자를 팔로우하는지
