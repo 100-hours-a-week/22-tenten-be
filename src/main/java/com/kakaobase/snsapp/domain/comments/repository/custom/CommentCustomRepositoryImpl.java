@@ -197,7 +197,7 @@ public class CommentCustomRepositoryImpl implements CommentCustomRepository {
                         comment.member.id.eq(authorMemberId)
                                 .and(cursor != null ? comment.id.lt(cursor) : null)
                 )
-                .orderBy(comment.createdAt.asc(), comment.id.desc())
+                .orderBy(comment.createdAt.desc(), comment.id.desc())
                 .limit(limit)
                 .fetch();
     }
