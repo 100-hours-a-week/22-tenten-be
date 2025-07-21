@@ -51,6 +51,7 @@ public class CustomUserDetailsFixture extends AbstractFixture {
                 generateEncodedPassword(),
                 "1",
                 "USER",
+                generateRandomKoreanName(),
                 "PANGYO_1",
                 generateRandomNickname(),
                 generateRandomS3ImageUrl(),
@@ -71,6 +72,7 @@ public class CustomUserDetailsFixture extends AbstractFixture {
                 generateEncodedPassword(),
                 String.valueOf(id),
                 "USER",
+                generateRandomKoreanName(),
                 "PANGYO_1",
                 nickname,
                 generateS3ImageUrl("profile" + id),
@@ -95,7 +97,7 @@ public class CustomUserDetailsFixture extends AbstractFixture {
                                              String nickname, String profileImgUrl) {
         return new CustomUserDetails(
                 email, password, String.valueOf(id),
-                role, className, nickname, profileImgUrl, true
+                role, generateRandomKoreanName(), className, nickname, profileImgUrl, true
         );
     }
 
@@ -119,6 +121,7 @@ public class CustomUserDetailsFixture extends AbstractFixture {
                 generateEncodedPassword(),
                 "999",
                 "ADMIN",
+                "관리자",
                 "ALL",
                 "admin",
                 generateS3ImageUrl("admin"),
@@ -181,6 +184,7 @@ public class CustomUserDetailsFixture extends AbstractFixture {
                 member.getPassword(),
                 member.getId().toString(),
                 member.getRole(),
+                member.getName(),
                 member.getClassName(),
                 member.getNickname(),
                 member.getProfileImgUrl(),

@@ -14,6 +14,7 @@ import com.kakaobase.snsapp.domain.posts.entity.QPostImage;
 import com.kakaobase.snsapp.domain.posts.entity.QPostLike;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -262,7 +263,7 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
         QPostLike currentUserLike = new QPostLike("currentUserLike");  // 별칭 사용
         QFollow follow = QFollow.follow;
 
-        return queryFactory
+        JPAQuery<PostResponseDto.PostDetails> query = queryFactory
                 .select(Projections.constructor(PostResponseDto.PostDetails.class,
                         post.id,
 
@@ -291,7 +292,9 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
                         // 좋아요 여부 - likedByMemberId가 좋아요한 게시글이므로 조건부 처리
                         likedByMemberId.equals(currentMemberId) ?
                                 Expressions.constant(true) :  // 자신이 좋아요한 게시글 목록이면 모두 true
-                                currentUserLike.id.isNotNull()  // 다른 사람이 좋아요한 게시글이면 현재 사용자 좋아요 여부
+                                (currentMemberId != null && !currentMemberId.equals(likedByMemberId)) ?
+                                        currentUserLike.id.isNotNull() :  // 조인된 경우에만 참조
+                                        Expressions.constant(false)  // 조인되지 않은 경우
                 ))
                 .from(post)
                 .join(post.member, member)
@@ -306,15 +309,16 @@ public class PostCustomRepositoryImpl implements PostCustomRepository {
                 .leftJoin(postImage).on(
                         postImage.post.eq(post)
                                 .and(postImage.sortIndex.eq(0))
-                )
+                );
 
-                // 현재 사용자의 좋아요 여부 확인 (likedByMemberId와 다른 경우만)
-                .leftJoin(currentUserLike).on(
-                        currentUserLike.post.eq(post)
-                                .and(currentMemberId != null && !currentMemberId.equals(likedByMemberId) ?
-                                        currentUserLike.id.memberId.eq(currentMemberId) : null)
-                )
+        // 현재 사용자의 좋아요 여부 확인 (likedByMemberId와 다른 경우만)
+        if (currentMemberId != null && !currentMemberId.equals(likedByMemberId)) {
+            query = query.leftJoin(currentUserLike).on(
+                    currentUserLike.post.eq(post).and(currentUserLike.id.memberId.eq(currentMemberId))
+            );
+        }
 
+        return query
                 // 현재 사용자가 게시글 작성자를 팔로우하는지
                 .leftJoin(follow).on(
                         currentMemberId != null ? follow.followerUser.id.eq(currentMemberId) : null,

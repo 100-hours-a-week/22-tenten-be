@@ -1,5 +1,6 @@
 ### Documentation ###
 HELP.md
+CLAUDE.md
 
 ### Gradle ###
 .gradle/
@@ -81,3 +82,6 @@ tmp/
 
 ### Custom Project Artifacts ###
 fileHashs.lock
+
+### Claude
+.claude/

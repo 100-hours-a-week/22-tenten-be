@@ -8,6 +8,7 @@ import com.kakaobase.snsapp.domain.posts.util.BoardType;
 import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,6 @@ import java.util.*;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class BotPostService {
 
     private final PostService postService;
@@ -34,6 +34,14 @@ public class BotPostService {
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
+
+    public BotPostService(@Qualifier("generalWebClient") WebClient webClient,
+                          PostRepository postRepository,
+                          PostService postService) {
+        this.webClient = webClient;
+        this.postRepository = postRepository;
+        this.postService = postService;
+    }
 
     /**
      * AI 봇 게시글 생성

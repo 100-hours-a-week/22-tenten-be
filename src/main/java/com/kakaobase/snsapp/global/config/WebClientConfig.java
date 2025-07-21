@@ -4,10 +4,10 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.http.codec.LoggingCodecSupport;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -26,6 +26,24 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class WebClientConfig {
 
+    @Value("${ai.server.url}")
+    private String aiServerUrl;
+    
+    @Value("${ai.server.connection-timeout:5000}")
+    private int connectionTimeout;
+    
+    @Value("${ai.server.read-timeout:30000}")
+    private int readTimeout;
+    
+    @Value("${ai.server.write-timeout:30000}")
+    private int writeTimeout;
+    
+    @Value("${ai.server.youtube-summary-timeout:120000}")
+    private int youtubeSummaryTimeout;
+    
+    @Value("${ai.server.sse.write-timeout:10000}")
+    private int sseWriteTimeout;
+
     /**
      * WebClient 빈 생성
      *
@@ -33,7 +51,7 @@ public class WebClientConfig {
      *
      * @return 설정된 WebClient 인스턴스
      */
-    @Bean
+    @Bean("generalWebClient")
     public WebClient webClient() {
         // Exchange 전략 설정 (최대 메모리 사이즈 등)
         ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
@@ -45,12 +63,12 @@ public class WebClientConfig {
 
         // HttpClient 설정
         HttpClient httpClient = HttpClient.create()
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000) // 연결 타임아웃 10초
-                .responseTimeout(Duration.ofSeconds(120)) // 응답 타임아웃 120초(2분)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectionTimeout)
+                .responseTimeout(Duration.ofMillis(youtubeSummaryTimeout))
                 .followRedirect(true)
                 .doOnConnected(conn ->
-                        conn.addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
-                                .addHandlerLast(new WriteTimeoutHandler(30, TimeUnit.SECONDS))
+                        conn.addHandlerLast(new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
+                                .addHandlerLast(new WriteTimeoutHandler(writeTimeout, TimeUnit.MILLISECONDS))
                 );
 
         return WebClient.builder()
@@ -87,5 +105,28 @@ public class WebClientConfig {
                     log.debug("Response Header: {}={}", name, value)));
             return Mono.just(clientResponse);
         });
+    }
+
+    /**
+     * AI 서버 SSE 통신 전용 WebClient
+     * 장시간 연결 유지 및 스트리밍에 최적화
+     */
+    @Bean("webFluxClient")
+    public WebClient aiServerWebClient() {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectionTimeout)
+                .responseTimeout(Duration.ZERO)  // 무한 대기
+                .doOnConnected(connection ->
+                        connection.addHandlerLast(new WriteTimeoutHandler(sseWriteTimeout, TimeUnit.MILLISECONDS))
+                        // ReadTimeoutHandler 제거 - SSE 스트림 무한 대기
+                )
+                .keepAlive(true)
+                .compress(true);
+
+        return WebClient.builder()
+                .baseUrl(aiServerUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
+                .build();
     }
 }

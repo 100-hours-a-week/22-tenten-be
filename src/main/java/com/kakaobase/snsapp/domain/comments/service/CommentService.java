@@ -13,8 +13,11 @@ import com.kakaobase.snsapp.domain.comments.repository.RecommentLikeRepository;
 import com.kakaobase.snsapp.domain.comments.repository.RecommentRepository;
 import com.kakaobase.snsapp.domain.comments.service.async.CommentAsyncService;
 import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
+import com.kakaobase.snsapp.domain.members.converter.MemberConverter;
+import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.members.entity.Member;
 import com.kakaobase.snsapp.domain.members.repository.MemberRepository;
+import com.kakaobase.snsapp.domain.notification.service.NotificationService;
 import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.domain.posts.exception.PostException;
 import com.kakaobase.snsapp.domain.posts.repository.PostRepository;
@@ -50,6 +53,8 @@ public class CommentService {
     private final CommentCacheService commentCacheService;
     private final RecommentLikeRepository recommentLikeRepository;
     private final CommentAsyncService commentAsyncService;
+    private final NotificationService notifService;
+    private final MemberConverter memberConverter;
 
     /**
      * 댓글을 생성합니다.
@@ -71,25 +76,44 @@ public class CommentService {
         // 대댓글인 경우
         if (request.parent_id() != null) {
 
-            if(!commentRepository.existsById(request.parent_id())) {
+            // 1) 존재 여부 확인
+            if (!commentRepository.existsById(request.parent_id())) {
                 throw new CommentException(GeneralErrorCode.RESOURCE_NOT_FOUND, "parentId");
             }
-
+            // 2) 프록시 로드
             Comment proxyComment = em.getReference(Comment.class, request.parent_id());
 
-            // 대댓글 엔티티 생성 및 저장
+
+            // 3) INSERT 수행
             Recomment recomment = commentConverter.toRecommentEntity(proxyComment, proxyMember, request);
             Recomment savedRecomment = recommentRepository.save(recomment);
 
-            //부모 댓글 대댓글 카운트 증가
-            try{
+            // 4) 예외 상황에서만 부모 댓글 카운트 직접 증가 (DML)
+            try {
                 commentCacheService.incrementCommentCount(request.parent_id());
-            } catch (CacheException e){
-                log.error(e.getMessage());
-                Comment comment = em.getReference(Comment.class, request.parent_id());
-                comment.increaseRecommentCount();
+            } catch (CacheException e) {
+                proxyComment.increaseRecommentCount();
+            }
+            // 5) 알림
+            if (!proxyComment.getMember().getId().equals(memberId)) {
+                MemberResponseDto.UserInfo userInfo = memberConverter.toUserInfo(proxyMember);
+                notifService.sendRecommentCreatedNotification(
+                        proxyComment.getMember().getId(),
+                        savedRecomment.getId(),
+                        request.content(),
+                        userInfo,
+                        proxyComment.getPost().getId()
+                );
             }
 
+            // 6) BOT 트리거
+            Post post = proxyComment.getPost();
+            if (post.getMember().getRole().equals(Member.Role.BOT)) {
+                log.info("🤖 [Trigger] BOT 작성 게시글에 유저 대댓글 → BOT 후속 대댓글");
+                commentAsyncService.triggerAsync(post, proxyComment);
+            }
+
+            // 6) 응답 DTO 반환 (대댓글)
             return commentConverter.toCreateRecommentResponse(savedRecomment);
         }
 
@@ -114,10 +138,21 @@ public class CommentService {
 
         // 게시물 작성자가 소셜봇이면 소셜봇 대댓글 로직 구현하도록
         if (post.getMember().getRole().equals("BOT")) {
-            log.info("🤖 [Trigger] 소셜봇 게시글이므로 트리거 실행!");
+            log.info("🤖 [Trigger] 소셜봇 게시글이므로 BOT 대댓글 생성");
             commentAsyncService.triggerAsync(post, savedComment);
         } else {
-            log.info("🙅 [Skip] 게시글 작성자가 소셜봇이 아님 → 트리거 생략");
+            log.info("🙅 [Skip] 게시글 작성자가 소셜봇이 아님 → BOT 대댓글 미실행");
+        }
+
+        //알림 전송
+        if(!memberId.equals(post.getMember().getId())) {
+            var userInfo = memberConverter.toUserInfo(proxyMember);
+            notifService.sendCommentCreatedNotification(
+                    post.getMember().getId(),
+                    savedComment.getId(),
+                    request.content(),
+                    userInfo,
+                    post.getId());
         }
 
         return commentConverter.toCreateCommentResponse(savedComment);

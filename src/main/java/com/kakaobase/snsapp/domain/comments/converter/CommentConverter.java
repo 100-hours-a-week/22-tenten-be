@@ -3,9 +3,7 @@ package com.kakaobase.snsapp.domain.comments.converter;
 import com.kakaobase.snsapp.domain.comments.dto.CommentRequestDto;
 import com.kakaobase.snsapp.domain.comments.dto.CommentResponseDto;
 import com.kakaobase.snsapp.domain.comments.entity.Comment;
-import com.kakaobase.snsapp.domain.comments.entity.CommentLike;
 import com.kakaobase.snsapp.domain.comments.entity.Recomment;
-import com.kakaobase.snsapp.domain.comments.entity.RecommentLike;
 import com.kakaobase.snsapp.domain.comments.exception.CommentErrorCode;
 import com.kakaobase.snsapp.domain.comments.exception.CommentException;
 import com.kakaobase.snsapp.domain.comments.service.cache.CommentCacheService;
@@ -15,14 +13,12 @@ import com.kakaobase.snsapp.domain.posts.entity.Post;
 import com.kakaobase.snsapp.global.common.redis.CacheRecord;
 import com.kakaobase.snsapp.global.common.redis.error.CacheException;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 댓글과 대댓글 관련 엔티티와 DTO 간 변환을 담당하는 컨버터 클래스
@@ -33,7 +29,6 @@ import java.util.Set;
 public class CommentConverter {
 
     private final CommentCacheService commentCacheService;
-    private final EntityManager em;
 
     /**
      * 댓글 작성 요청 DTO를 댓글 엔티티로 변환
@@ -116,28 +111,6 @@ public class CommentConverter {
                 recomment.getContent(),
                 recomment.getComment().getId()  // 부모 댓글 ID
         );
-    }
-
-    /**
-     * 댓글 좋아요 엔티티 생성
-     */
-    public CommentLike toCommentLikeEntity(Long memberId, Long commentId) {
-
-        Member proxyMember = em.getReference(Member.class, memberId);
-        Comment proxyCommennt = em.getReference(Comment.class, commentId);
-
-        return new CommentLike(proxyMember, proxyCommennt);
-    }
-
-    /**
-     * 대댓글 좋아요 엔티티 생성
-     */
-    public RecommentLike toRecommentLikeEntity(Long memberId, Long recommentId) {
-
-        Member proxyMember = em.getReference(Member.class, memberId);
-        Recomment proxyRecomment = em.getReference(Recomment.class, recommentId);
-
-        return new RecommentLike(proxyMember, proxyRecomment);
     }
 
     /**
