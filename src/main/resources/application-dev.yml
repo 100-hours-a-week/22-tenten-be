@@ -23,6 +23,6 @@ logging:
     org.apache.juli: OFF
     org.apache.catalina: WARN
     org.apache.tomcat: WARN
-    discord:
-      webhook-url: ${DISCORD_ERROR_WEBHOOK_URL}
-      config: classpath:logback-spring.xml
+  discord:
+    webhook-url: ${DISCORD_ERROR_WEBHOOK_URL}
+    config: classpath:logback-spring.xml
