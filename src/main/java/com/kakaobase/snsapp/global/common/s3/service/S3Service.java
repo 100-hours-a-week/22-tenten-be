@@ -51,7 +51,7 @@ public class S3Service {
      * 허용된 MIME 타입 목록
      */
     private static final List<String> ALLOWED_MIME_TYPES = List.of(
-            "image/jpeg", "image/jpg", "image/png", "image/gif"
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "image/avif"
     );
 
     /**

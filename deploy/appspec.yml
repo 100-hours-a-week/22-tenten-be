@@ -23,3 +23,8 @@ hooks:
     - location: scripts/deploy.sh
       timeout: 120
       runas: ubuntu
+
+  AfterAllowTraffic:
+    - location: scripts/health_check.sh
+      timeout: 60
+      runas: ubuntu
