@@ -1,5 +1,9 @@
 package com.kakaobase.snsapp.global.config;
 
+import com.kakaobase.snsapp.global.common.metrics.QueryCountInspector;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
@@ -9,6 +13,19 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  */
 @Configuration
 @EnableJpaAuditing
+@RequiredArgsConstructor
 public class JpaConfig {
-    // 추가 JPA 설정이 필요한 경우 여기에 구현
+
+    private final QueryCountInspector queryCountInspector;
+
+    /**
+     * Hibernate Properties Customizer를 통해 QueryCountInspector를 등록합니다.
+     * application.yml 설정 대신 Java Configuration으로 직접 Bean을 주입합니다.
+     */
+    @Bean
+    public HibernatePropertiesCustomizer hibernatePropertiesCustomizer() {
+        return hibernateProperties -> {
+            hibernateProperties.put("hibernate.session_factory.statement_inspector", queryCountInspector);
+        };
+    }
 }
