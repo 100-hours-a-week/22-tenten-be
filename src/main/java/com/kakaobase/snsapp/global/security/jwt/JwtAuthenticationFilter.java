@@ -66,7 +66,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             new PathMethodPattern("/api/recomments/*/likes", "GET"),
             new PathMethodPattern("/api/comments/*/recomments", "GET"),
             new PathMethodPattern("/api/posts/**", "GET"),
-            new PathMethodPattern("/api/users/**", "GET")
+            new PathMethodPattern("/api/users/*", "GET"),
+            new PathMethodPattern("/api/users/*/posts", "GET"),
+            new PathMethodPattern("/api/users/*/comments", "GET")
+
     );
 
     @Override
@@ -93,7 +96,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // 익명 접근 가능한 경로인지 확인
         boolean isAnonymousAccessible = anonymousAccessiblePatterns.stream()
-                .anyMatch(pattern -> pattern.matches(path, method, pathMatcher));
+                .anyMatch(pattern -> pattern.matches(path, method, pathMatcher))
+                && !path.equals("/api/users/notifications");
 
         String token = jwtUtil.resolveTokenFromCookie(request);
 
