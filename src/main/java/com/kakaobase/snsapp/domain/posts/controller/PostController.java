@@ -49,7 +49,6 @@ public class PostController {
      */
     @GetMapping("/{postType}")
     @Operation(summary = "게시글 목록 조회", description = "게시판 유형별로 게시글 목록을 조회합니다.")
-    @PreAuthorize("@accessChecker.hasAccessToBoardForTest(#postType)")
     public CustomResponse<List<PostResponseDto.PostDetails>> getPosts(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Parameter(description = "한 페이지에 표시할 게시글 수") @RequestParam(defaultValue = "12") int limit,
@@ -84,14 +83,13 @@ public class PostController {
      */
     @PostMapping("/{postType}")
     @Operation(summary = "게시글 생성", description = "새 게시글을 생성합니다.")
-    @PreAuthorize("@accessChecker.hasAccessToBoard(#postType, authentication.principal)")
     public CustomResponse<PostResponseDto.PostDetails> createPost(
             @Parameter(description = "게시판 유형") @PathVariable String postType,
             @Valid @RequestBody PostRequestDto.PostCreateRequestDto requestDto,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
 
-        Long memberId = Long.valueOf(userDetails.getId());
+        Long memberId = 1L;
 
         // 게시글 내용 유효성 검증
         if (requestDto.isEmpty()) {

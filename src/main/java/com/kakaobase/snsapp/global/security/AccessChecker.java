@@ -40,9 +40,15 @@ public class AccessChecker {
     /**
      * postType 하나만 받고, 내부에서 Authentication을 꺼내 씁니다.
      */
-    public boolean hasAccessToBoardForTest(String postType) {
+    public boolean hasAccessToBoard(String postType, Authentication authentication) {
+
+        CustomUserDetails userDetails = authentication.getPrincipal() instanceof CustomUserDetails ? (CustomUserDetails) authentication.getPrincipal() : null;
+        if (userDetails == null) { return false; }
+
+        Long memberId = Long.valueOf(userDetails.getId());
+
         // 1) 항상 멤버 ID=1 가져오기 (테스트 전용)
-        Member member = memberRepository.findById(1L)
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() ->
                         new CustomException(GeneralErrorCode.RESOURCE_NOT_FOUND, "memberId")
                 );
