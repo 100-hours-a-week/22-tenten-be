@@ -73,3 +73,6 @@ tmp/
 
 ### Custom Project Artifacts ###
 fileHashs.lock
+
+CLAUDE.md
+.claude/
