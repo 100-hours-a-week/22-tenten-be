@@ -31,4 +31,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoffDate")
     int deleteByCreatedAtBefore(@Param("cutoffDate") LocalDateTime cutoffDate);
 
+    /**
+     * 특정 사용자의 안읽은 알림 개수 조회
+     */
+    Long countByReceiverIdAndIsRead(Long receiverId, Boolean isRead);
+
 }

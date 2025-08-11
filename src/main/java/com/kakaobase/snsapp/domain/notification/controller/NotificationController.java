@@ -5,6 +5,7 @@ import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationAckData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationNackData;
 import com.kakaobase.snsapp.domain.notification.dto.records.NotificationRequestData;
+import com.kakaobase.snsapp.domain.notification.dto.response.NotificationCount;
 import com.kakaobase.snsapp.domain.notification.dto.response.NotificationFetchResponse;
 import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.service.NotificationService;
@@ -46,6 +47,17 @@ public class NotificationController {
         NotificationFetchResponse response = notifService.getNotifList(memberId, limit, cursor);
 
         return CustomResponse.success("알림 조회에 성공하였습니다", response);
+    }
+
+    @GetMapping("/api/users/notifications/counts")
+    @Operation(summary = "알림 개수 조회", description = "사용자의 안읽은 알림 개수를 조회합니다.")
+    public CustomResponse<NotificationCount> getNotificationCounts(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ){
+        Long memberId = Long.valueOf(userDetails.getId());
+        NotificationCount response = notifService.getNotifCount(memberId);
+
+        return CustomResponse.success("알림 개수 조회에 성공하였습니다", response);
     }
 
     @MessageMapping("/notification.read")
