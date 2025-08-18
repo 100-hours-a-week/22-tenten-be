@@ -49,7 +49,7 @@ jobs:
 
       - name: Deploy to EC2 via SSM
         run: |
-          aws ssm send-command \
+          COMMAND_ID=$(aws ssm send-command \
             --targets "Key=instanceIds,Values=${{ secrets.SSM_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy Backend via GitHub Actions" \
@@ -60,7 +60,17 @@ jobs:
               "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
               "docker compose pull backend",
               "docker compose up -d backend"
-            ]'
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          aws ssm list-command-invocations \
+            --command-id $COMMAND_ID \
+            --details \
+            --region ${{ secrets.AWS_REGION }}
+  
 
   notify:
     name: Discord Notification
