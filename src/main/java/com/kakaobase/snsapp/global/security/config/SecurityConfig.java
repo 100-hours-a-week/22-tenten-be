@@ -57,6 +57,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         //Swagger관련 경로들
                         .requestMatchers(
+                                "/api/v3/api-docs/**",
                                 "/v3/api-docs/**",
                                 "/api/swagger-ui/**",
                                 "/api/swagger-ui.html"
