@@ -48,22 +48,18 @@ jobs:
           docker push $IMAGE_REPO:prod
 
       - name: Deploy to EC2 via SSM
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
         run: |
           aws ssm send-command \
-            --targets "Key=instanceIds,Values=${{ secrets.SSM_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy Backend via GitHub Actions" \
-            --region $AWS_REGION \
-            --parameters "commands=[
-              \"cd /opt/kakaobase\",
-              \"./bin/load-ssm-env.sh\",
-              \"aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com\",
-              \"docker-compose pull backend\",
-              \"docker-compose up -d backend\"
-            ]"
+            --comment "GitHub Actions 배포 (prod)" \
+            --instance-ids ${{ secrets.SSM_INSTANCE_ID }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --parameters commands='[
+              "cd /opt/kakaobase",
+              "./bin/load-ssm-env.sh",
+              "aws ecr get-login-password --region '"${{ secrets.AWS_REGION }}"' | docker login --username AWS --password-stdin '"${{ secrets.ECR_REPO_BE }}"'",
+              "bash -lc \"docker compose pull backend && docker compose up -d backend\""
+            ]'
   
   
 
