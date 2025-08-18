@@ -38,8 +38,8 @@ jobs:
       - name: Build & Push Docker image
         run: |
           IMAGE_REPO=${{ secrets.ECR_REPO_BE }}
-          docker build -t $IMAGE_REPO:dev .
-          docker push $IMAGE_REPO:dev
+          docker build -t $IMAGE_REPO:prod .
+          docker push $IMAGE_REPO:prod
 
   notify:
     name: Discord Notification
