@@ -28,39 +28,66 @@ jobs:
     name: CD (Push Image & Deploy to EC2)
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    needs: ci
+
     steps:
       - uses: actions/checkout@v3
 
+      # AWS CLI & 권한 세팅
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.DEPLOY_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.DEPLOY_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2   # 리전 맞게 수정
 
+      # ECR 로그인
       - name: Login to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push Docker image
+      # Docker build & push
+      - name: Build, Tag, and Push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: kakaobase-backend
+          IMAGE_TAG: prod
         run: |
-          IMAGE_REPO=${{ secrets.ECR_REPO_BE }}
-          docker build -t $IMAGE_REPO:prod .
-          docker push $IMAGE_REPO:prod
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Deploy to EC2 via SSM
-        run: |
-          aws ssm send-command \
-            --document-name "AWS-RunShellScript" \
-            --comment "GitHub Actions 배포 (prod)" \
-            --instance-ids ${{ secrets.SSM_INSTANCE_ID }} \
-            --region ${{ secrets.AWS_REGION }} \
-            --parameters commands='[
-              "cd /opt/kakaobase",
-              "./bin/load-ssm-env.sh",
-              "aws ecr get-login-password --region '"${{ secrets.AWS_REGION }}"' | docker login --username AWS --password-stdin '"${{ secrets.ECR_REPO_BE }}"'",
-              "bash -lc \"docker compose pull backend && docker compose up -d backend\""
-            ]'
-  
+      # EC2 배포 (SSH)
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+
+            docker pull ${{ steps.login-ecr.outputs.registry }}/kakaobase-backend:prod
+
+            docker stop backend || true
+            docker rm backend || true
+
+            # 환경 변수는 SSM Parameter Store에서 주입
+            export AI_SERVER_URL=$(aws ssm get-parameter --name "/kakaobase/prod/AI_SERVER_URL" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2)
+            export AWS_ACCESS_KEY=$(aws ssm get-parameter --name "/kakaobase/prod/AWS_ACCESS_KEY" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2)
+            export AWS_SECRET_KEY=$(aws ssm get-parameter --name "/kakaobase/prod/AWS_SECRET_KEY" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2)
+            export AWS_REGION=$(aws ssm get-parameter --name "/kakaobase/prod/AWS_REGION" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2)
+            export BUCKET_NAME=$(aws ssm get-parameter --name "/kakaobase/prod/BUCKET_NAME" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2)
+            export COOKIE_DOMAIN=$(aws ssm get-parameter --name "/kakaobase/prod/COOKIE_DOMAIN" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2)
+
+            docker run -d --name backend \
+              -p 8080:8080 \
+              -e AI_SERVER_URL=$AI_SERVER_URL \
+              -e AWS_ACCESS_KEY=$AWS_ACCESS_KEY \
+              -e AWS_SECRET_KEY=$AWS_SECRET_KEY \
+              -e AWS_REGION=$AWS_REGION \
+              -e BUCKET_NAME=$BUCKET_NAME \
+              -e COOKIE_DOMAIN=$COOKIE_DOMAIN \
+              ${{ steps.login-ecr.outputs.registry }}/kakaobase-backend:prod
   
 
   notify:
