@@ -1,0 +1,82 @@
+name: Backend - CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '**/README*'
+
+jobs:
+  ci:
+    name: CI (Build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Build Spring Project
+        run: ./gradlew build -x test
+
+  cd:
+    name: CD (Push Image to ECR)
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.DEPLOY_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEPLOY_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build & Push Docker image
+        run: |
+          IMAGE_REPO=${{ secrets.ECR_REPO_BE }}
+          docker build -t $IMAGE_REPO:dev .
+          docker push $IMAGE_REPO:dev
+
+  notify:
+    name: Discord Notification
+    if: always()
+    needs: [ci, cd]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Notification
+        run: |
+          CI_RESULT="${{ needs.ci.result || 'skipped' }}"
+          CD_RESULT="${{ needs.cd.result || 'skipped' }}"
+          
+          COLOR="8359053"
+          STATUS="⚪ CI/CD 실행됨"
+          
+          if [ "$CI_RESULT" = "success" ]; then
+            STATUS="✅ CI 성공"
+            COLOR="5763719"
+          elif [ "$CI_RESULT" = "failure" ]; then
+            STATUS="❌ CI 실패"
+            COLOR="15158332"
+          fi
+          
+          if [ "$CD_RESULT" = "success" ]; then
+            STATUS="✅ CD 성공"
+            COLOR="3066993"
+          elif [ "$CD_RESULT" = "failure" ]; then
+            STATUS="❌ CD 실패"
+            COLOR="15158332"
+          fi
+          
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"🔔 GitHub Actions 결과: ${{ github.workflow }}\",
+                \"description\": \"$STATUS\n브랜치: \`${{ github.ref_name }}\`\n커밋: \`${{ github.actor }}\`\n[👉 실행 로그 보기](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\",
+                \"color\": $COLOR
+              }]
+            }" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
