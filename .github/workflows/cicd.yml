@@ -81,12 +81,23 @@ jobs:
 
             docker run -d --name backend \
               -p 8080:8080 \
-              -e AI_SERVER_URL=$AI_SERVER_URL \
-              -e AWS_ACCESS_KEY=$AWS_ACCESS_KEY \
-              -e AWS_SECRET_KEY=$AWS_SECRET_KEY \
-              -e AWS_REGION=$AWS_REGION \
-              -e BUCKET_NAME=$BUCKET_NAME \
-              -e COOKIE_DOMAIN=$COOKIE_DOMAIN \
+              -e AI_SERVER_URL=$(aws ssm get-parameter --name "/kakaobase/prod/AI_SERVER_URL" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e AWS_ACCESS_KEY=$(aws ssm get-parameter --name "/kakaobase/prod/AWS_ACCESS_KEY" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e AWS_REGION=$(aws ssm get-parameter --name "/kakaobase/prod/AWS_REGION" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e AWS_SECRET_KEY=$(aws ssm get-parameter --name "/kakaobase/prod/AWS_SECRET_KEY" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e BUCKET_NAME=$(aws ssm get-parameter --name "/kakaobase/prod/BUCKET_NAME" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e COOKIE_DOMAIN=$(aws ssm get-parameter --name "/kakaobase/prod/COOKIE_DOMAIN" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e DISCORD_ERROR_WEBHOOK_URL=$(aws ssm get-parameter --name "/kakaobase/prod/DISCORD_ERROR_WEBHOOK_URL" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e EMAIL=$(aws ssm get-parameter --name "/kakaobase/prod/EMAIL" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e EMAIL_PASSWORD=$(aws ssm get-parameter --name "/kakaobase/prod/EMAIL_PASSWORD" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e JWT_SECRET=$(aws ssm get-parameter --name "/kakaobase/prod/JWT_SECRET" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e MYSQL_PASSWORD=$(aws ssm get-parameter --name "/kakaobase/prod/MYSQL_PASSWORD" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e MYSQL_URL=$(aws ssm get-parameter --name "/kakaobase/prod/MYSQL_URL" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e REDIS_URL=$(aws ssm get-parameter --name "/kakaobase/prod/REDIS_URL" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e SPRING_DATASOURCE_PASSWORD=$(aws ssm get-parameter --name "/kakaobase/prod/SPRING_DATASOURCE_PASSWORD" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e SPRING_DATASOURCE_URL=$(aws ssm get-parameter --name "/kakaobase/prod/SPRING_DATASOURCE_URL" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e SPRING_DATASOURCE_USERNAME=$(aws ssm get-parameter --name "/kakaobase/prod/SPRING_DATASOURCE_USERNAME" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
+              -e SPRING_PROFILES_ACTIVE=$(aws ssm get-parameter --name "/kakaobase/prod/SPRING_PROFILES_ACTIVE" --with-decryption --query "Parameter.Value" --output text --region ap-northeast-2) \
               ${{ steps.login-ecr.outputs.registry }}/kakaobase-backend:prod
   
 
