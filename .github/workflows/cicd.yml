@@ -1,4 +1,4 @@
-name: Backend - CI/CD
+name: Backend - CI/CD (prod)
 
 on:
   push:
@@ -22,24 +22,42 @@ jobs:
         run: ./gradlew build -x test
 
   cd:
-    name: CD (Push Image to ECR)
+    name: CD (Push Image & Deploy to EC2)
     runs-on: ubuntu-latest
     needs: ci
     steps:
       - uses: actions/checkout@v3
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.DEPLOY_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.DEPLOY_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
+
       - name: Build & Push Docker image
         run: |
           IMAGE_REPO=${{ secrets.ECR_REPO_BE }}
           docker build -t $IMAGE_REPO:prod .
           docker push $IMAGE_REPO:prod
+
+      - name: Deploy to EC2 via SSM
+        run: |
+          aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.SSM_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy Backend via GitHub Actions" \
+            --region ${{ secrets.AWS_REGION }} \
+            --parameters 'commands=[
+              "cd /opt/kakaobase",
+              "./bin/load-ssm-env.sh",
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com",
+              "docker compose pull backend",
+              "docker compose up -d backend"
+            ]'
 
   notify:
     name: Discord Notification
@@ -64,10 +82,10 @@ jobs:
           fi
           
           if [ "$CD_RESULT" = "success" ]; then
-            STATUS="✅ CD 성공"
+            STATUS="✅ CD 성공 (EC2 배포 완료)"
             COLOR="3066993"
           elif [ "$CD_RESULT" = "failure" ]; then
-            STATUS="❌ CD 실패"
+            STATUS="❌ CD 실패 (EC2 배포 오류)"
             COLOR="15158332"
           fi
           
