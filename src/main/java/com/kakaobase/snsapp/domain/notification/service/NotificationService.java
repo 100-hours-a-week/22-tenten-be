@@ -3,12 +3,14 @@ package com.kakaobase.snsapp.domain.notification.service;
 import com.kakaobase.snsapp.domain.members.dto.MemberResponseDto;
 import com.kakaobase.snsapp.domain.notification.converter.NotificationConverter;
 import com.kakaobase.snsapp.domain.notification.dto.records.*;
+import com.kakaobase.snsapp.domain.notification.dto.response.NotificationCount;
 import com.kakaobase.snsapp.domain.notification.dto.response.NotificationFetchResponse;
 import com.kakaobase.snsapp.domain.notification.error.NotificationErrorCode;
 import com.kakaobase.snsapp.domain.notification.error.NotificationException;
 import com.kakaobase.snsapp.domain.notification.util.InvalidNotificationCacheUtil;
 import com.kakaobase.snsapp.domain.notification.util.NotificationType;
 import com.kakaobase.snsapp.domain.notification.util.ResponseEnum;
+import com.kakaobase.snsapp.global.common.constant.BotConstants;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacket;
 import com.kakaobase.snsapp.global.common.entity.WebSocketPacketImpl;
 import com.kakaobase.snsapp.global.error.code.GeneralErrorCode;
@@ -27,7 +29,6 @@ public class NotificationService {
 
     private final NotificationCommandService commandService;
     private final NotificationConverter notifConverter;
-    private final InvalidNotificationCacheUtil invalidNotificationCacheUtil;
 
     public NotificationFetchResponse getNotifList(Long memberId, int limit, Long cursor) {
         if (limit < 1) {
@@ -51,20 +52,14 @@ public class NotificationService {
                 .limit(limit)
                 .toList();
             
-            // 5. unreadCount 계산 (최종 반환될 알림 중에서)
-            int unreadCount = (int) finalNotifications.stream()
-                .filter(packet -> !packet.data.isRead())
-                .count();
-            
             // 6. NotificationFetchResponse 생성
             NotificationFetchResponse response = NotificationFetchResponse.builder()
-                .unreadCount(unreadCount)
                 .hasNext(hasNext)
                 .notifications(finalNotifications)
                 .build();
                 
-            log.info("사용자 {}의 알림 {}개 조회됨 (반환: {}개, 읽지 않은: {}개, hasNext: {})",
-                    memberId, allNotifications.size(), finalNotifications.size(), unreadCount, hasNext);
+            log.info("사용자 {}의 알림 {}개 조회됨 (반환: {}개, hasNext: {})",
+                    memberId, allNotifications.size(), finalNotifications.size(), hasNext);
                     
             return response;
 
@@ -158,5 +153,19 @@ public class NotificationService {
             log.error("에러 삭제 처리중 예외 발생 알림id: {}, 에러: {}", packet.data.id(), e.getMessage());
             throw new NotificationException(NotificationErrorCode.NOTIFICATION_DELETE_FAIL, packet.data.id());
         }
+    }
+
+    public NotificationCount getNotifCount(Long memberId) {
+        if(memberId.equals(BotConstants.BOT_MEMBER_ID)){
+            return NotificationCount.builder()
+                    .count(0L)
+                    .build();
+        }
+
+        Long count = commandService.getUnreadNotificationCount(memberId);
+        
+        return NotificationCount.builder()
+                .count(count)
+                .build();
     }
 }
