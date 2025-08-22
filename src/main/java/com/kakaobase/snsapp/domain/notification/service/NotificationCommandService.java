@@ -206,4 +206,20 @@ public class NotificationCommandService {
         // - 실시간 상태 업데이트가 필요한 경우 구현
         log.debug("채팅 타이핑 상태 알림: userId={}, isTyping={}", userId, isTyping);
     }
+
+    /**
+     * 특정 사용자의 안읽은 알림 개수 조회
+     */
+    @Transactional(readOnly = true)
+    public Long getUnreadNotificationCount(Long memberId) {
+        log.debug("사용자 {}의 안읽은 알림 개수 조회", memberId);
+        
+        try {
+            Long count = notificationRepository.countByReceiverIdAndIsRead(memberId, false);
+            return count != null ? count : 0L;
+        } catch (Exception e) {
+            log.error("사용자 {}의 안읽은 알림 개수 조회 실패", memberId, e);
+            return 0L; // 오류 발생 시 0 반환
+        }
+    }
 }

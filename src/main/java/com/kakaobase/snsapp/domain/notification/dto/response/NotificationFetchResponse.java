@@ -13,8 +13,6 @@ import java.util.List;
  */
 @Builder
 public record NotificationFetchResponse(
-        @JsonProperty("unread_count")
-        Integer unreadCount,
         @JsonProperty("has_next")
         Boolean hasNext,
         List<WebSocketPacket<NotificationResponse>> notifications
